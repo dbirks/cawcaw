@@ -143,8 +143,9 @@ export default function ChatView() {
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea className="flex-1 p-2">
-        <div className="space-y-2 max-w-3xl mx-auto">
+      <ScrollArea className="flex-1">
+        <div className="min-h-full flex flex-col justify-end p-2">
+          <div className="space-y-2 max-w-3xl mx-auto w-full">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <p>Start a conversation with AI</p>
@@ -192,6 +193,7 @@ export default function ChatView() {
               </Card>
             </div>
           )}
+          </div>
         </div>
       </ScrollArea>
 
