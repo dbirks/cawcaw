@@ -143,8 +143,8 @@ export default function ChatView() {
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 max-w-3xl mx-auto">
+      <ScrollArea className="flex-1 p-2">
+        <div className="space-y-2 max-w-3xl mx-auto">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <p>Start a conversation with AI</p>
