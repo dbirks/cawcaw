@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { SecureStoragePlugin } from '@atroo/capacitor-secure-storage-plugin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,26 +25,41 @@ export default function ChatView() {
 
   useEffect(() => {
     // Check if we have a stored API key
-    const stored = localStorage.getItem('openai_api_key');
-    if (stored) {
-      setApiKey(stored);
-      setShowApiKeyInput(false);
-    }
+    const loadApiKey = async () => {
+      try {
+        const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
+        if (result?.value) {
+          setApiKey(result.value);
+          setShowApiKeyInput(false);
+        }
+      } catch (error) {
+        console.log('No stored API key found');
+      }
+    };
+    loadApiKey();
   }, []);
 
-  const saveApiKey = () => {
+  const saveApiKey = async () => {
     if (tempApiKey.trim()) {
-      setApiKey(tempApiKey);
-      localStorage.setItem('openai_api_key', tempApiKey);
-      setShowApiKeyInput(false);
+      try {
+        await SecureStoragePlugin.set({ key: 'openai_api_key', value: tempApiKey });
+        setApiKey(tempApiKey);
+        setShowApiKeyInput(false);
+      } catch (error) {
+        console.error('Failed to save API key:', error);
+      }
     }
   };
 
-  const clearApiKey = () => {
-    setApiKey('');
-    setTempApiKey('');
-    localStorage.removeItem('openai_api_key');
-    setShowApiKeyInput(true);
+  const clearApiKey = async () => {
+    try {
+      await SecureStoragePlugin.remove({ key: 'openai_api_key' });
+      setApiKey('');
+      setTempApiKey('');
+      setShowApiKeyInput(true);
+    } catch (error) {
+      console.error('Failed to clear API key:', error);
+    }
   };
 
   const sendMessage = async (content: string) => {
