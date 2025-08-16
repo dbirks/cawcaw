@@ -55,11 +55,7 @@ jobs:
       run: |
         echo "Building React app..."
         pnpm build
-        
-        echo "Syncing Capacitor iOS..."
-        pnpm cap:sync:ios
-        
-        echo "✅ Capacitor iOS sync complete"
+        echo "✅ React build complete"
         
     - name: 💎 Setup Ruby
       uses: ruby/setup-ruby@v1
@@ -67,6 +63,12 @@ jobs:
         ruby-version: ${{ env.RUBY_VERSION }}
         bundler-cache: true
         working-directory: ios
+        
+    - name: 📱 Sync Capacitor iOS
+      run: |
+        echo "Syncing Capacitor iOS..."
+        pnpm cap:sync:ios
+        echo "✅ Capacitor iOS sync complete"
         
     - name: 🔧 Install CocoaPods dependencies
       run: |
