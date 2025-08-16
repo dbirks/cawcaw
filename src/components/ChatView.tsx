@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { SecureStoragePlugin } from '@atroo/capacitor-secure-storage-plugin';
+import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

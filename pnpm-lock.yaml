@@ -14,9 +14,6 @@ importers:
       '@ai-sdk/react':
         specifier: ^2.0.10
         version: 2.0.10(react@19.1.1)(zod@3.25.76)
-      '@atroo/capacitor-secure-storage-plugin':
-        specifier: ^6.1.0
-        version: 6.1.0(@capacitor/core@7.4.2)
       '@capacitor/android':
         specifier: ^7.4.2
         version: 7.4.2(@capacitor/core@7.4.2)
@@ -41,6 +38,9 @@ importers:
       ai:
         specifier: ^5.0.10
         version: 5.0.10(zod@3.25.76)
+      capacitor-secure-storage-plugin:
+        specifier: ^0.11.0
+        version: 0.11.0(@capacitor/core@7.4.2)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -140,11 +140,6 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
-
-  '@atroo/capacitor-secure-storage-plugin@6.1.0':
-    resolution: {integrity: sha512-tHT23ZnckCqH1cWpAjHoAOm1HhpTs9SrLFZeRUbmxQge/k+cXYNnK27vCqiKoIiHVPx84HESWIHVcpkE8/dQSg==}
-    peerDependencies:
-      '@capacitor/core': ^6.0.0
 
   '@babel/code-frame@7.27.1':
     resolution: {integrity: sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg==}
@@ -1043,6 +1038,11 @@ packages:
 
   caniuse-lite@1.0.30001734:
     resolution: {integrity: sha512-uhE1Ye5vgqju6OI71HTQqcBCZrvHugk0MjLak7Q+HfoBgoq5Bi+5YnwjP4fjDgrtYr/l8MVRBvzz9dPD4KyK0A==}
+
+  capacitor-secure-storage-plugin@0.11.0:
+    resolution: {integrity: sha512-1fs+RifRlKia+7U68Ekm+5FrX5OiWK/MBvtFdfFR2t7enh3rrIHuemA1+0Rkl3IWcQ6XOcL/6lOb5elZq9IMTA==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   chalk@4.1.2:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
@@ -1999,10 +1999,6 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.12
       '@jridgewell/trace-mapping': 0.3.29
 
-  '@atroo/capacitor-secure-storage-plugin@6.1.0(@capacitor/core@7.4.2)':
-    dependencies:
-      '@capacitor/core': 7.4.2
-
   '@babel/code-frame@7.27.1':
     dependencies:
       '@babel/helper-validator-identifier': 7.27.1
@@ -2861,6 +2857,10 @@ snapshots:
   callsites@3.1.0: {}
 
   caniuse-lite@1.0.30001734: {}
+
+  capacitor-secure-storage-plugin@0.11.0(@capacitor/core@7.4.2):
+    dependencies:
+      '@capacitor/core': 7.4.2
 
   chalk@4.1.2:
     dependencies:
