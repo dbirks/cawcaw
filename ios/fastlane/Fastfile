@@ -1,0 +1,121 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_ci if ENV['CI']
+  end
+
+  desc "Load App Store Connect API Key"
+  private_lane :load_asc_api_key do
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_PRIVATE_KEY"],
+      duration: 1200, # optional (maximum 1200)
+      in_house: false # optional but may be required if using match/sigh
+    )
+  end
+
+  desc "Sync certificates and provisioning profiles"
+  lane :sync_certificates do
+    load_asc_api_key
+    match(
+      type: "appstore",
+      readonly: ENV['CI']
+    )
+  end
+
+  desc "Build the app for release"
+  lane :build_release do
+    # Load signing certificates
+    sync_certificates
+    
+    # Increment build number based on current timestamp
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1,
+      xcodeproj: "App/App.xcodeproj"
+    )
+    
+    # Build the app
+    build_app(
+      scheme: "App",
+      workspace: "App/App.xcworkspace",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: {
+          "com.aichat.app" => "match AppStore com.aichat.app"
+        }
+      }
+    )
+  end
+
+  desc "Upload to TestFlight"
+  lane :upload_testflight do
+    load_asc_api_key
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      skip_submission: true,
+      distribute_external: false,
+      notify_external_testers: false,
+      changelog: "Built with GitHub Actions"
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    build_release
+    upload_testflight
+    
+    # Send success notification
+    if ENV['CI']
+      puts "✅ Successfully uploaded build to TestFlight!"
+      puts "🔗 Check your build at: https://appstoreconnect.apple.com"
+    end
+  end
+
+  desc "Build for local testing"
+  lane :build_local do
+    load_asc_api_key
+    match(type: "development")
+    build_app(
+      scheme: "App",
+      workspace: "App/App.xcworkspace",
+      export_method: "development"
+    )
+  end
+
+  desc "Download certificates for development"
+  lane :certificates_development do
+    load_asc_api_key
+    match(type: "development")
+  end
+
+  desc "Download certificates for distribution"
+  lane :certificates_distribution do
+    load_asc_api_key
+    match(type: "appstore")
+  end
+
+  # Error handling
+  error do |lane, exception|
+    puts "❌ Error in lane #{lane}: #{exception}"
+    if ENV['CI']
+      puts "Check the GitHub Actions logs for more details"
+    end
+  end
+end

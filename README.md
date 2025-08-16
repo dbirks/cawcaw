@@ -90,14 +90,29 @@ pnpm dev           # Frontend React app (port 5173)
    - Invite internal testers (up to 100)
    - For external testing (up to 10,000), submit for beta review
 
-#### Automated iOS Deployment (Optional)
+#### Automated iOS Deployment with TestFlight
 
-Set up GitHub Actions for automated TestFlight uploads by adding secrets:
-- `BUILD_CERTIFICATE_BASE64` - Your distribution certificate
-- `P12_PASSWORD` - Certificate password
-- `BUILD_PROVISION_PROFILE_BASE64` - Provisioning profile
-- `APPLE_ID` - Your Apple ID email
-- `APP_SPECIFIC_PASSWORD` - App-specific password
+**🚀 Fully automated iOS deployment is now configured!**
+
+The app includes a complete GitHub Actions workflow that builds, signs, and uploads to TestFlight automatically. No Mac required - everything runs on GitHub's macOS runners.
+
+**Quick Setup:**
+1. **Join Apple Developer Program** ($99/year)
+2. **Run setup script**: `./scripts/setup-ios-deployment.sh`
+3. **Configure GitHub secrets** (detailed in iOS-DEPLOYMENT.md)
+4. **Push to main branch** - automatic TestFlight upload!
+
+**📖 For complete setup instructions, see: [iOS-DEPLOYMENT.md](./iOS-DEPLOYMENT.md)**
+
+**Features:**
+- ✅ Headless macOS builds via GitHub Actions
+- ✅ Certificate management with Fastlane Match
+- ✅ Automatic TestFlight uploads
+- ✅ No local Mac or Xcode required
+- ✅ Professional signing and distribution
+- ✅ Works entirely from Linux development environment
+
+**Cost:** $99/year (Apple) + ~$5-15/month (GitHub Actions)
 
 ### Android Play Store
 
