@@ -181,7 +181,7 @@ export default function ChatView() {
                     ? 'bg-primary text-primary-foreground' 
                     : 'bg-muted'
                 }`}>
-                  <CardContent className="p-3">
+                  <CardContent className="px-3 py-2">
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   </CardContent>
                 </Card>
@@ -199,7 +199,7 @@ export default function ChatView() {
                 <AvatarFallback>AI</AvatarFallback>
               </Avatar>
               <Card className="bg-muted">
-                <CardContent className="p-3">
+                <CardContent className="px-3 py-2">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
