@@ -4,7 +4,7 @@ storage_mode("git")
 
 type("development") # The default type, can be: appstore, adhoc, development, enterprise
 
-app_identifier(["com.aichat.app"])
+app_identifier(["com.cawcaw.app"])
 username("") # Your Apple ID email - will be set via ASC API key
 
 # For all available options run `fastlane match --help`

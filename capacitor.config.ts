@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.aichat.app',
-  appName: 'AI Chat App',
+  appId: 'com.cawcaw.app',
+  appName: 'Caw Caw',
   webDir: 'dist'
 };
 
