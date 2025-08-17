@@ -77,7 +77,7 @@ export default function ChatView() {
     try {
       const openai = createOpenAI({ apiKey });
       const { text } = await generateText({
-        model: openai('gpt-3.5-turbo'),
+        model: openai('gpt-4.1-nano'),
         messages: [...messages, userMessage].map(msg => ({
           role: msg.role,
           content: msg.content,
