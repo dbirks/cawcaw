@@ -176,7 +176,7 @@ export default function ChatView() {
                     <AvatarFallback>AI</AvatarFallback>
                   </Avatar>
                 )}
-                <Card className={`max-w-[80%] ${
+                <Card className={`max-w-[80%] py-0 ${
                   message.role === 'user' 
                     ? 'bg-primary text-primary-foreground' 
                     : 'bg-muted'
@@ -198,7 +198,7 @@ export default function ChatView() {
               <Avatar className="h-8 w-8">
                 <AvatarFallback>AI</AvatarFallback>
               </Avatar>
-              <Card className="bg-muted">
+              <Card className="bg-muted py-0">
                 <CardContent className="px-2 py-1">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
