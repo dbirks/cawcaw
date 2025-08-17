@@ -1,4 +1,4 @@
-# AI Chat App
+# caw caw
 
 A cross-platform AI chat application built with React + Capacitor for iOS and Android. Users can chat with AI using their own OpenAI API keys.
 
@@ -63,7 +63,7 @@ pnpm dev           # Frontend React app (port 5173)
 1. **Prepare App in App Store Connect**
    ```bash
    # Visit https://appstoreconnect.apple.com
-   # Create new app with Bundle ID: com.aichat.app
+   # Create new app with Bundle ID: app.cawcaw
    ```
 
 2. **Build Production Version**
@@ -76,7 +76,7 @@ pnpm dev           # Frontend React app (port 5173)
    pnpm cap:open:ios
    ```
    - Select your development team
-   - Set Bundle Identifier to `com.aichat.app`
+   - Set Bundle Identifier to `app.cawcaw`
    - Configure signing certificates
 
 4. **Create Archive & Upload**
@@ -125,7 +125,7 @@ The app includes a complete GitHub Actions workflow that builds, signs, and uplo
 1. **Prepare App in Google Play Console**
    ```bash
    # Visit https://play.google.com/console
-   # Create new app with package name: com.aichat.app
+   # Create new app with package name: app.cawcaw
    ```
 
 2. **Build Production Version**
@@ -172,7 +172,7 @@ The app uses user-provided API keys, so no environment variables are needed for 
 - iOS project in `ios/App/`
 - Android project in `android/`
 - Secure storage for API keys
-- Bundle ID: `com.aichat.app`
+- Bundle ID: `app.cawcaw`
 
 ## Security
 

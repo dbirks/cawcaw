@@ -1,4 +1,4 @@
-package com.aichat.app;
+package app.cawcaw;
 
 import com.getcapacitor.BridgeActivity;
 

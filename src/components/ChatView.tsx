@@ -111,7 +111,7 @@ export default function ChatView() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 space-y-4">
-            <h2 className="text-2xl font-bold text-center">Caw Caw</h2>
+            <h2 className="text-2xl font-bold text-center">caw caw</h2>
             <p className="text-muted-foreground text-center">
               Enter your OpenAI API key to get started
             </p>
@@ -148,7 +148,7 @@ export default function ChatView() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="border-b p-4 flex justify-between items-center">
-        <h1 className="text-xl font-semibold">Caw Caw</h1>
+        <h1 className="text-xl font-semibold">caw caw</h1>
         <Button 
           variant="outline" 
           size="sm" 

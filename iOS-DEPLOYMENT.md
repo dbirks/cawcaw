@@ -31,7 +31,7 @@ Everything else—Capacitor sync, Xcode build, code-signing via match, and TestF
 3. **Wait for approval**: Usually 3-5 business days
 
 ### Required Information
-- **Bundle ID**: `com.aichat.app` (already configured in capacitor.config.ts)
+- **Bundle ID**: `app.cawcaw` (already configured in capacitor.config.ts)
 - **App Name**: AI Chat App
 - **Team ID**: Found in your Apple Developer account
 
@@ -42,9 +42,9 @@ Everything else—Capacitor sync, Xcode build, code-signing via match, and TestF
 2. Go to **My Apps** → **+ (Add App)**
 3. Fill in:
    - **Name**: AI Chat App
-   - **Bundle ID**: com.aichat.app
+   - **Bundle ID**: app.cawcaw
    - **Language**: English
-   - **SKU**: ai-chat-app (or any unique identifier)
+   - **SKU**: caw-caw-app (or any unique identifier)
 
 ### Generate API Key
 1. In App Store Connect, go to **Users and Access** → **Keys**
