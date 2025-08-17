@@ -161,7 +161,7 @@ export default function ChatView() {
       {/* Chat Messages */}
       <ScrollArea className="flex-1">
         <div className="min-h-full flex flex-col justify-end p-2">
-          <div className="space-y-2 max-w-3xl mx-auto w-full">
+          <div className="space-y-3 max-w-3xl mx-auto w-full">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <p>Start a conversation with AI</p>
@@ -176,12 +176,12 @@ export default function ChatView() {
                     <AvatarFallback>AI</AvatarFallback>
                   </Avatar>
                 )}
-                <Card className={`max-w-[80%] py-0 ${
+                <Card className={`max-w-[80%] py-0 rounded-2xl ${
                   message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground' 
+                    ? 'bg-blue-500 text-white' 
                     : 'bg-muted'
                 }`}>
-                  <CardContent className="px-2 py-1">
+                  <CardContent className="px-3 py-2">
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   </CardContent>
                 </Card>
@@ -198,8 +198,8 @@ export default function ChatView() {
               <Avatar className="h-8 w-8">
                 <AvatarFallback>AI</AvatarFallback>
               </Avatar>
-              <Card className="bg-muted py-0">
-                <CardContent className="px-2 py-1">
+              <Card className="bg-muted py-0 rounded-2xl">
+                <CardContent className="px-3 py-2">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
