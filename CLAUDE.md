@@ -157,3 +157,40 @@ sendMessage({ parts: [{ type: 'text', text: input }], role: 'user' })
 
 ### Plugin Integration
 The app includes `@atroo/capacitor-secure-storage-plugin` for secure API key storage. After adding new plugins, always run `pnpm exec cap sync` to update native projects.
+
+## Important Development Notes & Lessons
+
+### App Branding & Identity
+- **App Name**: "caw caw" (lowercase)
+- **Bundle ID**: `app.cawcaw` (proper reverse domain notation)
+- **Domain**: cawcaw.app
+- **Current AI Model**: `gpt-4.1-nano` (fastest, cheapest OpenAI model as of 2025)
+
+### ShadCN/UI Card Component Override
+When using ShadCN Card components for chat bubbles, remember the built-in padding:
+- Card has default `py-6` (24px vertical padding)
+- CardContent has default `px-6` (24px horizontal padding)
+- Override with `py-0` on Card and custom padding on CardContent for tight spacing
+- Example: `<Card className="py-0">` + `<CardContent className="px-3 py-2">`
+
+### Android Package Structure Changes
+When changing bundle identifiers:
+1. Update `capacitor.config.ts` 
+2. Update `android/app/build.gradle` (namespace + applicationId)
+3. Move Java files to new package structure: `android/app/src/main/java/app/cawcaw/`
+4. Update `android/app/src/main/res/values/strings.xml`
+5. Run `./gradlew clean` in android folder before rebuilding
+6. Run `pnpm cap:sync` to apply changes
+
+### iOS Bundle Identifier Updates
+- Update `ios/App/App.xcodeproj/project.pbxproj` (PRODUCT_BUNDLE_IDENTIFIER)
+- Update `ios/App/App/Info.plist` (CFBundleDisplayName)
+- Update `ios/fastlane/Matchfile` (app_identifier)
+
+### Chat UI Best Practices
+- Use `space-y-3` for comfortable message spacing
+- Use `px-3 py-2` for balanced bubble padding
+- Use `rounded-2xl` for modern bubble styling
+- User messages: `bg-blue-500 text-white`
+- AI messages: `bg-muted`
+- Always override Card default padding with `py-0`
