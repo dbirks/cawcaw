@@ -111,9 +111,9 @@ jobs:
         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        FASTLANE_MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
+        MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
         GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
-        FASTLANE_MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
+        MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
         
     - name: 🚀 Build and upload to TestFlight
       run: |
@@ -123,9 +123,9 @@ jobs:
         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        FASTLANE_MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
+        MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
         GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
-        FASTLANE_MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
+        MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
         
     - name: 📤 Upload build artifacts
       if: failure()
