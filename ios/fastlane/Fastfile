@@ -17,7 +17,10 @@ default_platform(:ios)
 
 platform :ios do
   before_all do
-    setup_ci if ENV['CI']
+    # Only run setup_ci when explicitly forcing certificate creation
+    if ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] == true || ENV['MATCH_FORCE_WRITE'] == 'true')
+      setup_ci
+    end
   end
 
   desc "Load App Store Connect API Key"
@@ -37,7 +40,7 @@ platform :ios do
     match(
       type: "appstore",
       platform: "ios",
-      readonly: ENV['CI'] && !ENV['MATCH_FORCE_WRITE']
+      readonly: ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] != true && ENV['MATCH_FORCE_WRITE'] != 'true')
     )
   end
 
@@ -115,7 +118,7 @@ platform :ios do
     match(
       type: "appstore",
       platform: "ios",
-      readonly: ENV['CI'] && !ENV['MATCH_FORCE_WRITE']
+      readonly: ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] != true && ENV['MATCH_FORCE_WRITE'] != 'true')
     )
   end
 
