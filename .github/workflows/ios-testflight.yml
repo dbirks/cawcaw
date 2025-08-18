@@ -13,6 +13,11 @@ on:
         options:
         - testflight
         - development
+      force_write:
+        description: 'Force certificate creation (first time setup)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   NODE_VERSION: '20'
@@ -114,6 +119,7 @@ jobs:
         MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
         GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
         MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
+        MATCH_FORCE_WRITE: ${{ github.event.inputs.force_write || 'false' }}
         
     - name: 🚀 Build and upload to TestFlight
       run: |
@@ -126,6 +132,7 @@ jobs:
         MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
         GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
         MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
+        MATCH_FORCE_WRITE: ${{ github.event.inputs.force_write || 'false' }}
         
     - name: 📤 Upload build artifacts
       if: failure()
