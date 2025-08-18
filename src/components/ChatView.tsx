@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { generateText } from 'ai';
+import { generateText, tool, stepCountIs } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +9,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Settings, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
+import MCPSettings from './MCPSettings';
+import { mcpManager } from '@/services/mcpManager';
+import MarkdownRenderer from './MathRenderer';
+
+interface ToolCall {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  result?: unknown;
+}
 
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  toolCalls?: ToolCall[];
 }
 
 export default function ChatView() {
@@ -22,21 +35,33 @@ export default function ChatView() {
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [expandedToolCalls, setExpandedToolCalls] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Check if we have a stored API key
-    const loadApiKey = async () => {
+    // Check if we have a stored API key and initialize MCP
+    const initialize = async () => {
       try {
+        // Load API key
         const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
         if (result?.value) {
           setApiKey(result.value);
           setShowApiKeyInput(false);
         }
+
+        // Initialize MCP servers
+        await mcpManager.loadConfigurations();
+        await mcpManager.connectToEnabledServers();
       } catch (error) {
-        console.log('No stored API key found');
+        console.log('Initialization error:', error);
       }
     };
-    loadApiKey();
+    initialize();
+
+    // Cleanup MCP connections on unmount
+    return () => {
+      mcpManager.cleanup();
+    };
   }, []);
 
   const saveApiKey = async () => {
@@ -76,21 +101,106 @@ export default function ChatView() {
 
     try {
       const openai = createOpenAI({ apiKey });
-      const { text } = await generateText({
-        model: openai('gpt-4.1-nano'),
+      
+      // Create demo tools for testing MCP functionality (works on mobile)
+      const tools = {
+        calculator: tool({
+          description: 'Perform basic mathematical calculations',
+          inputSchema: z.object({
+            expression: z.string().describe('Mathematical expression to evaluate (e.g., "2 + 2", "10 * 5")')
+          }),
+          execute: async ({ expression }: { expression: string }) => {
+            try {
+              // Simple safe evaluation for demo purposes
+              const result = Function(`"use strict"; return (${expression.replace(/[^0-9+\-*/.() ]/g, '')})`)();
+              return { calculation: expression, result: result.toString() };
+            } catch {
+              return { calculation: expression, result: 'Error: Invalid expression' };
+            }
+          }
+        }),
+        timeInfo: tool({
+          description: 'Get current time and date information',
+          inputSchema: z.object({
+            timezone: z.string().optional().describe('Timezone (optional, defaults to local)')
+          }),
+          execute: async ({ timezone }: { timezone?: string }) => {
+            const now = new Date();
+            return {
+              currentTime: now.toLocaleString(),
+              timestamp: now.getTime(),
+              timezone: timezone || 'local'
+            };
+          }
+        }),
+        textAnalyzer: tool({
+          description: 'Analyze text for word count, character count, etc.',
+          inputSchema: z.object({
+            text: z.string().describe('Text to analyze')
+          }),
+          execute: async ({ text }: { text: string }) => {
+            return {
+              text: text,
+              wordCount: text.split(/\s+/).filter((word: string) => word.length > 0).length,
+              characterCount: text.length,
+              characterCountNoSpaces: text.replace(/\s/g, '').length
+            };
+          }
+        })
+      };
+
+      const result = await generateText({
+        model: openai('gpt-4o-mini'),
         messages: [...messages, userMessage].map(msg => ({
           role: msg.role,
           content: msg.content,
         })),
+        tools,
+        stopWhen: stepCountIs(5) // Enable multi-step: AI can use tools and then respond
       });
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: text,
-      };
+      // Extract tool calls from the result (multi-step approach)
+      const toolCalls: ToolCall[] = [];
+      if (result.steps) {
+        for (const step of result.steps) {
+          if (step.toolCalls) {
+            for (const toolCall of step.toolCalls) {
+              const toolResult = step.toolResults?.find(r => r.toolCallId === toolCall.toolCallId);
+              toolCalls.push({
+                id: toolCall.toolCallId,
+                name: toolCall.toolName,
+                input: ((toolCall as any).input || (toolCall as any).args || (toolCall as any).arguments || {}) as Record<string, unknown>,
+                result: toolResult
+              });
+            }
+          }
+        }
+      }
 
-      setMessages(prev => [...prev, assistantMessage]);
+      const newMessages: Message[] = [];
+
+      // Add tool calls as separate message if they exist
+      if (toolCalls.length > 0) {
+        const toolCallMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: '', // Empty content for tool-only message
+          toolCalls: toolCalls
+        };
+        newMessages.push(toolCallMessage);
+      }
+
+      // Add AI response as separate message if there's text content
+      if (result.text && result.text.trim()) {
+        const assistantMessage: Message = {
+          id: (Date.now() + 2).toString(),
+          role: 'assistant',
+          content: result.text
+        };
+        newMessages.push(assistantMessage);
+      }
+
+      setMessages(prev => [...prev, ...newMessages]);
     } catch (error) {
       console.error('Chat error:', error);
       
@@ -105,6 +215,64 @@ export default function ChatView() {
       setIsLoading(false);
     }
   };
+
+  const toggleToolCallExpansion = (toolCallId: string) => {
+    const newExpanded = new Set(expandedToolCalls);
+    if (newExpanded.has(toolCallId)) {
+      newExpanded.delete(toolCallId);
+    } else {
+      newExpanded.add(toolCallId);
+    }
+    setExpandedToolCalls(newExpanded);
+  };
+
+  const ToolCallDisplay = ({ toolCall }: { toolCall: ToolCall }) => {
+    const isExpanded = expandedToolCalls.has(toolCall.id);
+    
+    return (
+      <div className="mt-2">
+        <button
+          onClick={() => toggleToolCallExpansion(toolCall.id)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+          <Wrench className="h-3 w-3" />
+          <span className="font-mono">{toolCall.name}</span>
+        </button>
+        
+        {isExpanded && (
+          <div className="mt-2 p-3 bg-muted rounded-md text-xs space-y-2">
+            <div>
+              <span className="font-medium text-foreground">Input:</span>
+              <pre className="mt-1 overflow-x-auto">
+                {JSON.stringify(toolCall.input, null, 2)}
+              </pre>
+            </div>
+            {toolCall.result !== undefined && toolCall.result !== null && (
+              <div>
+                <span className="font-medium text-foreground">Result:</span>
+                <pre className="mt-1 overflow-x-auto">
+                  {typeof toolCall.result === 'string' 
+                    ? toolCall.result 
+                    : JSON.stringify(toolCall.result, null, 2)
+                  }
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Show MCP Settings screen
+  if (showSettings) {
+    return <MCPSettings onClose={() => setShowSettings(false)} />;
+  }
 
   if (showApiKeyInput) {
     return (
@@ -149,13 +317,22 @@ export default function ChatView() {
       {/* Header */}
       <div className="border-b p-4 flex justify-between items-center">
         <h1 className="text-xl font-semibold">caw caw</h1>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={clearApiKey}
-        >
-          Change API Key
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowSettings(!showSettings)}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={clearApiKey}
+          >
+            Change API Key
+          </Button>
+        </div>
       </div>
 
       {/* Chat Messages */}
@@ -182,7 +359,18 @@ export default function ChatView() {
                     : 'bg-muted'
                 }`}>
                   <CardContent className="px-3 py-2">
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.content && (
+                      <div>
+                        <MarkdownRenderer content={message.content} />
+                      </div>
+                    )}
+                    {message.toolCalls && message.toolCalls.length > 0 && (
+                      <div className={`space-y-1 ${message.content ? 'mt-2' : ''}`}>
+                        {message.toolCalls.map((toolCall) => (
+                          <ToolCallDisplay key={toolCall.id} toolCall={toolCall} />
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 {message.role === 'user' && (

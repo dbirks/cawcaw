@@ -136,6 +136,11 @@ sendMessage({ parts: [{ type: 'text', text: input }], role: 'user' })
 - Backend receives API key via Authorization header and proxies to OpenAI
 - Never commit or hardcode API keys
 
+### CORS and External APIs
+- **Vite Dev Server**: Will encounter CORS issues with external APIs and remote MCP servers - this is expected behavior
+- **Mobile Apps**: iOS and Android builds work correctly with external APIs due to Capacitor's fetch patching
+- **Workarounds**: Use backend server proxy for external API calls during development, or test external APIs on mobile builds only
+
 ### TypeScript Configuration
 - Uses path mapping (`@/*` → `src/*`) in both tsconfig and Vite
 - Separate configs for app (`tsconfig.app.json`) and Node/tooling (`tsconfig.node.json`)

@@ -58,7 +58,7 @@ platform :ios do
       export_method: "app-store",
       export_options: {
         provisioningProfiles: {
-          "com.aichat.app" => "match AppStore com.aichat.app"
+          "app.cawcaw" => "match AppStore app.cawcaw"
         }
       }
     )

@@ -76,6 +76,23 @@ jobs:
         pod install --repo-update
         echo "✅ CocoaPods dependencies installed"
         
+    - name: 🔐 Setup SSH Deploy Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.FASTLANE_MATCH_DEPLOY_KEY }}" > ~/.ssh/match_deploy_key
+        chmod 600 ~/.ssh/match_deploy_key
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        # Configure SSH to use the deploy key for GitHub
+        cat > ~/.ssh/config << EOF
+        Host github.com
+          HostName github.com
+          User git
+          IdentityFile ~/.ssh/match_deploy_key
+          IdentitiesOnly yes
+        EOF
+        chmod 600 ~/.ssh/config
+        echo "✅ SSH Deploy Key configured"
+        
     - name: 🔐 Setup Keychain
       run: |
         security create-keychain -p "" build.keychain
@@ -94,9 +111,9 @@ jobs:
         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-        MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+        FASTLANE_MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
+        GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
+        FASTLANE_MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
         
     - name: 🚀 Build and upload to TestFlight
       run: |
@@ -106,9 +123,9 @@ jobs:
         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-        MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+        FASTLANE_MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
+        GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
+        FASTLANE_MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
         
     - name: 📤 Upload build artifacts
       if: failure()
