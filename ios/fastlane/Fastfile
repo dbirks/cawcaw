@@ -36,6 +36,7 @@ platform :ios do
     load_asc_api_key
     match(
       type: "appstore",
+      platform: "ios",
       readonly: ENV['CI'] && !ENV['MATCH_FORCE_WRITE']
     )
   end
@@ -102,7 +103,10 @@ platform :ios do
   desc "Download certificates for development"
   lane :certificates_development do
     load_asc_api_key
-    match(type: "development")
+    match(
+      type: "development",
+      platform: "ios"
+    )
   end
 
   desc "Download certificates for distribution"
@@ -110,6 +114,7 @@ platform :ios do
     load_asc_api_key
     match(
       type: "appstore",
+      platform: "ios",
       readonly: ENV['CI'] && !ENV['MATCH_FORCE_WRITE']
     )
   end
