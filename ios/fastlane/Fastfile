@@ -61,6 +61,7 @@ platform :ios do
       workspace: "App/App.xcworkspace",
       export_method: "app-store",
       codesigning_identity: "Apple Distribution",
+      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AppStore app.cawcaw'",
       export_options: {
         method: "app-store",
         signingStyle: "manual",
