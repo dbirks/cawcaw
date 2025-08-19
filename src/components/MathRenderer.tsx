@@ -9,6 +9,15 @@ interface MarkdownRendererProps {
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+  // Only preprocess if content contains AI's specific bracket notation patterns
+  const needsPreprocessing = content.includes('[') || /\(\s+[a-zA-Z]\s+\)/.test(content);
+  
+  const processedContent = needsPreprocessing ? 
+    content
+      .replace(/\[\s*([^[\]]+)\s*\]/g, '$$$1$')
+      .replace(/\(\s+([a-zA-Z])\s+\)/g, '$$$1$')  // Only spaces around letters
+    : content;
+  
   return (
     <ReactMarkdown
       remarkPlugins={[remarkMath]}
@@ -27,7 +36,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
         h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
       }}
     >
-      {content}
+      {processedContent}
     </ReactMarkdown>
   );
 };
