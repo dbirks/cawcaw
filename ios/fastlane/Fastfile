@@ -60,10 +60,14 @@ platform :ios do
       scheme: "App",
       workspace: "App/App.xcworkspace",
       export_method: "app-store",
+      codesigning_identity: "Apple Distribution",
       export_options: {
+        method: "app-store",
+        signingStyle: "manual",
         provisioningProfiles: {
           "app.cawcaw" => "match AppStore app.cawcaw"
-        }
+        },
+        signingCertificate: "Apple Distribution"
       }
     )
   end
