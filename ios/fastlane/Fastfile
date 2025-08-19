@@ -40,6 +40,7 @@ platform :ios do
     match(
       type: "appstore",
       platform: "ios",
+      force: ENV['MATCH_FORCE_WRITE'] == 'true',
       readonly: ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] != true && ENV['MATCH_FORCE_WRITE'] != 'true')
     )
   end
