@@ -199,3 +199,15 @@ When changing bundle identifiers:
 - User messages: `bg-blue-500 text-white`
 - AI messages: `bg-muted`
 - Always override Card default padding with `py-0`
+
+### Commit Message Convention
+Always use conventional commit messages when making changes:
+- `feat:` for new features
+- `fix:` for bug fixes  
+- `docs:` for documentation updates
+- `style:` for formatting changes
+- `refactor:` for code refactoring
+- `test:` for adding/updating tests
+- `chore:` for maintenance tasks
+
+Keep commit messages short and descriptive (under 50 characters for the subject line).
