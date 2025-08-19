@@ -1,0 +1,171 @@
+name: iOS Ad Hoc Distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Distribution method'
+        required: true
+        default: 'adhoc'
+        type: choice
+        options:
+        - adhoc
+      force_write:
+        description: 'Force certificate creation'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  RUBY_VERSION: '3.2'
+
+jobs:
+  build-and-distribute:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    
+    steps:
+    - name: 📱 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: 📦 Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: latest
+        run_install: false
+        
+    - name: 📥 Install dependencies
+      run: |
+        echo "Installing Node.js dependencies..."
+        pnpm install
+        echo "✅ Dependencies installed"
+        
+    - name: 🏗️ Build Capacitor app
+      run: |
+        echo "Building React app..."
+        pnpm build
+        echo "✅ React build complete"
+        
+    - name: 💎 Setup Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ env.RUBY_VERSION }}
+        bundler-cache: true
+        working-directory: ios
+        
+    - name: 📱 Select Xcode 16.2
+      run: |
+        sudo xcode-select -s /Applications/Xcode_16.2.app
+        xcodebuild -version
+        echo "✅ Xcode 16.2 selected for iOS 18 SDK compliance"
+        
+    - name: 📱 Sync Capacitor iOS
+      run: |
+        echo "Syncing Capacitor iOS..."
+        pnpm cap:sync:ios
+        echo "✅ Capacitor iOS sync complete"
+        
+    - name: 🔧 Install CocoaPods dependencies
+      run: |
+        cd ios/App
+        pod install --repo-update
+        echo "✅ CocoaPods dependencies installed"
+        
+    - name: 🔐 Setup SSH Deploy Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.FASTLANE_MATCH_DEPLOY_KEY }}" > ~/.ssh/match_deploy_key
+        chmod 600 ~/.ssh/match_deploy_key
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        # Configure SSH to use the deploy key for GitHub
+        cat > ~/.ssh/config << EOF
+        Host github.com
+          HostName github.com
+          User git
+          IdentityFile ~/.ssh/match_deploy_key
+          IdentitiesOnly yes
+        EOF
+        chmod 600 ~/.ssh/config
+        echo "✅ SSH Deploy Key configured"
+        
+    - name: 🔐 Setup Keychain
+      run: |
+        security create-keychain -p "" build.keychain
+        security list-keychains -s build.keychain
+        security default-keychain -s build.keychain
+        security unlock-keychain -p "" build.keychain
+        security set-keychain-settings -t 3600 -u build.keychain
+        echo "✅ Keychain configured"
+        
+    - name: 📜 Generate certificates and profiles
+      run: |
+        cd ios
+        bundle exec fastlane certificates_adhoc
+        echo "✅ Ad Hoc certificates and provisioning profiles ready"
+      env:
+        ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
+        GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
+        MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
+        MATCH_FORCE_WRITE: ${{ github.event.inputs.force_write || 'false' }}
+        
+    - name: 🚀 Build Ad Hoc IPA
+      run: |
+        cd ios
+        bundle exec fastlane build_adhoc
+        echo "✅ Ad Hoc build complete"
+      env:
+        ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        MATCH_PASSWORD: ${{ secrets.FASTLANE_MATCH_PASSWORD }}
+        GIT_SSH_COMMAND: "ssh -i ~/.ssh/match_deploy_key -o IdentitiesOnly=yes"
+        MATCH_GIT_URL: ${{ secrets.FASTLANE_MATCH_GIT_URL }}
+        MATCH_FORCE_WRITE: ${{ github.event.inputs.force_write || 'false' }}
+        
+    - name: 📤 Upload IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-adhoc-build-${{ github.run_number }}
+        path: ios/caw_caw.ipa
+        retention-days: 30
+        
+    - name: 📤 Upload build artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-build-logs
+        path: |
+          ios/App/build/**/*.log
+          ~/Library/Logs/gym/**
+        retention-days: 5
+        if-no-files-found: warn
+        
+    - name: 💬 Create deployment summary
+      run: |
+        echo "## 🎉 iOS Ad Hoc Build Successful!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Number**: $(date '+%Y%m%d%H%M')" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Workflow**: [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 Install on Device" >> $GITHUB_STEP_SUMMARY
+        echo "1. 📥 Download the IPA from the artifacts above" >> $GITHUB_STEP_SUMMARY
+        echo "2. 🔗 Use [Diawi](https://diawi.com) or [TestFlight alternatives](https://installonair.com) for OTA install" >> $GITHUB_STEP_SUMMARY
+        echo "3. 💻 Or install directly using Xcode/Apple Configurator" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Device Requirements" >> $GITHUB_STEP_SUMMARY
+        echo "- Device UDID must be registered in Apple Developer Portal" >> $GITHUB_STEP_SUMMARY
+        echo "- iOS 14.0 or later required" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "_Build completed at $(date)_" >> $GITHUB_STEP_SUMMARY
