@@ -50,6 +50,9 @@ platform :ios do
     # Load signing certificates
     sync_certificates
     
+    # Verify certificate installation
+    sh("security find-identity -v -p codesigning build.keychain")
+    
     # Increment build number based on current timestamp
     increment_build_number(
       build_number: latest_testflight_build_number(app_identifier: "app.cawcaw") + 1,
@@ -62,7 +65,7 @@ platform :ios do
       workspace: "App/App.xcworkspace",
       export_method: "app-store",
       codesigning_identity: "Apple Distribution",
-      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AppStore app.cawcaw'",
+      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AppStore app.cawcaw' OTHER_CODE_SIGN_FLAGS='--keychain build.keychain'",
       export_options: {
         method: "app-store",
         signingStyle: "manual",
@@ -171,7 +174,7 @@ platform :ios do
       workspace: "App/App.xcworkspace",
       export_method: "ad-hoc",
       codesigning_identity: "Apple Distribution",
-      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AdHoc app.cawcaw'",
+      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AdHoc app.cawcaw' OTHER_CODE_SIGN_FLAGS='--keychain build.keychain'",
       export_options: {
         method: "ad-hoc",
         signingStyle: "manual",
