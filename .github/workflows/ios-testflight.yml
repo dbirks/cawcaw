@@ -55,6 +55,12 @@ jobs:
       run: |
         pnpm install --frozen-lockfile
         echo "✅ Dependencies installed"
+
+    - name: 🔍 Run code quality checks
+      run: |
+        echo "Running Biome linting and formatting checks..."
+        pnpm lint
+        echo "✅ Code quality checks passed"
         
     - name: 🏗️ Build Capacitor app
       run: |
