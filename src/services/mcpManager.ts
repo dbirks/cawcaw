@@ -5,7 +5,7 @@ const MCP_STORAGE_KEY = 'mcp_server_configs';
 
 // Simple mock client for built-in tools
 interface MockMCPClient {
-  listTools(): Promise<Record<string, any>>;
+  listTools(): Promise<Record<string, unknown>>;
   close(): Promise<void>;
 }
 
@@ -189,7 +189,7 @@ class MCPManager {
           for (const [toolName, toolDef] of Object.entries(tools)) {
             const prefixedName = `${serverConfig.name}_${toolName}`;
             allTools[prefixedName] = {
-              ...toolDef,
+              ...(typeof toolDef === 'object' && toolDef !== null ? toolDef : {}),
               _mcpServerId: serverId,
               _mcpServerName: serverConfig.name,
               _mcpOriginalName: toolName,

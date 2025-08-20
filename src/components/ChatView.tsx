@@ -11,11 +11,7 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation';
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-} from '@/components/ai-elements/message';
+import { Message, MessageAvatar, MessageContent } from '@/components/ai-elements/message';
 import {
   PromptInput,
   PromptInputButton,
@@ -37,7 +33,13 @@ import {
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
 import { mcpManager } from '@/services/mcpManager';
@@ -67,7 +69,7 @@ export default function ChatView() {
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(true);
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<UIMessage[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // const [isLoading, setIsLoading] = useState<boolean>(false); // Replaced with status state
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // New state for AI Elements features
@@ -205,14 +207,11 @@ export default function ChatView() {
               const toolResult = step.toolResults?.find(
                 (r) => r.toolCallId === toolCall.toolCallId
               );
-              
+
               assistantParts.push({
                 type: `tool-${toolCall.toolName}`,
                 toolName: toolCall.toolName,
-                input: ((toolCall as any).input ||
-                  (toolCall as any).args ||
-                  (toolCall as any).arguments ||
-                  {}) as Record<string, unknown>,
+                input: (toolCall.input || {}) as Record<string, unknown>,
                 output: toolResult,
                 state: toolResult ? 'output-available' : 'output-error',
                 errorText: toolResult ? undefined : 'Tool execution failed',
@@ -265,37 +264,37 @@ export default function ChatView() {
     try {
       // Request microphone permission and start recording
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       // Create MediaRecorder to capture audio
       const mediaRecorder = new MediaRecorder(stream);
       const audioChunks: Blob[] = [];
-      
+
       // Collect audio data
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunks.push(event.data);
         }
       };
-      
+
       // Handle recording completion
       mediaRecorder.onstop = async () => {
         try {
           // Create audio blob from chunks
           const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-          
+
           // Convert to ArrayBuffer for transcription
           const audioData = new Uint8Array(await audioBlob.arrayBuffer());
-          
+
           // Set processing status
           setStatus('submitted');
-          
+
           // Transcribe using OpenAI Whisper
           const openai = createOpenAI({ apiKey });
           const transcript = await transcribe({
             model: openai.transcription('whisper-1'), // Use Whisper model
-            audio: audioData
+            audio: audioData,
           });
-          
+
           const transcribedText = transcript.text?.trim();
           if (transcribedText) {
             // Send the transcribed message
@@ -303,27 +302,27 @@ export default function ChatView() {
           } else {
             setStatus('error');
           }
-          
         } catch (error) {
           console.error('Transcription error:', error);
           setStatus('error');
         } finally {
           // Stop all tracks to release microphone
-          stream.getTracks().forEach(track => track.stop());
+          stream.getTracks().forEach((track) => {
+            track.stop();
+          });
         }
       };
-      
+
       // Start recording for 5 seconds
       mediaRecorder.start();
       setStatus('streaming');
-      
+
       // Auto-stop after 5 seconds
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
         }
       }, 5000);
-      
     } catch (error) {
       console.error('Voice input error:', error);
       alert('Microphone access denied or not available');
@@ -392,7 +391,6 @@ export default function ChatView() {
         </Button>
       </div>
 
-
       {/* Main Conversation */}
       <Conversation className="flex-1">
         <ConversationContent>
@@ -407,15 +405,14 @@ export default function ChatView() {
                   <MessageContent>
                     {message.parts.map((part, idx) => {
                       if (part.type === 'text') {
-                        return (
-                          <Response key={`text-${idx}`}>
-                            {part.text || ''}
-                          </Response>
-                        );
+                        return <Response key={`text-${idx}`}>{part.text || ''}</Response>;
                       } else if (part.type.startsWith('tool-')) {
                         return (
                           <Tool key={`tool-${idx}`} defaultOpen={false}>
-                            <ToolHeader type={part.toolName || part.type} state={part.state} />
+                            <ToolHeader
+                              type={part.type as `tool-${string}`}
+                              state={part.state || 'input-available'}
+                            />
                             <ToolContent>
                               <ToolInput input={part.input} />
                               {part.state === 'output-available' && (
