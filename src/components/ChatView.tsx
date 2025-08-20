@@ -9,8 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Settings, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
-import MCPSettings from './MCPSettings';
+import { Settings as SettingsIcon, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
+import Settings from './Settings';
 import { mcpManager } from '@/services/mcpManager';
 import MarkdownRenderer from './MathRenderer';
 
@@ -76,16 +76,6 @@ export default function ChatView() {
     }
   };
 
-  const clearApiKey = async () => {
-    try {
-      await SecureStoragePlugin.remove({ key: 'openai_api_key' });
-      setApiKey('');
-      setTempApiKey('');
-      setShowApiKeyInput(true);
-    } catch (error) {
-      console.error('Failed to clear API key:', error);
-    }
-  };
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || !apiKey) return;
@@ -269,9 +259,9 @@ export default function ChatView() {
     );
   };
 
-  // Show MCP Settings screen
+  // Show Settings screen
   if (showSettings) {
-    return <MCPSettings onClose={() => setShowSettings(false)} />;
+    return <Settings onClose={() => setShowSettings(false)} />;
   }
 
   if (showApiKeyInput) {
@@ -317,22 +307,13 @@ export default function ChatView() {
       {/* Header */}
       <div className="border-b p-4 flex justify-between items-center">
         <h1 className="text-xl font-semibold">caw caw</h1>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowSettings(!showSettings)}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={clearApiKey}
-          >
-            Change API Key
-          </Button>
-        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowSettings(!showSettings)}
+        >
+          <SettingsIcon className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Chat Messages */}
