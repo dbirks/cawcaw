@@ -24,7 +24,7 @@ import {
   PromptInputToolbar,
   PromptInputTools,
 } from '@/components/ai-elements/prompt-input';
-import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning';
+// import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'; // Only for reasoning models like o1
 import { Response } from '@/components/ai-elements/response';
 import {
   Tool,
@@ -71,8 +71,6 @@ export default function ChatView() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // New state for AI Elements features
-  const [reasoningText, setReasoningText] = useState<string>('');
-  const [isThinking, setIsThinking] = useState<boolean>(false);
   const [toolsModalOpen, setToolsModalOpen] = useState<boolean>(false);
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
 
@@ -126,8 +124,6 @@ export default function ChatView() {
 
     setMessages((prev) => [...prev, userMessage]);
     setStatus('submitted');
-    setIsThinking(true);
-    setReasoningText('🤔 AI is processing your request...\n');
 
     try {
       const openai = createOpenAI({ apiKey });
@@ -190,7 +186,6 @@ export default function ChatView() {
       }));
 
       setStatus('streaming');
-      setReasoningText(prev => prev + '⚙️ Generating response with available tools...\n');
 
       const result = await generateText({
         model: openai('gpt-4o-mini'),
@@ -210,8 +205,6 @@ export default function ChatView() {
               const toolResult = step.toolResults?.find(
                 (r) => r.toolCallId === toolCall.toolCallId
               );
-              
-              setReasoningText(prev => prev + `🔧 Using tool: ${toolCall.toolName}\n`);
               
               assistantParts.push({
                 type: `tool-${toolCall.toolName}`,
@@ -244,13 +237,7 @@ export default function ChatView() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-      setReasoningText(prev => prev + '✅ Response generated successfully!\n');
       setStatus('ready');
-
-      // Auto-hide reasoning panel after a delay
-      setTimeout(() => {
-        setIsThinking(false);
-      }, 1500);
     } catch (error) {
       console.error('Chat error:', error);
 
@@ -267,7 +254,6 @@ export default function ChatView() {
 
       setMessages((prev) => [...prev, errorMessage]);
       setStatus('error');
-      setIsThinking(false);
     }
   };
 
@@ -302,8 +288,6 @@ export default function ChatView() {
           
           // Set processing status
           setStatus('submitted');
-          setReasoningText('🎤 Processing voice input...\n');
-          setIsThinking(true);
           
           // Transcribe using OpenAI Whisper
           const openai = createOpenAI({ apiKey });
@@ -314,21 +298,15 @@ export default function ChatView() {
           
           const transcribedText = transcript.text?.trim();
           if (transcribedText) {
-            setReasoningText(prev => prev + `📝 Transcribed: "${transcribedText}"\n`);
-            
             // Send the transcribed message
             await sendMessage(transcribedText);
           } else {
             setStatus('error');
-            setReasoningText(prev => prev + '❌ No speech detected\n');
-            setTimeout(() => setIsThinking(false), 2000);
           }
           
         } catch (error) {
           console.error('Transcription error:', error);
           setStatus('error');
-          setReasoningText(prev => prev + '❌ Voice transcription failed\n');
-          setTimeout(() => setIsThinking(false), 2000);
         } finally {
           // Stop all tracks to release microphone
           stream.getTracks().forEach(track => track.stop());
@@ -338,8 +316,6 @@ export default function ChatView() {
       // Start recording for 5 seconds
       mediaRecorder.start();
       setStatus('streaming');
-      setReasoningText('🎤 Listening... (5 seconds)\n');
-      setIsThinking(true);
       
       // Auto-stop after 5 seconds
       setTimeout(() => {
@@ -416,11 +392,6 @@ export default function ChatView() {
         </Button>
       </div>
 
-      {/* Reasoning Panel */}
-      <Reasoning className="mx-4 mt-4" isStreaming={isThinking} defaultOpen={false}>
-        <ReasoningTrigger />
-        <ReasoningContent>{reasoningText}</ReasoningContent>
-      </Reasoning>
 
       {/* Main Conversation */}
       <Conversation className="flex-1">
