@@ -11,7 +11,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +54,15 @@ export default function Settings({ onClose }: SettingsProps) {
     description: '',
     enabled: true,
   });
+
+  // Generate unique IDs for form elements
+  const currentApiKeyId = useId();
+  const updateApiKeyId = useId();
+  const serverNameId = useId();
+  const serverUrlId = useId();
+  const transportTypeId = useId();
+  const serverDescriptionId = useId();
+  const serverEnabledId = useId();
 
   const [isTestingConnection, setIsTestingConnection] = useState(false);
 
@@ -272,9 +281,9 @@ export default function Settings({ onClose }: SettingsProps) {
               <CardContent className="space-y-6">
                 {/* Current API Key */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Current API Key</label>
+                  <label htmlFor={currentApiKeyId} className="text-sm font-medium mb-2 block">Current API Key</label>
                   <div className="flex items-center gap-2">
-                    <Input value={currentApiKey || 'Not configured'} readOnly className="flex-1" />
+                    <Input id={currentApiKeyId} value={currentApiKey || 'Not configured'} readOnly className="flex-1" />
                     <Button variant="outline" onClick={handleClearApiKey} disabled={!currentApiKey}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -283,9 +292,10 @@ export default function Settings({ onClose }: SettingsProps) {
 
                 {/* Update API Key */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Update API Key</label>
+                  <label htmlFor={updateApiKeyId} className="text-sm font-medium mb-2 block">Update API Key</label>
                   <div className="space-y-3">
                     <Input
+                      id={updateApiKeyId}
                       type="password"
                       placeholder="sk-..."
                       value={tempApiKey}
@@ -383,24 +393,27 @@ export default function Settings({ onClose }: SettingsProps) {
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
-                          <label className="text-sm font-medium">Name *</label>
+                          <label htmlFor={serverNameId} className="text-sm font-medium">Name *</label>
                           <Input
+                            id={serverNameId}
                             value={newServer.name}
                             onChange={(e) => setNewServer({ ...newServer, name: e.target.value })}
                             placeholder="My MCP Server"
                           />
                         </div>
                         <div>
-                          <label className="text-sm font-medium">URL *</label>
+                          <label htmlFor={serverUrlId} className="text-sm font-medium">URL *</label>
                           <Input
+                            id={serverUrlId}
                             value={newServer.url}
                             onChange={(e) => setNewServer({ ...newServer, url: e.target.value })}
                             placeholder="https://example.com/mcp"
                           />
                         </div>
                         <div>
-                          <label className="text-sm font-medium">Transport Type</label>
+                          <label htmlFor={transportTypeId} className="text-sm font-medium">Transport Type</label>
                           <select
+                            id={transportTypeId}
                             value={newServer.transportType}
                             onChange={(e) =>
                               setNewServer({
@@ -415,8 +428,9 @@ export default function Settings({ onClose }: SettingsProps) {
                           </select>
                         </div>
                         <div>
-                          <label className="text-sm font-medium">Description</label>
+                          <label htmlFor={serverDescriptionId} className="text-sm font-medium">Description</label>
                           <Textarea
+                            id={serverDescriptionId}
                             value={newServer.description}
                             onChange={(e) =>
                               setNewServer({ ...newServer, description: e.target.value })
@@ -427,10 +441,11 @@ export default function Settings({ onClose }: SettingsProps) {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Switch
+                            id={serverEnabledId}
                             checked={newServer.enabled}
                             onCheckedChange={(enabled) => setNewServer({ ...newServer, enabled })}
                           />
-                          <label className="text-sm">Enable server</label>
+                          <label htmlFor={serverEnabledId} className="text-sm">Enable server</label>
                         </div>
                         <div className="flex gap-2">
                           <Button
