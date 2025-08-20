@@ -1,16 +1,33 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Settings as SettingsIcon, Wifi, WifiOff, TestTube, Brain, Key, Wrench, X } from 'lucide-react';
-import { mcpManager } from '@/services/mcpManager';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+import {
+  Brain,
+  Key,
+  Plus,
+  Settings as SettingsIcon,
+  TestTube,
+  Trash2,
+  Wifi,
+  WifiOff,
+  Wrench,
+  X,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 
 interface SettingsProps {
@@ -35,19 +52,15 @@ export default function Settings({ onClose }: SettingsProps) {
     url: '',
     transportType: 'sse' as 'sse' | 'http',
     description: '',
-    enabled: true
+    enabled: true,
   });
 
   const [isTestingConnection, setIsTestingConnection] = useState(false);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setIsLoading(true);
-      
+
       // Load MCP servers
       const configs = await mcpManager.loadConfigurations();
       setServers(configs);
@@ -56,14 +69,18 @@ export default function Settings({ onClose }: SettingsProps) {
       // Load current API key (masked)
       const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
       if (result?.value) {
-        setCurrentApiKey('sk-...' + result.value.slice(-6));
+        setCurrentApiKey(`sk-...${result.value.slice(-6)}`);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   const handleUpdateApiKey = async () => {
     if (!tempApiKey.trim()) {
@@ -74,7 +91,7 @@ export default function Settings({ onClose }: SettingsProps) {
     setIsUpdatingKey(true);
     try {
       await SecureStoragePlugin.set({ key: 'openai_api_key', value: tempApiKey });
-      setCurrentApiKey('sk-...' + tempApiKey.slice(-6));
+      setCurrentApiKey(`sk-...${tempApiKey.slice(-6)}`);
       setTempApiKey('');
       alert('✅ API key updated successfully');
     } catch (error) {
@@ -86,7 +103,11 @@ export default function Settings({ onClose }: SettingsProps) {
   };
 
   const handleClearApiKey = async () => {
-    if (confirm('Are you sure you want to remove your API key? You\'ll need to re-enter it to use the chat.')) {
+    if (
+      confirm(
+        "Are you sure you want to remove your API key? You'll need to re-enter it to use the chat."
+      )
+    ) {
       try {
         await SecureStoragePlugin.remove({ key: 'openai_api_key' });
         setCurrentApiKey('');
@@ -112,7 +133,7 @@ export default function Settings({ onClose }: SettingsProps) {
         url: '',
         transportType: 'sse',
         description: '',
-        enabled: true
+        enabled: true,
       });
       setShowAddDialog(false);
       await loadSettings();
@@ -170,29 +191,29 @@ export default function Settings({ onClose }: SettingsProps) {
       name: 'Demo Tools (Built-in)',
       url: 'built-in://demo-tools',
       description: 'Built-in tools: calculator, time, text analyzer (always works)',
-      transportType: 'http' as const
+      transportType: 'http' as const,
     },
     {
       name: 'Local MCP Server Example',
       url: 'http://localhost:8000/mcp',
       description: 'Example local server URL (requires running local MCP server)',
-      transportType: 'http' as const
+      transportType: 'http' as const,
     },
     {
       name: 'Custom MCP Server',
       url: '',
       description: 'Add your own MCP server URL',
-      transportType: 'sse' as const
-    }
+      transportType: 'sse' as const,
+    },
   ];
 
-  const addPublicServer = (server: typeof publicServers[0]) => {
+  const addPublicServer = (server: (typeof publicServers)[0]) => {
     setNewServer({
       name: server.name,
       url: server.url,
       transportType: server.transportType,
       description: server.description,
-      enabled: true
+      enabled: true,
     });
     setShowAddDialog(true);
   };
@@ -253,11 +274,7 @@ export default function Settings({ onClose }: SettingsProps) {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Current API Key</label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      value={currentApiKey || 'Not configured'}
-                      readOnly
-                      className="flex-1"
-                    />
+                    <Input value={currentApiKey || 'Not configured'} readOnly className="flex-1" />
                     <Button variant="outline" onClick={handleClearApiKey} disabled={!currentApiKey}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -274,8 +291,8 @@ export default function Settings({ onClose }: SettingsProps) {
                       value={tempApiKey}
                       onChange={(e) => setTempApiKey(e.target.value)}
                     />
-                    <Button 
-                      onClick={handleUpdateApiKey} 
+                    <Button
+                      onClick={handleUpdateApiKey}
                       disabled={!tempApiKey.trim() || isUpdatingKey}
                       className="w-full"
                     >
@@ -298,8 +315,20 @@ export default function Settings({ onClose }: SettingsProps) {
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  <p>Your API key is stored securely on your device and never sent to our servers.</p>
-                  <p>Get your API key from <a href="https://platform.openai.com/api-keys" className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></p>
+                  <p>
+                    Your API key is stored securely on your device and never sent to our servers.
+                  </p>
+                  <p>
+                    Get your API key from{' '}
+                    <a
+                      href="https://platform.openai.com/api-keys"
+                      className="text-blue-500 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      OpenAI Platform
+                    </a>
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -373,7 +402,12 @@ export default function Settings({ onClose }: SettingsProps) {
                           <label className="text-sm font-medium">Transport Type</label>
                           <select
                             value={newServer.transportType}
-                            onChange={(e) => setNewServer({ ...newServer, transportType: e.target.value as 'sse' | 'http' })}
+                            onChange={(e) =>
+                              setNewServer({
+                                ...newServer,
+                                transportType: e.target.value as 'sse' | 'http',
+                              })
+                            }
                             className="w-full p-2 border rounded-md"
                           >
                             <option value="sse">SSE (Server-Sent Events)</option>
@@ -384,7 +418,9 @@ export default function Settings({ onClose }: SettingsProps) {
                           <label className="text-sm font-medium">Description</label>
                           <Textarea
                             value={newServer.description}
-                            onChange={(e) => setNewServer({ ...newServer, description: e.target.value })}
+                            onChange={(e) =>
+                              setNewServer({ ...newServer, description: e.target.value })
+                            }
                             placeholder="Optional description..."
                             rows={2}
                           />
@@ -424,7 +460,8 @@ export default function Settings({ onClose }: SettingsProps) {
                           <SettingsIcon className="h-12 w-12 text-muted-foreground mb-4" />
                           <h3 className="text-lg font-medium mb-2">No MCP Servers Configured</h3>
                           <p className="text-muted-foreground mb-4">
-                            Add your first MCP server to enhance your AI conversations with external tools and data.
+                            Add your first MCP server to enhance your AI conversations with external
+                            tools and data.
                           </p>
                           <Button onClick={() => setShowAddDialog(true)}>
                             <Plus className="h-4 w-4 mr-2" />
@@ -457,9 +494,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                       {server.transportType.toUpperCase()}
                                     </Badge>
                                   </div>
-                                  <p className="text-sm text-muted-foreground mb-2">
-                                    {server.url}
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mb-2">{server.url}</p>
                                   {server.description && (
                                     <p className="text-sm text-muted-foreground mb-2">
                                       {server.description}
@@ -479,7 +514,9 @@ export default function Settings({ onClose }: SettingsProps) {
                                 <div className="flex items-center gap-2">
                                   <Switch
                                     checked={server.enabled}
-                                    onCheckedChange={(enabled) => handleToggleServer(server.id, enabled)}
+                                    onCheckedChange={(enabled) =>
+                                      handleToggleServer(server.id, enabled)
+                                    }
                                   />
                                   <Button
                                     variant="outline"

@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react';
-import { generateText, tool, stepCountIs } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { z } from 'zod';
+import { generateText, stepCountIs, tool } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
+import { ChevronDown, ChevronRight, Settings as SettingsIcon, Wrench } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { z } from 'zod';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Settings as SettingsIcon, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
-import Settings from './Settings';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import { mcpManager } from '@/services/mcpManager';
 import MarkdownRenderer from './MathRenderer';
+import Settings from './Settings';
 
 interface ToolCall {
   id: string;
@@ -76,7 +76,6 @@ export default function ChatView() {
     }
   };
 
-
   const sendMessage = async (content: string) => {
     if (!content.trim() || !apiKey) return;
 
@@ -86,67 +85,71 @@ export default function ChatView() {
       content: content.trim(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
       const openai = createOpenAI({ apiKey });
-      
+
       // Create demo tools for testing MCP functionality (works on mobile)
       const tools = {
         calculator: tool({
           description: 'Perform basic mathematical calculations',
           inputSchema: z.object({
-            expression: z.string().describe('Mathematical expression to evaluate (e.g., "2 + 2", "10 * 5")')
+            expression: z
+              .string()
+              .describe('Mathematical expression to evaluate (e.g., "2 + 2", "10 * 5")'),
           }),
           execute: async ({ expression }: { expression: string }) => {
             try {
               // Simple safe evaluation for demo purposes
-              const result = Function(`"use strict"; return (${expression.replace(/[^0-9+\-*/.() ]/g, '')})`)();
+              const result = Function(
+                `"use strict"; return (${expression.replace(/[^0-9+\-*/.() ]/g, '')})`
+              )();
               return { calculation: expression, result: result.toString() };
             } catch {
               return { calculation: expression, result: 'Error: Invalid expression' };
             }
-          }
+          },
         }),
         timeInfo: tool({
           description: 'Get current time and date information',
           inputSchema: z.object({
-            timezone: z.string().optional().describe('Timezone (optional, defaults to local)')
+            timezone: z.string().optional().describe('Timezone (optional, defaults to local)'),
           }),
           execute: async ({ timezone }: { timezone?: string }) => {
             const now = new Date();
             return {
               currentTime: now.toLocaleString(),
               timestamp: now.getTime(),
-              timezone: timezone || 'local'
+              timezone: timezone || 'local',
             };
-          }
+          },
         }),
         textAnalyzer: tool({
           description: 'Analyze text for word count, character count, etc.',
           inputSchema: z.object({
-            text: z.string().describe('Text to analyze')
+            text: z.string().describe('Text to analyze'),
           }),
           execute: async ({ text }: { text: string }) => {
             return {
               text: text,
               wordCount: text.split(/\s+/).filter((word: string) => word.length > 0).length,
               characterCount: text.length,
-              characterCountNoSpaces: text.replace(/\s/g, '').length
+              characterCountNoSpaces: text.replace(/\s/g, '').length,
             };
-          }
-        })
+          },
+        }),
       };
 
       const result = await generateText({
         model: openai('gpt-4o-mini'),
-        messages: [...messages, userMessage].map(msg => ({
+        messages: [...messages, userMessage].map((msg) => ({
           role: msg.role,
           content: msg.content,
         })),
         tools,
-        stopWhen: stepCountIs(5) // Enable multi-step: AI can use tools and then respond
+        stopWhen: stepCountIs(5), // Enable multi-step: AI can use tools and then respond
       });
 
       // Extract tool calls from the result (multi-step approach)
@@ -155,12 +158,17 @@ export default function ChatView() {
         for (const step of result.steps) {
           if (step.toolCalls) {
             for (const toolCall of step.toolCalls) {
-              const toolResult = step.toolResults?.find(r => r.toolCallId === toolCall.toolCallId);
+              const toolResult = step.toolResults?.find(
+                (r) => r.toolCallId === toolCall.toolCallId
+              );
               toolCalls.push({
                 id: toolCall.toolCallId,
                 name: toolCall.toolName,
-                input: ((toolCall as any).input || (toolCall as any).args || (toolCall as any).arguments || {}) as Record<string, unknown>,
-                result: toolResult
+                input: ((toolCall as any).input ||
+                  (toolCall as any).args ||
+                  (toolCall as any).arguments ||
+                  {}) as Record<string, unknown>,
+                result: toolResult,
               });
             }
           }
@@ -175,32 +183,32 @@ export default function ChatView() {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: '', // Empty content for tool-only message
-          toolCalls: toolCalls
+          toolCalls: toolCalls,
         };
         newMessages.push(toolCallMessage);
       }
 
       // Add AI response as separate message if there's text content
-      if (result.text && result.text.trim()) {
+      if (result.text?.trim()) {
         const assistantMessage: Message = {
           id: (Date.now() + 2).toString(),
           role: 'assistant',
-          content: result.text
+          content: result.text,
         };
         newMessages.push(assistantMessage);
       }
 
-      setMessages(prev => [...prev, ...newMessages]);
+      setMessages((prev) => [...prev, ...newMessages]);
     } catch (error) {
       console.error('Chat error:', error);
-      
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please check your API key and try again.',
       };
 
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -218,38 +226,31 @@ export default function ChatView() {
 
   const ToolCallDisplay = ({ toolCall }: { toolCall: ToolCall }) => {
     const isExpanded = expandedToolCalls.has(toolCall.id);
-    
+
     return (
       <div className="mt-2">
         <button
           onClick={() => toggleToolCallExpansion(toolCall.id)}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          {isExpanded ? (
-            <ChevronDown className="h-3 w-3" />
-          ) : (
-            <ChevronRight className="h-3 w-3" />
-          )}
+          {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
           <Wrench className="h-3 w-3" />
           <span className="font-mono">{toolCall.name}</span>
         </button>
-        
+
         {isExpanded && (
           <div className="mt-2 p-3 bg-muted rounded-md text-xs space-y-2">
             <div>
               <span className="font-medium text-foreground">Input:</span>
-              <pre className="mt-1 overflow-x-auto">
-                {JSON.stringify(toolCall.input, null, 2)}
-              </pre>
+              <pre className="mt-1 overflow-x-auto">{JSON.stringify(toolCall.input, null, 2)}</pre>
             </div>
             {toolCall.result !== undefined && toolCall.result !== null && (
               <div>
                 <span className="font-medium text-foreground">Result:</span>
                 <pre className="mt-1 overflow-x-auto">
-                  {typeof toolCall.result === 'string' 
-                    ? toolCall.result 
-                    : JSON.stringify(toolCall.result, null, 2)
-                  }
+                  {typeof toolCall.result === 'string'
+                    ? toolCall.result
+                    : JSON.stringify(toolCall.result, null, 2)}
                 </pre>
               </div>
             )}
@@ -285,11 +286,7 @@ export default function ChatView() {
                   }
                 }}
               />
-              <Button 
-                onClick={saveApiKey} 
-                className="w-full"
-                disabled={!tempApiKey.trim()}
-              >
+              <Button onClick={saveApiKey} className="w-full" disabled={!tempApiKey.trim()}>
                 Save API Key
               </Button>
             </div>
@@ -307,11 +304,7 @@ export default function ChatView() {
       {/* Header */}
       <div className="border-b p-4 flex justify-between items-center">
         <h1 className="text-xl font-semibold">caw caw</h1>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setShowSettings(!showSettings)}
-        >
+        <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
           <SettingsIcon className="h-4 w-4" />
         </Button>
       </div>
@@ -320,77 +313,89 @@ export default function ChatView() {
       <ScrollArea className="flex-1">
         <div className="min-h-full flex flex-col justify-end p-2">
           <div className="space-y-3 max-w-3xl mx-auto w-full">
-          {messages.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              <p>Start a conversation with AI</p>
-            </div>
-          ) : (
-            messages.map((message) => (
-              <div key={message.id} className={`flex gap-3 ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}>
-                {message.role === 'assistant' && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                )}
-                <Card className={`max-w-[80%] py-0 rounded-2xl ${
-                  message.role === 'user' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-muted'
-                }`}>
+            {messages.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <p>Start a conversation with AI</p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.role === 'assistant' && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>AI</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <Card
+                    className={`max-w-[80%] py-0 rounded-2xl ${
+                      message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-muted'
+                    }`}
+                  >
+                    <CardContent className="px-3 py-2">
+                      {message.content && (
+                        <div>
+                          <MarkdownRenderer content={message.content} />
+                        </div>
+                      )}
+                      {message.toolCalls && message.toolCalls.length > 0 && (
+                        <div className={`space-y-1 ${message.content ? 'mt-2' : ''}`}>
+                          {message.toolCalls.map((toolCall) => (
+                            <ToolCallDisplay key={toolCall.id} toolCall={toolCall} />
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  {message.role === 'user' && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>You</AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              ))
+            )}
+            {isLoading && (
+              <div className="flex gap-3 justify-start">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>AI</AvatarFallback>
+                </Avatar>
+                <Card className="bg-muted py-0 rounded-2xl">
                   <CardContent className="px-3 py-2">
-                    {message.content && (
-                      <div>
-                        <MarkdownRenderer content={message.content} />
-                      </div>
-                    )}
-                    {message.toolCalls && message.toolCalls.length > 0 && (
-                      <div className={`space-y-1 ${message.content ? 'mt-2' : ''}`}>
-                        {message.toolCalls.map((toolCall) => (
-                          <ToolCallDisplay key={toolCall.id} toolCall={toolCall} />
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
+                      <div
+                        className="w-2 h-2 bg-current rounded-full animate-bounce"
+                        style={{ animationDelay: '0.1s' }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-current rounded-full animate-bounce"
+                        style={{ animationDelay: '0.2s' }}
+                      ></div>
+                    </div>
                   </CardContent>
                 </Card>
-                {message.role === 'user' && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>You</AvatarFallback>
-                  </Avatar>
-                )}
               </div>
-            ))
-          )}
-          {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>AI</AvatarFallback>
-              </Avatar>
-              <Card className="bg-muted py-0 rounded-2xl">
-                <CardContent className="px-3 py-2">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </ScrollArea>
 
       {/* Input Area */}
       <div className="border-t p-4">
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          if (input.trim()) {
-            sendMessage(input);
-            setInput('');
-          }
-        }} className="max-w-3xl mx-auto">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (input.trim()) {
+              sendMessage(input);
+              setInput('');
+            }
+          }}
+          className="max-w-3xl mx-auto"
+        >
           <div className="flex gap-2">
             <Textarea
               value={input}

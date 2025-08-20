@@ -1,7 +1,7 @@
-import ChatView from './components/ChatView'
+import ChatView from './components/ChatView';
 
 function App() {
-  return <ChatView />
+  return <ChatView />;
 }
 
-export default App
+export default App;

@@ -1,5 +1,5 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import type { MCPServerConfig, MCPManagerConfig, MCPServerStatus, MCPToolInfo } from '@/types/mcp';
+import type { MCPManagerConfig, MCPServerConfig, MCPServerStatus, MCPToolInfo } from '@/types/mcp';
 
 const MCP_STORAGE_KEY = 'mcp_server_configs';
 
@@ -34,11 +34,11 @@ class MCPManager {
     try {
       const config: MCPManagerConfig = {
         servers: this.serverConfigs,
-        enabledServers: this.serverConfigs.filter(s => s.enabled).map(s => s.id)
+        enabledServers: this.serverConfigs.filter((s) => s.enabled).map((s) => s.id),
       };
-      await SecureStoragePlugin.set({ 
-        key: MCP_STORAGE_KEY, 
-        value: JSON.stringify(config) 
+      await SecureStoragePlugin.set({
+        key: MCP_STORAGE_KEY,
+        value: JSON.stringify(config),
       });
     } catch (error) {
       console.error('Failed to save MCP configurations:', error);
@@ -51,12 +51,12 @@ class MCPManager {
     const newConfig: MCPServerConfig = {
       ...config,
       id: `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
     this.serverConfigs.push(newConfig);
     await this.saveConfigurations();
-    
+
     // Test connection if enabled
     if (newConfig.enabled) {
       await this.connectToServer(newConfig.id);
@@ -67,7 +67,7 @@ class MCPManager {
 
   // Update server configuration
   async updateServer(serverId: string, updates: Partial<MCPServerConfig>): Promise<void> {
-    const index = this.serverConfigs.findIndex(s => s.id === serverId);
+    const index = this.serverConfigs.findIndex((s) => s.id === serverId);
     if (index === -1) throw new Error('Server not found');
 
     const oldConfig = this.serverConfigs[index];
@@ -86,14 +86,14 @@ class MCPManager {
   // Remove server configuration
   async removeServer(serverId: string): Promise<void> {
     await this.disconnectFromServer(serverId);
-    this.serverConfigs = this.serverConfigs.filter(s => s.id !== serverId);
+    this.serverConfigs = this.serverConfigs.filter((s) => s.id !== serverId);
     this.serverStatuses.delete(serverId);
     await this.saveConfigurations();
   }
 
   // Connect to a specific MCP server
   async connectToServer(serverId: string): Promise<void> {
-    const config = this.serverConfigs.find(s => s.id === serverId);
+    const config = this.serverConfigs.find((s) => s.id === serverId);
     if (!config || !config.enabled) return;
 
     try {
@@ -107,20 +107,20 @@ class MCPManager {
             return {
               calculator: { description: 'Perform basic mathematical calculations' },
               timeInfo: { description: 'Get current time and date information' },
-              textAnalyzer: { description: 'Analyze text for word count, character count, etc.' }
+              textAnalyzer: { description: 'Analyze text for word count, character count, etc.' },
             };
           },
           async close() {
             // Mock close
-          }
+          },
         };
-        
+
         this.clients.set(serverId, mockClient);
         this.serverStatuses.set(serverId, {
           id: serverId,
           connected: true,
           lastChecked: Date.now(),
-          toolCount: 3 // calculator, timeInfo, textAnalyzer
+          toolCount: 3, // calculator, timeInfo, textAnalyzer
         });
         console.log(`Built-in demo tools enabled: ${config.name}`);
         return;
@@ -134,7 +134,7 @@ class MCPManager {
         id: serverId,
         connected: false,
         error: error instanceof Error ? error.message : 'Connection failed',
-        lastChecked: Date.now()
+        lastChecked: Date.now(),
       });
       throw error;
     }
@@ -151,36 +151,36 @@ class MCPManager {
       }
       this.clients.delete(serverId);
     }
-    
+
     const status = this.serverStatuses.get(serverId);
     if (status) {
       this.serverStatuses.set(serverId, {
         ...status,
         connected: false,
-        lastChecked: Date.now()
+        lastChecked: Date.now(),
       });
     }
   }
 
   // Connect to all enabled servers
   async connectToEnabledServers(): Promise<void> {
-    const enabledServers = this.serverConfigs.filter(s => s.enabled);
-    const connectionPromises = enabledServers.map(server => 
-      this.connectToServer(server.id).catch(error => {
+    const enabledServers = this.serverConfigs.filter((s) => s.enabled);
+    const connectionPromises = enabledServers.map((server) =>
+      this.connectToServer(server.id).catch((error) => {
         console.error(`Failed to connect to ${server.name}:`, error);
       })
     );
-    
+
     await Promise.allSettled(connectionPromises);
   }
 
   // Get all tools from connected servers
   async getAllTools(): Promise<Record<string, unknown>> {
     const allTools: Record<string, unknown> = {};
-    
+
     for (const [serverId, client] of this.clients) {
       try {
-        const serverConfig = this.serverConfigs.find(s => s.id === serverId);
+        const serverConfig = this.serverConfigs.find((s) => s.id === serverId);
         if (!serverConfig?.enabled) continue;
 
         const tools = await client.listTools();
@@ -192,7 +192,7 @@ class MCPManager {
               ...toolDef,
               _mcpServerId: serverId,
               _mcpServerName: serverConfig.name,
-              _mcpOriginalName: toolName
+              _mcpOriginalName: toolName,
             };
           }
         }
@@ -207,10 +207,10 @@ class MCPManager {
   // Get tool info for UI display
   async getToolsInfo(): Promise<MCPToolInfo[]> {
     const toolsInfo: MCPToolInfo[] = [];
-    
+
     for (const [serverId, client] of this.clients) {
       try {
-        const serverConfig = this.serverConfigs.find(s => s.id === serverId);
+        const serverConfig = this.serverConfigs.find((s) => s.id === serverId);
         if (!serverConfig?.enabled) continue;
 
         const tools = await client.listTools();
@@ -219,9 +219,11 @@ class MCPManager {
             toolsInfo.push({
               name: toolName,
               description: (toolDef as Record<string, unknown>).description as string | undefined,
-              inputSchema: (toolDef as Record<string, unknown>).inputSchema as Record<string, unknown> | undefined,
+              inputSchema: (toolDef as Record<string, unknown>).inputSchema as
+                | Record<string, unknown>
+                | undefined,
               serverId,
-              serverName: serverConfig.name
+              serverName: serverConfig.name,
             });
           }
         }
@@ -261,7 +263,7 @@ class MCPManager {
 
   // Cleanup all connections
   async cleanup(): Promise<void> {
-    const cleanupPromises = Array.from(this.clients.keys()).map(serverId =>
+    const cleanupPromises = Array.from(this.clients.keys()).map((serverId) =>
       this.disconnectFromServer(serverId)
     );
     await Promise.allSettled(cleanupPromises);
