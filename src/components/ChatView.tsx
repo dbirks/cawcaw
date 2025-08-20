@@ -1,42 +1,80 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { generateText, stepCountIs, tool } from 'ai';
+import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { ChevronDown, ChevronRight, Settings as SettingsIcon, Wrench } from 'lucide-react';
+import { MicIcon, Settings as SettingsIcon, WrenchIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+// AI Elements imports
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation';
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+} from '@/components/ai-elements/message';
+import {
+  PromptInput,
+  PromptInputButton,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
+} from '@/components/ai-elements/prompt-input';
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning';
+import { Response } from '@/components/ai-elements/response';
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from '@/components/ai-elements/tool';
+
+// UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
+
 import { mcpManager } from '@/services/mcpManager';
-import MarkdownRenderer from './MathRenderer';
 import Settings from './Settings';
 
-interface ToolCall {
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-  result?: unknown;
+// Updated interfaces for AI Elements compatibility
+interface MessagePart {
+  type: 'text' | string; // string to allow for 'tool-*' types
+  text?: string;
+  toolName?: string;
+  input?: Record<string, unknown>;
+  output?: unknown;
+  state?: 'input-available' | 'input-streaming' | 'output-available' | 'output-error';
+  errorText?: string;
 }
 
-interface Message {
+interface UIMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  content: string;
-  toolCalls?: ToolCall[];
+  parts: MessagePart[];
 }
 
 export default function ChatView() {
+  // Existing state
   const [apiKey, setApiKey] = useState<string>('');
   const [tempApiKey, setTempApiKey] = useState<string>('');
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(true);
   const [input, setInput] = useState<string>('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [expandedToolCalls, setExpandedToolCalls] = useState<Set<string>>(new Set());
+
+  // New state for AI Elements features
+  const [reasoningText, setReasoningText] = useState<string>('');
+  const [isThinking, setIsThinking] = useState<boolean>(false);
+  const [toolsModalOpen, setToolsModalOpen] = useState<boolean>(false);
+  const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
 
   useEffect(() => {
     // Check if we have a stored API key and initialize MCP
@@ -79,19 +117,22 @@ export default function ChatView() {
   const sendMessage = async (content: string) => {
     if (!content.trim() || !apiKey) return;
 
-    const userMessage: Message = {
+    // Create user message with parts structure
+    const userMessage: UIMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: content.trim(),
+      parts: [{ type: 'text', text: content.trim() }],
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
+    setStatus('submitted');
+    setIsThinking(true);
+    setReasoningText('🤔 AI is processing your request...\n');
 
     try {
       const openai = createOpenAI({ apiKey });
 
-      // Create demo tools for testing MCP functionality (works on mobile)
+      // Create demo tools for testing MCP functionality
       const tools = {
         calculator: tool({
           description: 'Perform basic mathematical calculations',
@@ -142,18 +183,26 @@ export default function ChatView() {
         }),
       };
 
+      // Convert messages to the format expected by generateText
+      const formattedMessages = messages.concat(userMessage).map((msg) => ({
+        role: msg.role,
+        content: msg.parts.find((p) => p.type === 'text')?.text || '',
+      }));
+
+      setStatus('streaming');
+      setReasoningText(prev => prev + '⚙️ Generating response with available tools...\n');
+
       const result = await generateText({
         model: openai('gpt-4o-mini'),
-        messages: [...messages, userMessage].map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        })),
+        messages: formattedMessages,
         tools,
         stopWhen: stepCountIs(5), // Enable multi-step: AI can use tools and then respond
       });
 
-      // Extract tool calls from the result (multi-step approach)
-      const toolCalls: ToolCall[] = [];
+      // Create assistant message with parts
+      const assistantParts: MessagePart[] = [];
+
+      // Extract tool calls from the result
       if (result.steps) {
         for (const step of result.steps) {
           if (step.toolCalls) {
@@ -161,103 +210,160 @@ export default function ChatView() {
               const toolResult = step.toolResults?.find(
                 (r) => r.toolCallId === toolCall.toolCallId
               );
-              toolCalls.push({
-                id: toolCall.toolCallId,
-                name: toolCall.toolName,
+              
+              setReasoningText(prev => prev + `🔧 Using tool: ${toolCall.toolName}\n`);
+              
+              assistantParts.push({
+                type: `tool-${toolCall.toolName}`,
+                toolName: toolCall.toolName,
                 input: ((toolCall as any).input ||
                   (toolCall as any).args ||
                   (toolCall as any).arguments ||
                   {}) as Record<string, unknown>,
-                result: toolResult,
+                output: toolResult,
+                state: toolResult ? 'output-available' : 'output-error',
+                errorText: toolResult ? undefined : 'Tool execution failed',
               });
             }
           }
         }
       }
 
-      const newMessages: Message[] = [];
-
-      // Add tool calls as separate message if they exist
-      if (toolCalls.length > 0) {
-        const toolCallMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: '', // Empty content for tool-only message
-          toolCalls: toolCalls,
-        };
-        newMessages.push(toolCallMessage);
-      }
-
-      // Add AI response as separate message if there's text content
+      // Add text response if available
       if (result.text?.trim()) {
-        const assistantMessage: Message = {
-          id: (Date.now() + 2).toString(),
-          role: 'assistant',
-          content: result.text,
-        };
-        newMessages.push(assistantMessage);
+        assistantParts.push({
+          type: 'text',
+          text: result.text,
+        });
       }
 
-      setMessages((prev) => [...prev, ...newMessages]);
+      const assistantMessage: UIMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        parts: assistantParts,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+      setReasoningText(prev => prev + '✅ Response generated successfully!\n');
+      setStatus('ready');
+
+      // Auto-hide reasoning panel after a delay
+      setTimeout(() => {
+        setIsThinking(false);
+      }, 1500);
     } catch (error) {
       console.error('Chat error:', error);
 
-      const errorMessage: Message = {
+      const errorMessage: UIMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please check your API key and try again.',
+        parts: [
+          {
+            type: 'text',
+            text: 'Sorry, I encountered an error. Please check your API key and try again.',
+          },
+        ],
       };
 
       setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+      setStatus('error');
+      setIsThinking(false);
     }
   };
 
-  const toggleToolCallExpansion = (toolCallId: string) => {
-    const newExpanded = new Set(expandedToolCalls);
-    if (newExpanded.has(toolCallId)) {
-      newExpanded.delete(toolCallId);
-    } else {
-      newExpanded.add(toolCallId);
-    }
-    setExpandedToolCalls(newExpanded);
+  const handleSend = (content: string) => {
+    sendMessage(content);
   };
 
-  const ToolCallDisplay = ({ toolCall }: { toolCall: ToolCall }) => {
-    const isExpanded = expandedToolCalls.has(toolCall.id);
+  const handleVoiceInput = async () => {
+    try {
+      // Request microphone permission and start recording
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Create MediaRecorder to capture audio
+      const mediaRecorder = new MediaRecorder(stream);
+      const audioChunks: Blob[] = [];
+      
+      // Collect audio data
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+      
+      // Handle recording completion
+      mediaRecorder.onstop = async () => {
+        try {
+          // Create audio blob from chunks
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          
+          // Convert to ArrayBuffer for transcription
+          const audioData = new Uint8Array(await audioBlob.arrayBuffer());
+          
+          // Set processing status
+          setStatus('submitted');
+          setReasoningText('🎤 Processing voice input...\n');
+          setIsThinking(true);
+          
+          // Transcribe using OpenAI Whisper
+          const openai = createOpenAI({ apiKey });
+          const transcript = await transcribe({
+            model: openai.transcription('whisper-1'), // Use Whisper model
+            audio: audioData
+          });
+          
+          const transcribedText = transcript.text?.trim();
+          if (transcribedText) {
+            setReasoningText(prev => prev + `📝 Transcribed: "${transcribedText}"\n`);
+            
+            // Send the transcribed message
+            await sendMessage(transcribedText);
+          } else {
+            setStatus('error');
+            setReasoningText(prev => prev + '❌ No speech detected\n');
+            setTimeout(() => setIsThinking(false), 2000);
+          }
+          
+        } catch (error) {
+          console.error('Transcription error:', error);
+          setStatus('error');
+          setReasoningText(prev => prev + '❌ Voice transcription failed\n');
+          setTimeout(() => setIsThinking(false), 2000);
+        } finally {
+          // Stop all tracks to release microphone
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+      
+      // Start recording for 5 seconds
+      mediaRecorder.start();
+      setStatus('streaming');
+      setReasoningText('🎤 Listening... (5 seconds)\n');
+      setIsThinking(true);
+      
+      // Auto-stop after 5 seconds
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Voice input error:', error);
+      alert('Microphone access denied or not available');
+    }
+  };
 
-    return (
-      <div className="mt-2">
-        <button
-          onClick={() => toggleToolCallExpansion(toolCall.id)}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-          <Wrench className="h-3 w-3" />
-          <span className="font-mono">{toolCall.name}</span>
-        </button>
+  const toggleToolsModal = () => {
+    setToolsModalOpen(!toolsModalOpen);
+  };
 
-        {isExpanded && (
-          <div className="mt-2 p-3 bg-muted rounded-md text-xs space-y-2">
-            <div>
-              <span className="font-medium text-foreground">Input:</span>
-              <pre className="mt-1 overflow-x-auto">{JSON.stringify(toolCall.input, null, 2)}</pre>
-            </div>
-            {toolCall.result !== undefined && toolCall.result !== null && (
-              <div>
-                <span className="font-medium text-foreground">Result:</span>
-                <pre className="mt-1 overflow-x-auto">
-                  {typeof toolCall.result === 'string'
-                    ? toolCall.result
-                    : JSON.stringify(toolCall.result, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.trim() && status === 'ready') {
+      handleSend(input);
+      setInput('');
+    }
   };
 
   // Show Settings screen
@@ -265,6 +371,7 @@ export default function ChatView() {
     return <Settings onClose={() => setShowSettings(false)} />;
   }
 
+  // Show API Key input screen
   if (showApiKeyInput) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -304,121 +411,122 @@ export default function ChatView() {
       {/* Header */}
       <div className="border-b p-4 flex justify-between items-center">
         <h1 className="text-xl font-semibold">caw caw</h1>
-        <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)}>
+        <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
           <SettingsIcon className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Chat Messages */}
-      <ScrollArea className="flex-1">
-        <div className="min-h-full flex flex-col justify-end p-2">
-          <div className="space-y-3 max-w-3xl mx-auto w-full">
-            {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <p>Start a conversation with AI</p>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  {message.role === 'assistant' && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>AI</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <Card
-                    className={`max-w-[80%] py-0 rounded-2xl ${
-                      message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-muted'
-                    }`}
-                  >
-                    <CardContent className="px-3 py-2">
-                      {message.content && (
-                        <div>
-                          <MarkdownRenderer content={message.content} />
-                        </div>
-                      )}
-                      {message.toolCalls && message.toolCalls.length > 0 && (
-                        <div className={`space-y-1 ${message.content ? 'mt-2' : ''}`}>
-                          {message.toolCalls.map((toolCall) => (
-                            <ToolCallDisplay key={toolCall.id} toolCall={toolCall} />
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  {message.role === 'user' && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>You</AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              ))
-            )}
-            {isLoading && (
-              <div className="flex gap-3 justify-start">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-                <Card className="bg-muted py-0 rounded-2xl">
-                  <CardContent className="px-3 py-2">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-current rounded-full animate-bounce"
-                        style={{ animationDelay: '0.1s' }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-current rounded-full animate-bounce"
-                        style={{ animationDelay: '0.2s' }}
-                      ></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-        </div>
-      </ScrollArea>
+      {/* Reasoning Panel */}
+      <Reasoning className="mx-4 mt-4" isStreaming={isThinking} defaultOpen={false}>
+        <ReasoningTrigger />
+        <ReasoningContent>{reasoningText}</ReasoningContent>
+      </Reasoning>
 
-      {/* Input Area */}
+      {/* Main Conversation */}
+      <Conversation className="flex-1">
+        <ConversationContent>
+          {messages.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              <p>Start a conversation with AI</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <Message key={message.id} from={message.role}>
+                  <MessageContent>
+                    {message.parts.map((part, idx) => {
+                      if (part.type === 'text') {
+                        return (
+                          <Response key={`text-${idx}`}>
+                            {part.text || ''}
+                          </Response>
+                        );
+                      } else if (part.type.startsWith('tool-')) {
+                        return (
+                          <Tool key={`tool-${idx}`} defaultOpen={false}>
+                            <ToolHeader type={part.toolName || part.type} state={part.state} />
+                            <ToolContent>
+                              <ToolInput input={part.input} />
+                              {part.state === 'output-available' && (
+                                <ToolOutput
+                                  output={<Response>{String(part.output || '')}</Response>}
+                                  errorText={part.errorText}
+                                />
+                              )}
+                            </ToolContent>
+                          </Tool>
+                        );
+                      }
+                      return null;
+                    })}
+                  </MessageContent>
+                  <MessageAvatar
+                    src={message.role === 'assistant' ? '/robot-icon.png' : '/user-icon.png'}
+                    name={message.role === 'assistant' ? 'Assistant' : 'You'}
+                  />
+                </Message>
+              ))}
+            </div>
+          )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+
+      {/* Input Area with AI Elements */}
       <div className="border-t p-4">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (input.trim()) {
-              sendMessage(input);
-              setInput('');
-            }
-          }}
-          className="max-w-3xl mx-auto"
-        >
-          <div className="flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              className="min-h-[44px] resize-none"
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (input.trim()) {
-                    sendMessage(input);
-                    setInput('');
-                  }
-                }
-              }}
-            />
-            <Button type="submit" disabled={!input.trim() || isLoading}>
-              Send
-            </Button>
-          </div>
-        </form>
+        <PromptInput onSubmit={handleFormSubmit}>
+          <PromptInputTextarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            disabled={status === 'streaming'}
+          />
+          <PromptInputToolbar>
+            <PromptInputTools>
+              {/* Tools toggle button */}
+              <PromptInputButton type="button" onClick={toggleToolsModal}>
+                <WrenchIcon size={18} />
+              </PromptInputButton>
+              {/* Microphone button */}
+              <PromptInputButton type="button" onClick={handleVoiceInput}>
+                <MicIcon size={18} />
+              </PromptInputButton>
+            </PromptInputTools>
+            <PromptInputSubmit disabled={!input.trim() || status === 'streaming'} status={status} />
+          </PromptInputToolbar>
+        </PromptInput>
       </div>
+
+      {/* Tools Selection Modal */}
+      <Dialog open={toolsModalOpen} onOpenChange={setToolsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Tools</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Available demo tools (MCP integration coming soon):
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm">Calculator</span>
+                <span className="text-xs text-muted-foreground">Always enabled</span>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm">Time Info</span>
+                <span className="text-xs text-muted-foreground">Always enabled</span>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm">Text Analyzer</span>
+                <span className="text-xs text-muted-foreground">Always enabled</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setToolsModalOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
