@@ -75,11 +75,11 @@ jobs:
         bundler-cache: true
         working-directory: ios
         
-    - name: 📱 Select Xcode 15.4
+    - name: 📱 Select Xcode 15.0
       run: |
-        sudo xcode-select -s /Applications/Xcode_15.4.app
+        sudo xcode-select -s /Applications/Xcode_15.0.app
         xcodebuild -version
-        echo "✅ Xcode 15.4 selected for stable iOS SDK support"
+        echo "✅ Xcode 15.0 selected for stable iOS SDK support"
         
     - name: 📱 Sync Capacitor iOS
       run: |
