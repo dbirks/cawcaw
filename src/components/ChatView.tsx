@@ -1,7 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { MicIcon, Settings as SettingsIcon, WrenchIcon } from 'lucide-react';
+import { BotIcon, MicIcon, Settings as SettingsIcon, WrenchIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 
@@ -74,6 +74,8 @@ export default function ChatView() {
 
   // New state for AI Elements features
   const [toolsModalOpen, setToolsModalOpen] = useState<boolean>(false);
+  const [modelModalOpen, setModelModalOpen] = useState<boolean>(false);
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
 
   useEffect(() => {
@@ -85,6 +87,12 @@ export default function ChatView() {
         if (result?.value) {
           setApiKey(result.value);
           setShowApiKeyInput(false);
+        }
+
+        // Load selected model
+        const modelResult = await SecureStoragePlugin.get({ key: 'selected_model' });
+        if (modelResult?.value) {
+          setSelectedModel(modelResult.value);
         }
 
         // Initialize MCP servers
@@ -190,7 +198,7 @@ export default function ChatView() {
       setStatus('streaming');
 
       const result = await generateText({
-        model: openai('gpt-4o-mini'),
+        model: openai(selectedModel),
         messages: formattedMessages,
         tools,
         stopWhen: stepCountIs(5), // Enable multi-step: AI can use tools and then respond
@@ -333,6 +341,22 @@ export default function ChatView() {
     setToolsModalOpen(!toolsModalOpen);
   };
 
+  const toggleModelModal = () => {
+    setModelModalOpen(!modelModalOpen);
+  };
+
+  const handleModelSelect = async (modelId: string) => {
+    setSelectedModel(modelId);
+    setModelModalOpen(false);
+    
+    // Save selected model to secure storage
+    try {
+      await SecureStoragePlugin.set({ key: 'selected_model', value: modelId });
+    } catch (error) {
+      console.error('Failed to save selected model:', error);
+    }
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && status === 'ready') {
@@ -455,6 +479,10 @@ export default function ChatView() {
               <PromptInputButton type="button" onClick={toggleToolsModal}>
                 <WrenchIcon size={18} />
               </PromptInputButton>
+              {/* Model switcher button */}
+              <PromptInputButton type="button" onClick={toggleModelModal}>
+                <BotIcon size={18} />
+              </PromptInputButton>
               {/* Microphone button */}
               <PromptInputButton type="button" onClick={handleVoiceInput}>
                 <MicIcon size={18} />
@@ -492,6 +520,132 @@ export default function ChatView() {
           </div>
           <DialogFooter>
             <Button onClick={() => setToolsModalOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Model Selection Modal */}
+      <Dialog open={modelModalOpen} onOpenChange={setModelModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select AI Model</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Choose an OpenAI model for chat conversations:
+            </p>
+            <div className="space-y-2">
+              {/* GPT-4.1 Models */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium">GPT-4.1 (Latest)</h4>
+                <div className="space-y-1 ml-4">
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('gpt-4.1')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'gpt-4.1' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">GPT-4.1</div>
+                    <div className="text-xs text-muted-foreground">Most capable, 1M context</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('gpt-4.1-mini')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'gpt-4.1-mini' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">GPT-4.1 Mini</div>
+                    <div className="text-xs text-muted-foreground">Fast, cost-effective, beats GPT-4o</div>
+                  </button>
+                </div>
+              </div>
+              
+              {/* GPT-4o Models */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium">GPT-4o (Multimodal)</h4>
+                <div className="space-y-1 ml-4">
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('gpt-4o')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'gpt-4o' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">GPT-4o</div>
+                    <div className="text-xs text-muted-foreground">Multimodal flagship model</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('gpt-4o-mini')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'gpt-4o-mini' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">GPT-4o Mini</div>
+                    <div className="text-xs text-muted-foreground">Fast, affordable, 128K context</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* GPT-4 Models */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium">GPT-4</h4>
+                <div className="space-y-1 ml-4">
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('gpt-4-turbo')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'gpt-4-turbo' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">GPT-4 Turbo</div>
+                    <div className="text-xs text-muted-foreground">Optimized for speed and cost</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('gpt-4')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'gpt-4' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">GPT-4</div>
+                    <div className="text-xs text-muted-foreground">Original GPT-4</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* o-series Reasoning Models */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium">Reasoning Models</h4>
+                <div className="space-y-1 ml-4">
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('o1')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'o1' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">o1</div>
+                    <div className="text-xs text-muted-foreground">Advanced reasoning</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModelSelect('o3-mini')}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                      selectedModel === 'o3-mini' ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                  >
+                    <div className="font-medium">o3 Mini</div>
+                    <div className="text-xs text-muted-foreground">Compact reasoning model</div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setModelModalOpen(false)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
