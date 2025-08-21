@@ -495,10 +495,10 @@ export default function Settings({ onClose }: SettingsProps) {
           </TabsContent>
 
           {/* Tools & MCP Tab */}
-          <TabsContent value="tools" className="flex-1 overflow-hidden">
-            <div className="space-y-6 h-full flex flex-col">
+          <TabsContent value="tools" className="flex-1 flex flex-col overflow-hidden">
+            <div className="space-y-6 flex-1 flex flex-col min-h-0">
               {/* Quick Setup */}
-              <Card>
+              <Card className="flex-shrink-0">
                 <CardHeader>
                   <CardTitle>Quick Setup</CardTitle>
                 </CardHeader>
@@ -527,8 +527,8 @@ export default function Settings({ onClose }: SettingsProps) {
               </Card>
 
               {/* Configured Servers */}
-              <div className="flex-1 overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between mb-4 flex-shrink-0">
                   <h2 className="text-xl font-semibold">Configured Servers</h2>
                   <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                     <DialogTrigger asChild>
@@ -617,88 +617,90 @@ export default function Settings({ onClose }: SettingsProps) {
                 </div>
 
                 {/* Server List */}
-                <ScrollArea className="flex-1">
-                  <div className="space-y-4">
-                    {servers.length === 0 ? (
-                      <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                          <SettingsIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                          <h3 className="text-lg font-medium mb-2">No MCP Servers Configured</h3>
-                          <p className="text-muted-foreground mb-4">
-                            Add your first MCP server to enhance your AI conversations with external
-                            tools and data.
-                          </p>
-                          <Button onClick={() => setShowAddDialog(true)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Your First Server
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      servers.map((server) => {
-                        const status = serverStatuses.get(server.id);
-                        return (
-                          <Card key={server.id}>
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h3 className="font-medium">{server.name}</h3>
-                                    {status?.connected ? (
-                                      <Badge variant="default" className="bg-green-500">
-                                        <Wifi className="h-3 w-3 mr-1" />
-                                        Connected
+                <div className="flex-1 min-h-0">
+                  <ScrollArea className="h-full">
+                    <div className="space-y-4 pr-4">
+                      {servers.length === 0 ? (
+                        <Card className="border-dashed">
+                          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                            <SettingsIcon className="h-12 w-12 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-medium mb-2">No MCP Servers Configured</h3>
+                            <p className="text-muted-foreground mb-4">
+                              Add your first MCP server to enhance your AI conversations with external
+                              tools and data.
+                            </p>
+                            <Button onClick={() => setShowAddDialog(true)}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Your First Server
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        servers.map((server) => {
+                          const status = serverStatuses.get(server.id);
+                          return (
+                            <Card key={server.id}>
+                              <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h3 className="font-medium">{server.name}</h3>
+                                      {status?.connected ? (
+                                        <Badge variant="default" className="bg-green-500">
+                                          <Wifi className="h-3 w-3 mr-1" />
+                                          Connected
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="secondary">
+                                          <WifiOff className="h-3 w-3 mr-1" />
+                                          Disconnected
+                                        </Badge>
+                                      )}
+                                      <Badge variant="outline">
+                                        {server.transportType.toUpperCase()}
                                       </Badge>
-                                    ) : (
-                                      <Badge variant="secondary">
-                                        <WifiOff className="h-3 w-3 mr-1" />
-                                        Disconnected
-                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mb-2">{server.url}</p>
+                                    {server.description && (
+                                      <p className="text-sm text-muted-foreground mb-2">
+                                        {server.description}
+                                      </p>
                                     )}
-                                    <Badge variant="outline">
-                                      {server.transportType.toUpperCase()}
-                                    </Badge>
+                                    {status?.toolCount !== undefined && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {status.toolCount} tools available
+                                      </p>
+                                    )}
+                                    {status?.error && (
+                                      <p className="text-xs text-red-500 mt-1">
+                                        Error: {status.error}
+                                      </p>
+                                    )}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mb-2">{server.url}</p>
-                                  {server.description && (
-                                    <p className="text-sm text-muted-foreground mb-2">
-                                      {server.description}
-                                    </p>
-                                  )}
-                                  {status?.toolCount !== undefined && (
-                                    <p className="text-xs text-muted-foreground">
-                                      {status.toolCount} tools available
-                                    </p>
-                                  )}
-                                  {status?.error && (
-                                    <p className="text-xs text-red-500 mt-1">
-                                      Error: {status.error}
-                                    </p>
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      checked={server.enabled}
+                                      onCheckedChange={(enabled) =>
+                                        handleToggleServer(server.id, enabled)
+                                      }
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleRemoveServer(server.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Switch
-                                    checked={server.enabled}
-                                    onCheckedChange={(enabled) =>
-                                      handleToggleServer(server.id, enabled)
-                                    }
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRemoveServer(server.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })
-                    )}
-                  </div>
-                </ScrollArea>
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
           </TabsContent>
