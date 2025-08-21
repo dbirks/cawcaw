@@ -1,4 +1,4 @@
-name: Build iOS
+name: iOS TestFlight Deployment
 
 on:
   push:
@@ -24,9 +24,9 @@ env:
   RUBY_VERSION: '3.2'
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     
     steps:
     - name: 📱 Checkout repository
