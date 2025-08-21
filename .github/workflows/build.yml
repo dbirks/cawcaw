@@ -25,7 +25,7 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 45
     
     steps:
@@ -75,11 +75,11 @@ jobs:
         bundler-cache: true
         working-directory: ios
         
-    - name: 📱 Select Xcode 16.2
+    - name: 📱 Select Xcode 16.4
       run: |
-        sudo xcode-select -s /Applications/Xcode_16.2.app
+        sudo xcode-select -s /Applications/Xcode_16.4.app
         xcodebuild -version
-        echo "✅ Xcode 16.2 selected for iOS 18 SDK compliance"
+        echo "✅ Xcode 16.4 selected for latest iOS SDK support"
         
     - name: 📱 Sync Capacitor iOS
       run: |
