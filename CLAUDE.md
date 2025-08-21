@@ -270,7 +270,8 @@ Keep commit messages short and descriptive (under 50 characters for the subject 
 2. **Code quality checks**: Always run `pnpm lint` before committing
 3. **Local testing**: Test with Playwright MCP locally after major UI changes
 4. **Commit small**: Make focused commits with clear conventional messages
-5. **Example workflow**:
+5. **Use Tailwind**: Always prefer Tailwind CSS classes over custom CSS - we have the full Tailwind v4 utility system available
+6. **Example workflow**:
    ```bash
    # After completing a feature/fix
    pnpm lint

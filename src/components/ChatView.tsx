@@ -432,7 +432,7 @@ export default function ChatView() {
       </div>
 
       {/* Main Conversation - scrollable area */}
-      <Conversation className="flex-1 overflow-hidden">
+      <Conversation className="flex-1 overflow-hidden px-4">
         <ConversationContent className="safe-x h-full">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
