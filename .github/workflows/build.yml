@@ -75,11 +75,11 @@ jobs:
         bundler-cache: true
         working-directory: ios
         
-    - name: 📱 Select Xcode 16.2
+    - name: 📱 Select Xcode 16.1
       run: |
-        sudo xcode-select -s /Applications/Xcode_16.2.app
+        sudo xcode-select -s /Applications/Xcode_16.1.app
         xcodebuild -version
-        echo "✅ Xcode 16.2 selected for iOS 18 SDK compliance"
+        echo "✅ Xcode 16.1 selected for iOS SDK compliance"
         
     - name: 📱 Sync Capacitor iOS
       run: |
