@@ -20,7 +20,7 @@ import {
   PromptInputToolbar,
   PromptInputTools,
 } from '@/components/ai-elements/prompt-input';
-// import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'; // Only for reasoning models like o1
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'; // For reasoning models like o1 and o3-mini
 import { Response } from '@/components/ai-elements/response';
 import {
   Tool,
@@ -202,10 +202,23 @@ export default function ChatView() {
         messages: formattedMessages,
         tools,
         stopWhen: stepCountIs(5), // Enable multi-step: AI can use tools and then respond
+        providerOptions: {
+          openai: {
+            reasoningSummary: 'detailed', // Enable reasoning display for thinking models like o3-mini
+          },
+        },
       });
 
       // Create assistant message with parts
       const assistantParts: MessagePart[] = [];
+
+      // Add reasoning parts for thinking models like o3-mini
+      if (result.reasoning && result.reasoning.trim()) {
+        assistantParts.push({
+          type: 'reasoning',
+          text: result.reasoning,
+        });
+      }
 
       // Extract tool calls from the result
       if (result.steps) {
@@ -447,6 +460,13 @@ export default function ChatView() {
                               )}
                             </ToolContent>
                           </Tool>
+                        );
+                      } else if (part.type === 'reasoning') {
+                        return (
+                          <Reasoning key={`reasoning-${idx}`} defaultOpen={false}>
+                            <ReasoningTrigger />
+                            <ReasoningContent>{part.text || ''}</ReasoningContent>
+                          </Reasoning>
                         );
                       }
                       return null;
