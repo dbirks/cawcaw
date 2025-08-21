@@ -168,3 +168,23 @@
     min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* iOS Safari ScrollArea fixes - outside layers for direct CSS processing */
+[data-radix-scroll-area-viewport] {
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  /* Ensure proper overflow behavior for touch scrolling */
+  overflow-y: scroll !important;
+}
+
+/* Hide webkit scrollbars while maintaining functionality */
+[data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Ensure proper touch interaction for scrollbar elements */
+[data-radix-scroll-area-scrollbar] {
+  touch-action: none !important;
+  user-select: none !important;
+}
