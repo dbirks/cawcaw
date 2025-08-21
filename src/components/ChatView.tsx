@@ -383,17 +383,17 @@ export default function ChatView() {
 
   return (
     <div className="h-dvh bg-background flex flex-col">
-      {/* Header */}
-      <div className="border-b p-4 flex justify-between items-center">
+      {/* Fixed Header with safe area */}
+      <div className="border-b p-4 flex justify-between items-center safe-top safe-x flex-shrink-0">
         <h1 className="text-xl font-semibold">caw caw</h1>
         <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
           <SettingsIcon className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Main Conversation */}
-      <Conversation className="flex-1">
-        <ConversationContent>
+      {/* Main Conversation - scrollable area */}
+      <Conversation className="flex-1 overflow-hidden">
+        <ConversationContent className="safe-x h-full">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <p>Start a conversation with AI</p>
@@ -440,8 +440,8 @@ export default function ChatView() {
         <ConversationScrollButton />
       </Conversation>
 
-      {/* Input Area with AI Elements */}
-      <div className="border-t p-4">
+      {/* Fixed Input Area with safe area */}
+      <div className="border-t p-4 safe-bottom safe-x flex-shrink-0">
         <PromptInput onSubmit={handleFormSubmit}>
           <PromptInputTextarea
             value={input}
