@@ -213,11 +213,14 @@ export default function ChatView() {
       const assistantParts: MessagePart[] = [];
 
       // Add reasoning parts for thinking models like o3-mini
-      if (result.reasoning && result.reasoning.trim()) {
-        assistantParts.push({
-          type: 'reasoning',
-          text: result.reasoning,
-        });
+      if (result.reasoning && Array.isArray(result.reasoning) && result.reasoning.length > 0) {
+        const reasoningText = result.reasoning.map(part => part.text || '').join('\n\n');
+        if (reasoningText.trim()) {
+          assistantParts.push({
+            type: 'reasoning',
+            text: reasoningText,
+          });
+        }
       }
 
       // Extract tool calls from the result

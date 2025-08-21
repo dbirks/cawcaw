@@ -11,6 +11,8 @@ install! 'cocoapods', :disable_input_output_paths => true
 def capacitor_pods
   pod 'Capacitor', :path => '../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios'
+  pod 'CapacitorKeyboard', :path => '../../node_modules/.pnpm/@capacitor+keyboard@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/keyboard'
+  pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/status-bar'
   pod 'CapacitorSecureStoragePlugin', :path => '../../node_modules/.pnpm/capacitor-secure-storage-plugin@0.11.0_@capacitor+core@7.4.2/node_modules/capacitor-secure-storage-plugin'
 end
 

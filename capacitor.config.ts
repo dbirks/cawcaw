@@ -6,11 +6,18 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     preferredContentMode: 'mobile',
-    contentInset: 'automatic'
+    contentInset: 'always' // Auto-adjust scroll view insets for safe area
   },
   plugins: {
     SplashScreen: {
       launchAutoHide: true
+    },
+    StatusBar: {
+      overlaysWebView: false, // false = classic gap below status bar, true = immersive
+      style: 'default' // 'default' | 'light' | 'dark'
+    },
+    Keyboard: {
+      resize: 'native' // 'none' | 'body' | 'native' - prevents scroll issues
     }
   }
 };
