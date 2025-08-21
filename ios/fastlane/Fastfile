@@ -17,8 +17,8 @@ default_platform(:ios)
 
 platform :ios do
   before_all do
-    # Only run setup_ci when explicitly forcing certificate creation
-    if ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] == true || ENV['MATCH_FORCE_WRITE'] == 'true')
+    # Setup CI environment when running on CI
+    if ENV['CI']
       setup_ci
     end
   end
@@ -41,7 +41,9 @@ platform :ios do
       type: "appstore",
       platform: "ios",
       force: ENV['MATCH_FORCE_WRITE'] == 'true',
-      readonly: ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] != true && ENV['MATCH_FORCE_WRITE'] != 'true')
+      readonly: ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] != true && ENV['MATCH_FORCE_WRITE'] != 'true'),
+      keychain_name: ENV['CI'] ? 'build.keychain' : 'login.keychain',
+      keychain_password: ENV['CI'] ? '' : nil
     )
   end
 
@@ -129,7 +131,9 @@ platform :ios do
     match(
       type: "appstore",
       platform: "ios",
-      readonly: ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] != true && ENV['MATCH_FORCE_WRITE'] != 'true')
+      readonly: ENV['CI'] && (ENV['MATCH_FORCE_WRITE'] != true && ENV['MATCH_FORCE_WRITE'] != 'true'),
+      keychain_name: ENV['CI'] ? 'build.keychain' : 'login.keychain',
+      keychain_password: ENV['CI'] ? '' : nil
     )
   end
 
