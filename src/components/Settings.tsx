@@ -2,8 +2,12 @@ import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
   Brain,
   Key,
+  Monitor,
+  Moon,
+  Palette,
   Plus,
   Settings as SettingsIcon,
+  Sun,
   TestTube,
   Trash2,
   Wifi,
@@ -12,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +50,9 @@ export default function Settings({ onClose }: SettingsProps) {
   const [currentApiKey, setCurrentApiKey] = useState<string>('');
   const [tempApiKey, setTempApiKey] = useState<string>('');
   const [isUpdatingKey, setIsUpdatingKey] = useState(false);
+
+  // Theme management
+  const { themePreference, currentTheme, updateThemePreference } = useTheme();
 
   // New server form state
   const [newServer, setNewServer] = useState({
@@ -258,10 +266,14 @@ export default function Settings({ onClose }: SettingsProps) {
 
         {/* Settings Tabs */}
         <Tabs defaultValue="llm" className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="llm" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
               LLM Provider
+            </TabsTrigger>
+            <TabsTrigger value="appearance" className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Appearance
             </TabsTrigger>
             <TabsTrigger value="tools" className="flex items-center gap-2">
               <Wrench className="h-4 w-4" />
@@ -339,6 +351,144 @@ export default function Settings({ onClose }: SettingsProps) {
                       OpenAI Platform
                     </a>
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Appearance Tab */}
+          <TabsContent value="appearance" className="flex-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5" />
+                  Theme Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Theme Selection */}
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Choose your theme</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* System Theme Option */}
+                    <button
+                      type="button"
+                      onClick={() => updateThemePreference('system')}
+                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
+                        themePreference === 'system' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Monitor className="h-5 w-5" />
+                        <div className="text-left">
+                          <div className="font-medium">System</div>
+                          <div className="text-sm text-muted-foreground">
+                            Follow device theme preference
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        themePreference === 'system'
+                          ? 'border-primary bg-primary'
+                          : 'border-border'
+                      }`} />
+                    </button>
+
+                    {/* Light Theme Option */}
+                    <button
+                      type="button"
+                      onClick={() => updateThemePreference('light')}
+                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
+                        themePreference === 'light' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sun className="h-5 w-5" />
+                        <div className="text-left">
+                          <div className="font-medium">Light</div>
+                          <div className="text-sm text-muted-foreground">
+                            Always use light theme
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        themePreference === 'light'
+                          ? 'border-primary bg-primary'
+                          : 'border-border'
+                      }`} />
+                    </button>
+
+                    {/* Dark Theme Option */}
+                    <button
+                      type="button"
+                      onClick={() => updateThemePreference('dark')}
+                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
+                        themePreference === 'dark' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Moon className="h-5 w-5" />
+                        <div className="text-left">
+                          <div className="font-medium">Dark</div>
+                          <div className="text-sm text-muted-foreground">
+                            Always use dark theme
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        themePreference === 'dark'
+                          ? 'border-primary bg-primary'
+                          : 'border-border'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Current Theme Status */}
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Current Theme</h4>
+                  <div className="flex items-center gap-2 text-sm">
+                    {currentTheme === 'dark' ? (
+                      <Moon className="h-4 w-4" />
+                    ) : (
+                      <Sun className="h-4 w-4" />
+                    )}
+                    <span className="capitalize">{currentTheme} mode is active</span>
+                    {themePreference === 'system' && (
+                      <Badge variant="outline" className="ml-2">Auto</Badge>
+                    )}
+                  </div>
+                  {themePreference === 'system' && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Theme automatically switches based on your device settings
+                    </p>
+                  )}
+                </div>
+
+                {/* Theme Preview */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium">Preview</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Light Preview */}
+                    <div className="p-3 rounded-lg border bg-white text-black">
+                      <div className="text-xs font-medium mb-1">Light Theme</div>
+                      <div className="text-xs text-gray-600">Clean and bright interface</div>
+                      <div className="mt-2 h-2 bg-blue-500 rounded-full w-3/4"></div>
+                    </div>
+                    
+                    {/* Dark Preview */}
+                    <div className="p-3 rounded-lg border bg-gray-900 text-white">
+                      <div className="text-xs font-medium mb-1">Dark Theme</div>
+                      <div className="text-xs text-gray-300">Easy on the eyes</div>
+                      <div className="mt-2 h-2 bg-blue-400 rounded-full w-3/4"></div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
