@@ -53,9 +53,10 @@ platform :ios do
     # Verify certificate installation
     sh("security find-identity -v -p codesigning build.keychain")
     
-    # Increment build number based on current timestamp
+    # Increment build number based on current timestamp (more reliable than latest_testflight_build_number)
+    build_number = Time.now.strftime("%Y%m%d%H%M")
     increment_build_number(
-      build_number: latest_testflight_build_number(app_identifier: "app.cawcaw") + 1,
+      build_number: build_number,
       xcodeproj: "App/App.xcodeproj"
     )
     
@@ -85,7 +86,8 @@ platform :ios do
       skip_submission: true,
       distribute_external: false,
       notify_external_testers: false,
-      changelog: "Built with GitHub Actions"
+      changelog: "Built with GitHub Actions",
+      reject_build_waiting_for_review: true
     )
   end
 
