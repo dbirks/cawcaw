@@ -282,8 +282,11 @@ export default function Settings({ onClose }: SettingsProps) {
           </TabsList>
 
           {/* LLM Provider Tab */}
-          <TabsContent value="llm" className="flex-1">
-            <Card>
+          <TabsContent value="llm" className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full">
+                <div className="pr-4">
+                  <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="h-5 w-5" />
@@ -354,11 +357,17 @@ export default function Settings({ onClose }: SettingsProps) {
                 </div>
               </CardContent>
             </Card>
+                </div>
+              </ScrollArea>
+            </div>
           </TabsContent>
 
           {/* Appearance Tab */}
-          <TabsContent value="appearance" className="flex-1">
-            <Card>
+          <TabsContent value="appearance" className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full">
+                <div className="pr-4">
+                  <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="h-5 w-5" />
@@ -492,6 +501,9 @@ export default function Settings({ onClose }: SettingsProps) {
                 </div>
               </CardContent>
             </Card>
+                </div>
+              </ScrollArea>
+            </div>
           </TabsContent>
 
           {/* Tools & MCP Tab */}
