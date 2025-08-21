@@ -298,3 +298,5 @@ pnpm dev &  # Start dev server in background
 # Use Playwright MCP tools to test
 # Kill dev server when done
 ```
+
+**Important**: Always test on port 5173 (`http://localhost:5173`) - this is where saved API keys and preferences are stored in local storage. Other ports will require re-entering API keys.
