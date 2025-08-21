@@ -252,7 +252,7 @@ When changing bundle identifiers:
 - AI messages: `bg-muted`
 - Always override Card default padding with `py-0`
 
-### Commit Message Convention
+### Commit Message Convention & Workflow
 Always use conventional commit messages when making changes:
 - `feat:` for new features
 - `fix:` for bug fixes  
@@ -264,3 +264,36 @@ Always use conventional commit messages when making changes:
 - `ci:` for CI/CD pipeline changes
 
 Keep commit messages short and descriptive (under 50 characters for the subject line).
+
+### Development & Testing Workflow
+1. **Work in chunks**: Complete logical units of work before committing
+2. **Code quality checks**: Always run `pnpm lint` before committing
+3. **Local testing**: Test with Playwright MCP locally after major UI changes
+4. **Commit small**: Make focused commits with clear conventional messages
+5. **Example workflow**:
+   ```bash
+   # After completing a feature/fix
+   pnpm lint
+   # Test with Playwright if UI changes
+   git add .
+   git commit -m "fix: resolve theme initialization on app startup"
+   ```
+
+### Testing with Playwright MCP
+Use Playwright MCP server for automated UI testing and verification:
+- **Theme consistency**: Test light/dark mode across main chat and settings
+- **Viewport behavior**: Verify safe area handling and mobile responsiveness  
+- **User flows**: Test complete workflows (chat, settings, MCP configuration)
+- **Available commands**: `mcp__playwright__browser_*` tools for navigation, interaction, and verification
+- **Best practices**:
+  - Always use `browser_snapshot` to understand page state before interactions
+  - Use `browser_evaluate` to check JavaScript state (theme classes, etc.)
+  - Test on both desktop and mobile viewport sizes
+  - Verify console messages for errors during testing
+
+Example Playwright testing workflow:
+```bash
+pnpm dev &  # Start dev server in background
+# Use Playwright MCP tools to test
+# Kill dev server when done
+```
