@@ -1,7 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, MicIcon, Settings as SettingsIcon, WrenchIcon } from 'lucide-react';
+import { BotIcon, MicIcon, PaperclipIcon, Settings as SettingsIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 
@@ -214,7 +214,7 @@ export default function ChatView() {
 
       // Add reasoning parts for thinking models like o3-mini
       if (result.reasoning && Array.isArray(result.reasoning) && result.reasoning.length > 0) {
-        const reasoningText = result.reasoning.map(part => part.text || '').join('\n\n');
+        const reasoningText = result.reasoning.map((part) => part.text || '').join('\n\n');
         if (reasoningText.trim()) {
           assistantParts.push({
             type: 'reasoning',
@@ -364,7 +364,7 @@ export default function ChatView() {
   const handleModelSelect = async (modelId: string) => {
     setSelectedModel(modelId);
     setModelModalOpen(false);
-    
+
     // Save selected model to secure storage
     try {
       await SecureStoragePlugin.set({ key: 'selected_model', value: modelId });
@@ -498,17 +498,19 @@ export default function ChatView() {
           />
           <PromptInputToolbar>
             <PromptInputTools>
-              {/* Tools toggle button */}
+              {/* Attachment/Tools button */}
               <PromptInputButton type="button" onClick={toggleToolsModal}>
-                <WrenchIcon size={18} />
+                <PaperclipIcon size={16} />
               </PromptInputButton>
-              {/* Model switcher button */}
-              <PromptInputButton type="button" onClick={toggleModelModal}>
-                <BotIcon size={18} />
-              </PromptInputButton>
-              {/* Microphone button */}
+              {/* Microphone button with text label */}
               <PromptInputButton type="button" onClick={handleVoiceInput}>
-                <MicIcon size={18} />
+                <MicIcon size={16} />
+                <span>Voice</span>
+              </PromptInputButton>
+              {/* Model switcher button with text label */}
+              <PromptInputButton type="button" onClick={toggleModelModal}>
+                <BotIcon size={16} />
+                <span>Model</span>
               </PromptInputButton>
             </PromptInputTools>
             <PromptInputSubmit disabled={!input.trim() || status === 'streaming'} status={status} />
@@ -580,11 +582,13 @@ export default function ChatView() {
                     }`}
                   >
                     <div className="font-medium">GPT-4.1 Mini</div>
-                    <div className="text-xs text-muted-foreground">Fast, cost-effective, beats GPT-4o</div>
+                    <div className="text-xs text-muted-foreground">
+                      Fast, cost-effective, beats GPT-4o
+                    </div>
                   </button>
                 </div>
               </div>
-              
+
               {/* GPT-4o Models */}
               <div className="space-y-1">
                 <h4 className="text-sm font-medium">GPT-4o (Multimodal)</h4>
@@ -607,7 +611,9 @@ export default function ChatView() {
                     }`}
                   >
                     <div className="font-medium">GPT-4o Mini</div>
-                    <div className="text-xs text-muted-foreground">Fast, affordable, 128K context</div>
+                    <div className="text-xs text-muted-foreground">
+                      Fast, affordable, 128K context
+                    </div>
                   </button>
                 </div>
               </div>
@@ -624,7 +630,9 @@ export default function ChatView() {
                     }`}
                   >
                     <div className="font-medium">GPT-4 Turbo</div>
-                    <div className="text-xs text-muted-foreground">Optimized for speed and cost</div>
+                    <div className="text-xs text-muted-foreground">
+                      Optimized for speed and cost
+                    </div>
                   </button>
                   <button
                     type="button"
