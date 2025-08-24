@@ -1,10 +1,9 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, MicIcon, PaperclipIcon, Settings as SettingsIcon } from 'lucide-react';
+import { BotIcon, MicIcon, Settings as SettingsIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
-
 // AI Elements imports
 import {
   Conversation,
@@ -29,6 +28,7 @@ import {
   ToolInput,
   ToolOutput,
 } from '@/components/ai-elements/tool';
+import { McpIcon } from '@/components/icons/McpIcon';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -498,14 +498,15 @@ export default function ChatView() {
           />
           <PromptInputToolbar>
             <PromptInputTools>
-              {/* Attachment/Tools button */}
+              {/* MCP Tools button */}
               <PromptInputButton type="button" onClick={toggleToolsModal}>
-                <PaperclipIcon size={16} />
+                <McpIcon size={16} />
+                <span>MCP</span>
               </PromptInputButton>
               {/* Microphone button with text label */}
               <PromptInputButton type="button" onClick={handleVoiceInput}>
                 <MicIcon size={16} />
-                <span>Voice</span>
+                <span>Mic</span>
               </PromptInputButton>
               {/* Model switcher button with text label */}
               <PromptInputButton type="button" onClick={toggleModelModal}>
