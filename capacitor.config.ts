@@ -13,8 +13,9 @@ const config: CapacitorConfig = {
       launchAutoHide: true
     },
     StatusBar: {
-      overlaysWebView: false, // false = classic gap below status bar, true = immersive
-      style: 'default' // 'default' | 'light' | 'dark'
+      overlaysWebView: true, // Enable immersive mode for modern blurred status bar
+      style: 'default', // Will auto-adapt based on content
+      backgroundColor: '#00000000' // Transparent background for blur effect
     },
     Keyboard: {
       resize: 'native' // 'none' | 'body' | 'native' - prevents scroll issues
