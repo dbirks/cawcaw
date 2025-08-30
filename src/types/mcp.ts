@@ -41,3 +41,22 @@ export interface MCPToolInfo {
   serverId: string;
   serverName: string;
 }
+
+// MCP Tool definition from server
+export interface MCPToolDefinition {
+  description?: string;
+  inputSchema?: {
+    type: string;
+    properties?: Record<string, {
+      type: string;
+      description?: string;
+    }>;
+    required?: string[];
+  };
+  _mcpServerId?: string;
+  _mcpServerName?: string;
+  _mcpOriginalName?: string;
+}
+
+// MCP Tool execution result
+export type MCPToolResult = unknown;

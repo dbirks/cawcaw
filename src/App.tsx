@@ -9,12 +9,12 @@ function App() {
 
   useEffect(() => {
     // Initialize StatusBar for proper iOS safe area handling
-    const initializeStatusBar = async () => {
+    const setupStatusBar = async () => {
       try {
-        // Enable overlay mode for full-bleed design
+        // Enable overlay mode for full-bleed design (only needs to be done once)
         await StatusBar.setOverlaysWebView({ overlay: true });
         
-        // Set initial style based on theme
+        // Set style based on current theme
         const statusBarStyle = currentTheme === 'dark' ? Style.Light : Style.Dark;
         await StatusBar.setStyle({ style: statusBarStyle });
       } catch (error) {
@@ -23,22 +23,7 @@ function App() {
       }
     };
 
-    initializeStatusBar();
-  }, []);
-
-  // Update status bar style when theme changes
-  useEffect(() => {
-    const updateStatusBarStyle = async () => {
-      try {
-        const statusBarStyle = currentTheme === 'dark' ? Style.Light : Style.Dark;
-        await StatusBar.setStyle({ style: statusBarStyle });
-      } catch (error) {
-        // StatusBar API might not be available on web/development
-        console.log('StatusBar style update skipped:', error);
-      }
-    };
-
-    updateStatusBarStyle();
+    setupStatusBar();
   }, [currentTheme]);
 
   return <ChatView />;

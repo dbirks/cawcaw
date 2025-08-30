@@ -1,12 +1,19 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import type { MCPManagerConfig, MCPServerConfig, MCPServerStatus, MCPToolInfo } from '@/types/mcp';
+import type { 
+  MCPManagerConfig, 
+  MCPServerConfig, 
+  MCPServerStatus, 
+  MCPToolInfo, 
+  MCPToolDefinition,
+  MCPToolResult 
+} from '@/types/mcp';
 
 const MCP_STORAGE_KEY = 'mcp_server_configs';
 
 // Interface for MCP client (both real and mock)
 interface MCPClient {
-  listTools(): Promise<Record<string, any>>;
-  callTool(name: string, args: Record<string, any>): Promise<any>;
+  listTools(): Promise<Record<string, MCPToolDefinition>>;
+  callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult>;
   close(): Promise<void>;
 }
 
@@ -20,7 +27,7 @@ class HTTPMCPClient implements MCPClient {
     this.transport = transport;
   }
 
-  async listTools(): Promise<Record<string, any>> {
+  async listTools(): Promise<Record<string, MCPToolDefinition>> {
     try {
       // Use transport for future protocol variations
       const endpoint = this.transport === 'streamableHttp' ? `${this.baseUrl}/tools/list` : `${this.baseUrl}/tools/list`;
@@ -46,7 +53,7 @@ class HTTPMCPClient implements MCPClient {
         throw new Error(data.error.message || 'MCP server error');
       }
       
-      const tools: Record<string, any> = {};
+      const tools: Record<string, MCPToolDefinition> = {};
       if (data.result?.tools) {
         for (const tool of data.result.tools) {
           tools[tool.name] = {
@@ -63,7 +70,7 @@ class HTTPMCPClient implements MCPClient {
     }
   }
 
-  async callTool(name: string, args: Record<string, any>): Promise<any> {
+  async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     try {
       // Use transport for future protocol variations
       const endpoint = this.transport === 'streamableHttp' ? `${this.baseUrl}/tools/call` : `${this.baseUrl}/tools/call`;
@@ -106,7 +113,7 @@ class HTTPMCPClient implements MCPClient {
 
 // Built-in demo client
 class BuiltInMCPClient implements MCPClient {
-  async listTools(): Promise<Record<string, any>> {
+  async listTools(): Promise<Record<string, MCPToolDefinition>> {
     return {
       calculator: { 
         description: 'Perform basic mathematical calculations',
@@ -140,29 +147,33 @@ class BuiltInMCPClient implements MCPClient {
     };
   }
 
-  async callTool(name: string, args: Record<string, any>): Promise<any> {
+  async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     switch (name) {
       case 'calculator':
         try {
-          const result = Function(`"use strict"; return (${args.expression.replace(/[^0-9+\-*/.() ]/g, '')})`)();
-          return { calculation: args.expression, result: result.toString() };
+          const expression = String(args.expression);
+          const result = Function(`"use strict"; return (${expression.replace(/[^0-9+\-*/.() ]/g, '')})`)();
+          return { calculation: expression, result: result.toString() };
         } catch {
-          return { calculation: args.expression, result: 'Error: Invalid expression' };
+          return { calculation: String(args.expression), result: 'Error: Invalid expression' };
         }
-      case 'timeInfo':
+      case 'timeInfo': {
         const now = new Date();
         return {
           currentTime: now.toLocaleString(),
           timestamp: now.getTime(),
           timezone: args.timezone || 'local',
         };
-      case 'textAnalyzer':
+      }
+      case 'textAnalyzer': {
+        const text = String(args.text);
         return {
-          text: args.text,
-          wordCount: args.text.split(/\s+/).filter((word: string) => word.length > 0).length,
-          characterCount: args.text.length,
-          characterCountNoSpaces: args.text.replace(/\s/g, '').length,
+          text: text,
+          wordCount: text.split(/\s+/).filter((word: string) => word.length > 0).length,
+          characterCount: text.length,
+          characterCountNoSpaces: text.replace(/\s/g, '').length,
         };
+      }
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -407,8 +418,8 @@ class MCPManager {
   }
 
   // Get tools from enabled servers for AI usage
-  async getAllTools(): Promise<Record<string, any>> {
-    const allTools: Record<string, any> = {};
+  async getAllTools(): Promise<Record<string, MCPToolDefinition>> {
+    const allTools: Record<string, MCPToolDefinition> = {};
 
     for (const [serverId, client] of this.clients) {
       try {
@@ -437,7 +448,7 @@ class MCPManager {
   }
 
   // Call a tool from MCP server
-  async callTool(toolName: string, args: Record<string, any>): Promise<any> {
+  async callTool(toolName: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     // Find which server has this tool
     for (const [serverId, client] of this.clients) {
       try {

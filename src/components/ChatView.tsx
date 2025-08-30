@@ -44,6 +44,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 
 import { mcpManager } from '@/services/mcpManager';
+import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Settings from './Settings';
 
 // Updated interfaces for AI Elements compatibility
@@ -75,8 +76,8 @@ export default function ChatView() {
 
   // New state for AI Elements features
   const [toolsModalOpen, setToolsModalOpen] = useState<boolean>(false);
-  const [availableServers, setAvailableServers] = useState<any[]>([]);
-  const [serverStatuses, setServerStatuses] = useState<Map<string, any>>(new Map());
+  const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
+  const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
   const [modelModalOpen, setModelModalOpen] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
@@ -148,7 +149,7 @@ export default function ChatView() {
 
       // Get tools from MCP manager
       const mcpTools = await mcpManager.getAllTools();
-      const tools: Record<string, any> = {};
+      const tools: Record<string, ReturnType<typeof tool<any, any>>> = {};
 
       // Convert MCP tools to AI SDK format
       for (const [toolName, toolDef] of Object.entries(mcpTools)) {
@@ -158,17 +159,17 @@ export default function ChatView() {
           description: toolDef.description || `Tool from ${toolDef._mcpServerName}`,
           inputSchema: z.object(
             Object.fromEntries(
-              Object.entries(inputSchema.properties || {}).map(([key, prop]: [string, any]) => [
+              Object.entries(inputSchema.properties || {}).map(([key, prop]) => [
                 key,
                 prop.type === 'string' 
                   ? z.string().describe(prop.description || key)
                   : prop.type === 'number'
                   ? z.number().describe(prop.description || key)
-                  : z.any().describe(prop.description || key)
+                  : z.unknown().describe(prop.description || key)
               ])
             )
           ),
-          execute: async (args: Record<string, any>) => {
+          execute: async (args: Record<string, unknown>) => {
             try {
               return await mcpManager.callTool(toolName, args);
             } catch (error) {
