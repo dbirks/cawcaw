@@ -17,6 +17,101 @@ interface MCPClient {
   close(): Promise<void>;
 }
 
+// Mock MCP client with built-in demo tools
+class DemoMCPClient implements MCPClient {
+  async listTools(): Promise<Record<string, MCPToolDefinition>> {
+    return {
+      echo: {
+        description: 'Echo back the provided text',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            message: {
+              type: 'string',
+              description: 'The message to echo back',
+            },
+          },
+          required: ['message'],
+        },
+      },
+      random_number: {
+        description: 'Generate a random number between min and max',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            min: {
+              type: 'number',
+              description: 'Minimum value (default: 1)',
+            },
+            max: {
+              type: 'number',
+              description: 'Maximum value (default: 100)',
+            },
+          },
+        },
+      },
+      uppercase: {
+        description: 'Convert text to uppercase',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            text: {
+              type: 'string',
+              description: 'Text to convert to uppercase',
+            },
+          },
+          required: ['text'],
+        },
+      },
+    };
+  }
+
+  async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
+    switch (name) {
+      case 'echo':
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Echo: ${args.message || '(no message provided)'}`,
+            },
+          ],
+        };
+      
+      case 'random_number': {
+        const min = typeof args.min === 'number' ? args.min : 1;
+        const max = typeof args.max === 'number' ? args.max : 100;
+        const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Random number between ${min} and ${max}: ${randomNum}`,
+            },
+          ],
+        };
+      }
+      
+      case 'uppercase':
+        return {
+          content: [
+            {
+              type: 'text',
+              text: typeof args.text === 'string' ? args.text.toUpperCase() : 'NO TEXT PROVIDED',
+            },
+          ],
+        };
+      
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+  }
+
+  async close(): Promise<void> {
+    // No cleanup needed for demo client
+  }
+}
+
 // HTTP/Streamable HTTP MCP client implementation
 class HTTPMCPClient implements MCPClient {
   private baseUrl: string;
@@ -111,78 +206,6 @@ class HTTPMCPClient implements MCPClient {
   }
 }
 
-// Built-in demo client
-class BuiltInMCPClient implements MCPClient {
-  async listTools(): Promise<Record<string, MCPToolDefinition>> {
-    return {
-      calculator: { 
-        description: 'Perform basic mathematical calculations',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            expression: { type: 'string', description: 'Mathematical expression to evaluate' }
-          },
-          required: ['expression']
-        }
-      },
-      timeInfo: { 
-        description: 'Get current time and date information',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            timezone: { type: 'string', description: 'Timezone (optional, defaults to local)' }
-          }
-        }
-      },
-      textAnalyzer: { 
-        description: 'Analyze text for word count, character count, etc.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            text: { type: 'string', description: 'Text to analyze' }
-          },
-          required: ['text']
-        }
-      },
-    };
-  }
-
-  async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
-    switch (name) {
-      case 'calculator':
-        try {
-          const expression = String(args.expression);
-          const result = Function(`"use strict"; return (${expression.replace(/[^0-9+\-*/.() ]/g, '')})`)();
-          return { calculation: expression, result: result.toString() };
-        } catch {
-          return { calculation: String(args.expression), result: 'Error: Invalid expression' };
-        }
-      case 'timeInfo': {
-        const now = new Date();
-        return {
-          currentTime: now.toLocaleString(),
-          timestamp: now.getTime(),
-          timezone: args.timezone || 'local',
-        };
-      }
-      case 'textAnalyzer': {
-        const text = String(args.text);
-        return {
-          text: text,
-          wordCount: text.split(/\s+/).filter((word: string) => word.length > 0).length,
-          characterCount: text.length,
-          characterCountNoSpaces: text.replace(/\s/g, '').length,
-        };
-      }
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  }
-
-  async close(): Promise<void> {
-    // Mock close
-  }
-}
 
 class MCPManager {
   private clients: Map<string, MCPClient> = new Map();
@@ -197,22 +220,12 @@ class MCPManager {
   private initializeWithDefaultServers() {
     this.serverConfigs = [
       {
-        id: 'builtin-demo',
-        name: 'Built-in Demo Tools',
-        url: 'built-in://demo',
+        id: 'demo-mcp-server',
+        name: 'Demo Tools (Test Server)',
+        url: 'http://localhost:3001', // Will be replaced with mock client
         enabled: true,
         transportType: 'http',
-        description: 'Built-in calculator, time info, and text analyzer tools',
-        createdAt: Date.now(),
-        readonly: true,
-      },
-      {
-        id: 'everything-server',
-        name: 'Everything Test Server',
-        url: 'npx @modelcontextprotocol/server-everything',
-        enabled: false,
-        transportType: 'streamableHttp',
-        description: 'Official MCP reference server with all protocol features for testing',
+        description: 'Built-in demo tools for testing MCP protocol and tool calls.',
         createdAt: Date.now(),
         readonly: true,
       },
@@ -341,23 +354,10 @@ class MCPManager {
       // Disconnect existing client if any
       await this.disconnectFromServer(serverId);
 
-      let client: MCPClient;
-
-      // Handle built-in demo tools
-      if (config.url.startsWith('built-in://')) {
-        client = new BuiltInMCPClient();
-      } else {
-        // For the Everything server and other real MCP servers
-        // Note: This is a simplified implementation - in a real app you'd start the server process
-        if (config.url.includes('@modelcontextprotocol/server-everything')) {
-          // For demo purposes, we'll use a mock endpoint
-          // In reality, you'd need to start the server process and get its endpoint
-          const mockUrl = 'http://localhost:3001'; // This would be dynamic
-          client = new HTTPMCPClient(mockUrl, config.transportType as 'http' | 'streamableHttp');
-        } else {
-          client = new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
-        }
-      }
+      // Create appropriate MCP client based on server type
+      const client = config.id === 'demo-mcp-server' 
+        ? new DemoMCPClient()
+        : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
 
       // Test the connection by listing tools
       const tools = await client.listTools();
@@ -504,14 +504,9 @@ class MCPManager {
   // Test connection to a server
   async testConnection(config: Omit<MCPServerConfig, 'id' | 'createdAt'>): Promise<boolean> {
     try {
-      let client: MCPClient;
-      
-      if (config.url.startsWith('built-in://')) {
-        client = new BuiltInMCPClient();
-      } else {
-        client = new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
-      }
-      
+      const client = config.name === 'Demo Tools (Test Server)'
+        ? new DemoMCPClient()
+        : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
       await client.listTools();
       await client.close();
       return true;
