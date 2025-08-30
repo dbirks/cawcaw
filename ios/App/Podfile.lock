@@ -1,0 +1,53 @@
+PODS:
+  - Capacitor (7.4.2):
+    - CapacitorCordova
+  - CapacitorCommunitySafeArea (7.0.0-alpha.1):
+    - Capacitor
+  - CapacitorCordova (7.4.2)
+  - CapacitorKeyboard (7.0.2):
+    - Capacitor
+  - CapacitorSecureStoragePlugin (0.11.0):
+    - Capacitor
+    - SwiftKeychainWrapper
+  - CapacitorStatusBar (7.0.2):
+    - Capacitor
+  - SwiftKeychainWrapper (4.0.1)
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios`)"
+  - "CapacitorCommunitySafeArea (from `../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.4.2/node_modules/@capacitor-community/safe-area`)"
+  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios`)"
+  - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/keyboard`)"
+  - "CapacitorSecureStoragePlugin (from `../../node_modules/.pnpm/capacitor-secure-storage-plugin@0.11.0_@capacitor+core@7.4.2/node_modules/capacitor-secure-storage-plugin`)"
+  - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/status-bar`)"
+
+SPEC REPOS:
+  trunk:
+    - SwiftKeychainWrapper
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios"
+  CapacitorCommunitySafeArea:
+    :path: "../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.4.2/node_modules/@capacitor-community/safe-area"
+  CapacitorCordova:
+    :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios"
+  CapacitorKeyboard:
+    :path: "../../node_modules/.pnpm/@capacitor+keyboard@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/keyboard"
+  CapacitorSecureStoragePlugin:
+    :path: "../../node_modules/.pnpm/capacitor-secure-storage-plugin@0.11.0_@capacitor+core@7.4.2/node_modules/capacitor-secure-storage-plugin"
+  CapacitorStatusBar:
+    :path: "../../node_modules/.pnpm/@capacitor+status-bar@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/status-bar"
+
+SPEC CHECKSUMS:
+  Capacitor: 9d9e481b79ffaeacaf7a85d6a11adec32bd33b59
+  CapacitorCommunitySafeArea: 3f049619072ab5d0da2529bcb05b358ff6c13dc1
+  CapacitorCordova: 5e58d04631bc5094894ac106e2bf1da18a9e6151
+  CapacitorKeyboard: a86aa9e4741b6444a802df26440a92ae041b34a6
+  CapacitorSecureStoragePlugin: 450d402026ee3bcc018fa206504d9c0572fee78d
+  CapacitorStatusBar: e04d05e121d5a5979c29eb4249186a4e4a84cacb
+  SwiftKeychainWrapper: 807ba1d63c33a7d0613288512399cd1eda1e470c
+
+PODFILE CHECKSUM: 9115e1c3325c485bbe626d2ca364c5dfe1943605
+
+COCOAPODS: 1.16.2
