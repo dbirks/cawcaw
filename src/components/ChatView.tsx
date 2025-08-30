@@ -520,7 +520,7 @@ export default function ChatView() {
               <PromptInputButton 
                 type="button" 
                 onClick={handleVoiceInput}
-                disabled={isRecording || status === 'submitted'}
+                disabled={status === 'submitted' && !isRecording}
                 variant={isRecording ? 'default' : 'ghost'}
                 className={isRecording ? 'bg-red-500 text-white animate-pulse hover:bg-red-600' : ''}
               >
