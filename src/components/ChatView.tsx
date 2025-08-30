@@ -424,7 +424,7 @@ export default function ChatView() {
   return (
     <div className="h-dvh bg-background flex flex-col">
       {/* Fixed Header with safe area */}
-      <div className="border-b py-4 flex justify-between items-center safe-top safe-x flex-shrink-0 pt-6">
+      <div className="border-b pb-4 pt-8 flex justify-between items-center safe-top safe-x flex-shrink-0">
         <h1 className="text-xl font-semibold">caw caw</h1>
         <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
           <SettingsIcon className="h-4 w-4" />
