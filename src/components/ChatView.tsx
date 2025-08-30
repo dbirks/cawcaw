@@ -78,6 +78,10 @@ export default function ChatView() {
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
   const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [currentRecording, setCurrentRecording] = useState<{
+    mediaRecorder: MediaRecorder;
+    stream: MediaStream;
+  } | null>(null);
 
   useEffect(() => {
     // Check if we have a stored API key and initialize MCP
@@ -286,6 +290,12 @@ export default function ChatView() {
   };
 
   const handleVoiceInput = async () => {
+    // If already recording, stop the current recording
+    if (isRecording && currentRecording) {
+      currentRecording.mediaRecorder.stop();
+      return;
+    }
+
     try {
       // Request microphone permission and start recording
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -304,6 +314,7 @@ export default function ChatView() {
       // Handle recording completion
       mediaRecorder.onstop = async () => {
         setIsRecording(false);
+        setCurrentRecording(null);
         try {
           // Create audio blob from chunks
           const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
@@ -339,19 +350,14 @@ export default function ChatView() {
         }
       };
 
-      // Start recording for 5 seconds
+      // Start recording until manually stopped
       mediaRecorder.start();
       setIsRecording(true);
-
-      // Auto-stop after 5 seconds
-      setTimeout(() => {
-        if (mediaRecorder.state === 'recording') {
-          mediaRecorder.stop();
-        }
-      }, 5000);
+      setCurrentRecording({ mediaRecorder, stream });
     } catch (error) {
       console.error('Voice input error:', error);
       setIsRecording(false);
+      setCurrentRecording(null);
       alert('Microphone access denied or not available');
     }
   };
@@ -499,7 +505,7 @@ export default function ChatView() {
           <PromptInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isRecording ? "🎤 Recording... (5 seconds)" : "Type your message..."}
+            placeholder={isRecording ? "🎤 Recording... Click 'Stop' to finish" : "Type your message..."}
             disabled={isRecording || status === 'streaming'}
             className={isRecording ? 'bg-red-50 dark:bg-red-950/20' : ''}
           />
@@ -525,7 +531,7 @@ export default function ChatView() {
                 ) : (
                   <MicIcon size={16} />
                 )}
-                <span>{isRecording ? 'Recording...' : status === 'submitted' && !isRecording ? 'Processing...' : 'Mic'}</span>
+                <span>{isRecording ? 'Stop' : status === 'submitted' && !isRecording ? 'Processing...' : 'Mic'}</span>
               </PromptInputButton>
               {/* Model switcher button with text label */}
               <PromptInputButton type="button" onClick={toggleModelModal}>
