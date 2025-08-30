@@ -1,11 +1,11 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import type { 
-  MCPManagerConfig, 
-  MCPServerConfig, 
-  MCPServerStatus, 
-  MCPToolInfo, 
+import type {
+  MCPManagerConfig,
+  MCPServerConfig,
+  MCPServerStatus,
   MCPToolDefinition,
-  MCPToolResult 
+  MCPToolInfo,
+  MCPToolResult,
 } from '@/types/mcp';
 
 const MCP_STORAGE_KEY = 'mcp_server_configs';
@@ -77,7 +77,7 @@ class DemoMCPClient implements MCPClient {
             },
           ],
         };
-      
+
       case 'random_number': {
         const min = typeof args.min === 'number' ? args.min : 1;
         const max = typeof args.max === 'number' ? args.max : 100;
@@ -91,7 +91,7 @@ class DemoMCPClient implements MCPClient {
           ],
         };
       }
-      
+
       case 'uppercase':
         return {
           content: [
@@ -101,7 +101,7 @@ class DemoMCPClient implements MCPClient {
             },
           ],
         };
-      
+
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -116,7 +116,7 @@ class DemoMCPClient implements MCPClient {
 class HTTPMCPClient implements MCPClient {
   private baseUrl: string;
   private transport: 'http' | 'streamableHttp';
-  
+
   constructor(baseUrl: string, transport: 'http' | 'streamableHttp') {
     this.baseUrl = baseUrl;
     this.transport = transport;
@@ -125,7 +125,10 @@ class HTTPMCPClient implements MCPClient {
   async listTools(): Promise<Record<string, MCPToolDefinition>> {
     try {
       // Use transport for future protocol variations
-      const endpoint = this.transport === 'streamableHttp' ? `${this.baseUrl}/tools/list` : `${this.baseUrl}/tools/list`;
+      const endpoint =
+        this.transport === 'streamableHttp'
+          ? `${this.baseUrl}/tools/list`
+          : `${this.baseUrl}/tools/list`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -138,16 +141,16 @@ class HTTPMCPClient implements MCPClient {
           params: {},
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       if (data.error) {
         throw new Error(data.error.message || 'MCP server error');
       }
-      
+
       const tools: Record<string, MCPToolDefinition> = {};
       if (data.result?.tools) {
         for (const tool of data.result.tools) {
@@ -157,7 +160,7 @@ class HTTPMCPClient implements MCPClient {
           };
         }
       }
-      
+
       return tools;
     } catch (error) {
       console.error(`Failed to list tools from ${this.baseUrl}:`, error);
@@ -168,7 +171,10 @@ class HTTPMCPClient implements MCPClient {
   async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     try {
       // Use transport for future protocol variations
-      const endpoint = this.transport === 'streamableHttp' ? `${this.baseUrl}/tools/call` : `${this.baseUrl}/tools/call`;
+      const endpoint =
+        this.transport === 'streamableHttp'
+          ? `${this.baseUrl}/tools/call`
+          : `${this.baseUrl}/tools/call`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -184,16 +190,16 @@ class HTTPMCPClient implements MCPClient {
           },
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       if (data.error) {
         throw new Error(data.error.message || 'Tool call failed');
       }
-      
+
       return data.result;
     } catch (error) {
       console.error(`Failed to call tool ${name}:`, error);
@@ -205,7 +211,6 @@ class HTTPMCPClient implements MCPClient {
     // HTTP clients don't need explicit closing
   }
 }
-
 
 class MCPManager {
   private clients: Map<string, MCPClient> = new Map();
@@ -239,14 +244,14 @@ class MCPManager {
       if (result?.value) {
         const config: MCPManagerConfig = JSON.parse(result.value);
         const userServers = config.servers || [];
-        
+
         // Merge with default servers, preserving user-added servers
         const defaultServers = this.serverConfigs;
         const allServers: MCPServerConfig[] = [];
-        
+
         // Add default servers first
         for (const defaultServer of defaultServers) {
-          const userOverride = userServers.find(s => s.id === defaultServer.id);
+          const userOverride = userServers.find((s) => s.id === defaultServer.id);
           if (userOverride) {
             // Keep user's enabled/disabled state but preserve readonly flag
             allServers.push({ ...defaultServer, enabled: userOverride.enabled });
@@ -254,14 +259,14 @@ class MCPManager {
             allServers.push(defaultServer);
           }
         }
-        
+
         // Add user's custom servers
         for (const userServer of userServers) {
-          if (!defaultServers.find(s => s.id === userServer.id)) {
+          if (!defaultServers.find((s) => s.id === userServer.id)) {
             allServers.push(userServer);
           }
         }
-        
+
         this.serverConfigs = allServers;
         return this.serverConfigs;
       }
@@ -314,12 +319,12 @@ class MCPManager {
     if (index === -1) throw new Error('Server not found');
 
     const oldConfig = this.serverConfigs[index];
-    
+
     // Don't allow updates to readonly servers except enabled state
-    if (oldConfig.readonly && Object.keys(updates).some(key => key !== 'enabled')) {
+    if (oldConfig.readonly && Object.keys(updates).some((key) => key !== 'enabled')) {
       throw new Error('Cannot modify readonly server configuration');
     }
-    
+
     this.serverConfigs[index] = { ...oldConfig, ...updates };
     await this.saveConfigurations();
 
@@ -334,11 +339,11 @@ class MCPManager {
 
   // Remove server configuration
   async removeServer(serverId: string): Promise<void> {
-    const config = this.serverConfigs.find(s => s.id === serverId);
+    const config = this.serverConfigs.find((s) => s.id === serverId);
     if (config?.readonly) {
       throw new Error('Cannot remove readonly server');
     }
-    
+
     await this.disconnectFromServer(serverId);
     this.serverConfigs = this.serverConfigs.filter((s) => s.id !== serverId);
     this.serverStatuses.delete(serverId);
@@ -355,13 +360,14 @@ class MCPManager {
       await this.disconnectFromServer(serverId);
 
       // Create appropriate MCP client based on server type
-      const client = config.id === 'demo-mcp-server' 
-        ? new DemoMCPClient()
-        : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
+      const client =
+        config.id === 'demo-mcp-server'
+          ? new DemoMCPClient()
+          : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
 
       // Test the connection by listing tools
       const tools = await client.listTools();
-      
+
       this.clients.set(serverId, client);
       this.serverStatuses.set(serverId, {
         id: serverId,
@@ -369,7 +375,7 @@ class MCPManager {
         lastChecked: Date.now(),
         toolCount: Object.keys(tools).length,
       });
-      
+
       console.log(`Connected to MCP server: ${config.name} (${Object.keys(tools).length} tools)`);
     } catch (error) {
       console.error(`Failed to connect to MCP server ${config.name}:`, error);
@@ -457,7 +463,7 @@ class MCPManager {
 
         const tools = await client.listTools();
         const serverPrefix = `${serverConfig.name.replace(/\s+/g, '_')}_`;
-        
+
         if (toolName.startsWith(serverPrefix)) {
           const originalToolName = toolName.replace(serverPrefix, '');
           if (originalToolName in tools) {
@@ -468,7 +474,7 @@ class MCPManager {
         console.error(`Failed to call tool ${toolName} from server ${serverId}:`, error);
       }
     }
-    
+
     throw new Error(`Tool not found: ${toolName}`);
   }
 
@@ -504,9 +510,10 @@ class MCPManager {
   // Test connection to a server
   async testConnection(config: Omit<MCPServerConfig, 'id' | 'createdAt'>): Promise<boolean> {
     try {
-      const client = config.name === 'Demo Tools (Test Server)'
-        ? new DemoMCPClient()
-        : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
+      const client =
+        config.name === 'Demo Tools (Test Server)'
+          ? new DemoMCPClient()
+          : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
       await client.listTools();
       await client.close();
       return true;
@@ -523,7 +530,7 @@ class MCPManager {
 
   // Get enabled server configurations
   getEnabledServerConfigs(): MCPServerConfig[] {
-    return this.serverConfigs.filter(s => s.enabled);
+    return this.serverConfigs.filter((s) => s.enabled);
   }
 
   // Get server statuses

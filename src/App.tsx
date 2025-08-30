@@ -1,6 +1,6 @@
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { useTheme } from '@/hooks/useTheme';
 import { useEffect } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 import ChatView from './components/ChatView';
 
 function App() {
@@ -13,7 +13,7 @@ function App() {
       try {
         // Enable overlay mode for full-bleed design (only needs to be done once)
         await StatusBar.setOverlaysWebView({ overlay: true });
-        
+
         // Set style based on current theme
         const statusBarStyle = currentTheme === 'dark' ? Style.Light : Style.Dark;
         await StatusBar.setStyle({ style: statusBarStyle });

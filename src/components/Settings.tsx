@@ -530,140 +530,153 @@ export default function Settings({ onClose }: SettingsProps) {
 
           {/* Tools & MCP Tab */}
           <TabsContent value="tools" className="flex-1 flex flex-col overflow-hidden">
-            <div className="space-y-6 flex-1 flex flex-col min-h-0">
-              {/* Quick Setup */}
-              <Card className="flex-shrink-0">
-                <CardHeader>
-                  <CardTitle>Quick Setup</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {publicServers.map((server, index) => (
-                      <Card key={index} className="border-dashed">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-medium">{server.name}</h3>
-                              <p className="text-sm text-muted-foreground">{server.description}</p>
-                              <Badge variant="outline" className="mt-2">
-                                {server.transportType.toUpperCase()}
-                              </Badge>
-                            </div>
-                            <Button size="sm" onClick={() => addPublicServer(server)}>
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full">
+                <div className="space-y-6 pr-4">
+                  {/* Quick Setup */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Quick Setup</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {publicServers.map((server, index) => (
+                          <Card key={index} className="border-dashed">
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-medium">{server.name}</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {server.description}
+                                  </p>
+                                  <Badge variant="outline" className="mt-2">
+                                    {server.transportType.toUpperCase()}
+                                  </Badge>
+                                </div>
+                                <Button size="sm" onClick={() => addPublicServer(server)}>
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              {/* Configured Servers */}
-              <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                  <h2 className="text-xl font-semibold">Configured Servers</h2>
-                  <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Server
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Add MCP Server</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <label htmlFor={serverNameId} className="text-sm font-medium">
-                            Name *
-                          </label>
-                          <Input
-                            id={serverNameId}
-                            value={newServer.name}
-                            onChange={(e) => setNewServer({ ...newServer, name: e.target.value })}
-                            placeholder="My MCP Server"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={serverUrlId} className="text-sm font-medium">
-                            URL *
-                          </label>
-                          <Input
-                            id={serverUrlId}
-                            value={newServer.url}
-                            onChange={(e) => setNewServer({ ...newServer, url: e.target.value })}
-                            placeholder="https://example.com/mcp"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor={transportTypeId} className="text-sm font-medium">
-                            Transport Type
-                          </label>
-                          <select
-                            id={transportTypeId}
-                            value={newServer.transportType}
-                            onChange={(e) =>
-                              setNewServer({
-                                ...newServer,
-                                transportType: e.target.value as 'sse' | 'http',
-                              })
-                            }
-                            className="w-full p-2 border rounded-md"
-                          >
-                            <option value="sse">SSE (Server-Sent Events)</option>
-                            <option value="http">HTTP</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor={serverDescriptionId} className="text-sm font-medium">
-                            Description
-                          </label>
-                          <Textarea
-                            id={serverDescriptionId}
-                            value={newServer.description}
-                            onChange={(e) =>
-                              setNewServer({ ...newServer, description: e.target.value })
-                            }
-                            placeholder="Optional description..."
-                            rows={2}
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={serverEnabledId}
-                            checked={newServer.enabled}
-                            onCheckedChange={(enabled) => setNewServer({ ...newServer, enabled })}
-                          />
-                          <label htmlFor={serverEnabledId} className="text-sm">
-                            Enable server
-                          </label>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={handleTestConnection}
-                            disabled={isTestingConnection || !newServer.url.trim()}
-                            className="flex-1"
-                          >
-                            <TestTube className="h-4 w-4 mr-2" />
-                            {isTestingConnection ? 'Testing...' : 'Test Connection'}
-                          </Button>
-                          <Button onClick={handleAddServer} className="flex-1">
+                  {/* Configured Servers */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold">Configured Servers</h2>
+                      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <Plus className="h-4 w-4 mr-2" />
                             Add Server
                           </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+                          <DialogHeader>
+                            <DialogTitle>Add MCP Server</DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="flex-1 pr-4">
+                            <div className="space-y-4">
+                              <div>
+                                <label htmlFor={serverNameId} className="text-sm font-medium">
+                                  Name *
+                                </label>
+                                <Input
+                                  id={serverNameId}
+                                  value={newServer.name}
+                                  onChange={(e) =>
+                                    setNewServer({ ...newServer, name: e.target.value })
+                                  }
+                                  placeholder="My MCP Server"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={serverUrlId} className="text-sm font-medium">
+                                  URL *
+                                </label>
+                                <Input
+                                  id={serverUrlId}
+                                  value={newServer.url}
+                                  onChange={(e) =>
+                                    setNewServer({ ...newServer, url: e.target.value })
+                                  }
+                                  placeholder="https://example.com/mcp"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={transportTypeId} className="text-sm font-medium">
+                                  Transport Type
+                                </label>
+                                <select
+                                  id={transportTypeId}
+                                  value={newServer.transportType}
+                                  onChange={(e) =>
+                                    setNewServer({
+                                      ...newServer,
+                                      transportType: e.target.value as 'sse' | 'http',
+                                    })
+                                  }
+                                  className="w-full p-2 border rounded-md"
+                                >
+                                  <option value="sse">SSE (Server-Sent Events)</option>
+                                  <option value="http">HTTP</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label
+                                  htmlFor={serverDescriptionId}
+                                  className="text-sm font-medium"
+                                >
+                                  Description
+                                </label>
+                                <Textarea
+                                  id={serverDescriptionId}
+                                  value={newServer.description}
+                                  onChange={(e) =>
+                                    setNewServer({ ...newServer, description: e.target.value })
+                                  }
+                                  placeholder="Optional description..."
+                                  rows={2}
+                                />
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id={serverEnabledId}
+                                  checked={newServer.enabled}
+                                  onCheckedChange={(enabled) =>
+                                    setNewServer({ ...newServer, enabled })
+                                  }
+                                />
+                                <label htmlFor={serverEnabledId} className="text-sm">
+                                  Enable server
+                                </label>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={handleTestConnection}
+                                  disabled={isTestingConnection || !newServer.url.trim()}
+                                  className="flex-1"
+                                >
+                                  <TestTube className="h-4 w-4 mr-2" />
+                                  {isTestingConnection ? 'Testing...' : 'Test Connection'}
+                                </Button>
+                                <Button onClick={handleAddServer} className="flex-1">
+                                  Add Server
+                                </Button>
+                              </div>
+                            </div>
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
 
-                {/* Server List */}
-                <div className="flex-1 min-h-0">
-                  <ScrollArea className="h-full">
-                    <div className="space-y-4 pr-4">
+                    {/* Server List */}
+                    <div className="space-y-4">
                       {servers.length === 0 ? (
                         <Card className="border-dashed">
                           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
@@ -745,9 +758,9 @@ export default function Settings({ onClose }: SettingsProps) {
                         })
                       )}
                     </div>
-                  </ScrollArea>
+                  </div>
                 </div>
-              </div>
+              </ScrollArea>
             </div>
           </TabsContent>
         </Tabs>

@@ -1,7 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, MicIcon, MicOffIcon, Settings as SettingsIcon, Loader2Icon } from 'lucide-react';
+import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -149,23 +149,24 @@ export default function ChatView() {
 
       // Get tools from MCP manager
       const mcpTools = await mcpManager.getAllTools();
-      const tools: Record<string, ReturnType<typeof tool<any, any>>> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tools: Record<string, any> = {};
 
       // Convert MCP tools to AI SDK format
       for (const [toolName, toolDef] of Object.entries(mcpTools)) {
         const inputSchema = toolDef.inputSchema || { type: 'object', properties: {} };
-        
+
         tools[toolName] = tool({
           description: toolDef.description || `Tool from ${toolDef._mcpServerName}`,
           inputSchema: z.object(
             Object.fromEntries(
               Object.entries(inputSchema.properties || {}).map(([key, prop]) => [
                 key,
-                prop.type === 'string' 
+                prop.type === 'string'
                   ? z.string().describe(prop.description || key)
                   : prop.type === 'number'
-                  ? z.number().describe(prop.description || key)
-                  : z.unknown().describe(prop.description || key)
+                    ? z.number().describe(prop.description || key)
+                    : z.unknown().describe(prop.description || key),
               ])
             )
           ),
@@ -504,14 +505,20 @@ export default function ChatView() {
 
       {/* Fixed Input Area with safe area */}
       <div className="border-t py-4 safe-bottom safe-x flex-shrink-0">
-        <PromptInput 
+        <PromptInput
           onSubmit={handleFormSubmit}
-          className={isRecording ? 'ring-2 ring-red-500 ring-opacity-50 shadow-lg shadow-red-200 dark:shadow-red-900/20' : ''}
+          className={
+            isRecording
+              ? 'ring-2 ring-red-500 ring-opacity-50 shadow-lg shadow-red-200 dark:shadow-red-900/20'
+              : ''
+          }
         >
           <PromptInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isRecording ? "🎤 Recording... Click 'Stop' to finish" : "Type your message..."}
+            placeholder={
+              isRecording ? "🎤 Recording... Click 'Stop' to finish" : 'Type your message...'
+            }
             disabled={isRecording || status === 'streaming'}
             className={isRecording ? 'bg-red-50 dark:bg-red-950/20' : ''}
           />
@@ -523,12 +530,14 @@ export default function ChatView() {
                 <span>MCP</span>
               </PromptInputButton>
               {/* Enhanced Microphone button with recording state */}
-              <PromptInputButton 
-                type="button" 
+              <PromptInputButton
+                type="button"
                 onClick={handleVoiceInput}
                 disabled={status === 'submitted' && !isRecording}
                 variant={isRecording ? 'default' : 'ghost'}
-                className={isRecording ? 'bg-red-500 text-white animate-pulse hover:bg-red-600' : ''}
+                className={
+                  isRecording ? 'bg-red-500 text-white animate-pulse hover:bg-red-600' : ''
+                }
               >
                 {isRecording ? (
                   <MicOffIcon size={16} />
@@ -537,7 +546,13 @@ export default function ChatView() {
                 ) : (
                   <MicIcon size={16} />
                 )}
-                <span>{isRecording ? 'Stop' : status === 'submitted' && !isRecording ? 'Processing...' : 'Mic'}</span>
+                <span>
+                  {isRecording
+                    ? 'Stop'
+                    : status === 'submitted' && !isRecording
+                      ? 'Processing...'
+                      : 'Mic'}
+                </span>
               </PromptInputButton>
               {/* Model switcher button with text label */}
               <PromptInputButton type="button" onClick={toggleModelModal}>
@@ -568,7 +583,10 @@ export default function ChatView() {
                 const hasError = status?.error;
 
                 return (
-                  <div key={server.id} className="flex items-center justify-between py-3 px-4 border rounded-lg">
+                  <div
+                    key={server.id}
+                    className="flex items-center justify-between py-3 px-4 border rounded-lg"
+                  >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-medium">{server.name}</h4>
@@ -587,9 +605,7 @@ export default function ChatView() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{server.description}</p>
-                      {hasError && (
-                        <p className="text-xs text-red-600 mt-1">{status.error}</p>
-                      )}
+                      {hasError && <p className="text-xs text-red-600 mt-1">{status.error}</p>}
                     </div>
                     <Switch
                       checked={server.enabled}
@@ -598,7 +614,7 @@ export default function ChatView() {
                   </div>
                 );
               })}
-              
+
               {availableServers.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No MCP servers configured.</p>
