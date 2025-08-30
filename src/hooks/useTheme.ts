@@ -25,25 +25,28 @@ export function useTheme() {
     setCurrentTheme(theme);
   }, []);
 
-  const updateThemePreference = useCallback(async (preference: ThemePreference) => {
-    setThemePreference(preference);
-    
-    // Save preference to secure storage
-    try {
-      await SecureStoragePlugin.set({ key: 'theme_preference', value: preference });
-    } catch (error) {
-      console.error('Failed to save theme preference:', error);
-    }
+  const updateThemePreference = useCallback(
+    async (preference: ThemePreference) => {
+      setThemePreference(preference);
 
-    // Apply the theme
-    let themeToApply: Theme;
-    if (preference === 'system') {
-      themeToApply = getSystemTheme();
-    } else {
-      themeToApply = preference;
-    }
-    applyTheme(themeToApply);
-  }, [applyTheme, getSystemTheme]);
+      // Save preference to secure storage
+      try {
+        await SecureStoragePlugin.set({ key: 'theme_preference', value: preference });
+      } catch (error) {
+        console.error('Failed to save theme preference:', error);
+      }
+
+      // Apply the theme
+      let themeToApply: Theme;
+      if (preference === 'system') {
+        themeToApply = getSystemTheme();
+      } else {
+        themeToApply = preference;
+      }
+      applyTheme(themeToApply);
+    },
+    [applyTheme, getSystemTheme]
+  );
 
   // Initialize theme on mount
   useEffect(() => {
@@ -53,7 +56,7 @@ export function useTheme() {
         const themeResult = await SecureStoragePlugin.get({ key: 'theme_preference' });
         const savedPreference = (themeResult?.value as ThemePreference) || 'system';
         setThemePreference(savedPreference);
-        
+
         // Apply initial theme
         let initialTheme: Theme;
         if (savedPreference === 'system') {

@@ -16,7 +16,6 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
-import { useTheme } from '@/hooks/useTheme';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useTheme } from '@/hooks/useTheme';
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 
@@ -287,76 +287,90 @@ export default function Settings({ onClose }: SettingsProps) {
               <ScrollArea className="h-full">
                 <div className="pr-4">
                   <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  OpenAI Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Current API Key */}
-                <div>
-                  <label htmlFor={currentApiKeyId} className="text-sm font-medium mb-2 block">Current API Key</label>
-                  <div className="flex items-center gap-2">
-                    <Input id={currentApiKeyId} value={currentApiKey || 'Not configured'} readOnly className="flex-1" />
-                    <Button variant="outline" onClick={handleClearApiKey} disabled={!currentApiKey}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="h-5 w-5" />
+                        OpenAI Configuration
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Current API Key */}
+                      <div>
+                        <label htmlFor={currentApiKeyId} className="text-sm font-medium mb-2 block">
+                          Current API Key
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={currentApiKeyId}
+                            value={currentApiKey || 'Not configured'}
+                            readOnly
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={handleClearApiKey}
+                            disabled={!currentApiKey}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
 
-                {/* Update API Key */}
-                <div>
-                  <label htmlFor={updateApiKeyId} className="text-sm font-medium mb-2 block">Update API Key</label>
-                  <div className="space-y-3">
-                    <Input
-                      id={updateApiKeyId}
-                      type="password"
-                      placeholder="sk-..."
-                      value={tempApiKey}
-                      onChange={(e) => setTempApiKey(e.target.value)}
-                    />
-                    <Button
-                      onClick={handleUpdateApiKey}
-                      disabled={!tempApiKey.trim() || isUpdatingKey}
-                      className="w-full"
-                    >
-                      <Key className="h-4 w-4 mr-2" />
-                      {isUpdatingKey ? 'Updating...' : 'Update API Key'}
-                    </Button>
-                  </div>
-                </div>
+                      {/* Update API Key */}
+                      <div>
+                        <label htmlFor={updateApiKeyId} className="text-sm font-medium mb-2 block">
+                          Update API Key
+                        </label>
+                        <div className="space-y-3">
+                          <Input
+                            id={updateApiKeyId}
+                            type="password"
+                            placeholder="sk-..."
+                            value={tempApiKey}
+                            onChange={(e) => setTempApiKey(e.target.value)}
+                          />
+                          <Button
+                            onClick={handleUpdateApiKey}
+                            disabled={!tempApiKey.trim() || isUpdatingKey}
+                            className="w-full"
+                          >
+                            <Key className="h-4 w-4 mr-2" />
+                            {isUpdatingKey ? 'Updating...' : 'Update API Key'}
+                          </Button>
+                        </div>
+                      </div>
 
-                {/* Model Info */}
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Current Model</h4>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">GPT-4o Mini</span>
-                    <Badge variant="outline">Fast & Cost-effective</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    The fastest and most cost-effective OpenAI model as of 2025
-                  </p>
-                </div>
+                      {/* Model Info */}
+                      <div className="bg-muted/50 p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Current Model</h4>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">GPT-4o Mini</span>
+                          <Badge variant="outline">Fast & Cost-effective</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          The fastest and most cost-effective OpenAI model as of 2025
+                        </p>
+                      </div>
 
-                <div className="text-xs text-muted-foreground">
-                  <p>
-                    Your API key is stored securely on your device and never sent to our servers.
-                  </p>
-                  <p>
-                    Get your API key from{' '}
-                    <a
-                      href="https://platform.openai.com/api-keys"
-                      className="text-blue-500 hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      OpenAI Platform
-                    </a>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="text-xs text-muted-foreground">
+                        <p>
+                          Your API key is stored securely on your device and never sent to our
+                          servers.
+                        </p>
+                        <p>
+                          Get your API key from{' '}
+                          <a
+                            href="https://platform.openai.com/api-keys"
+                            className="text-blue-500 hover:underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            OpenAI Platform
+                          </a>
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </ScrollArea>
             </div>
@@ -368,139 +382,147 @@ export default function Settings({ onClose }: SettingsProps) {
               <ScrollArea className="h-full">
                 <div className="pr-4">
                   <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  Theme Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Theme Selection */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Choose your theme</h4>
-                  <div className="grid grid-cols-1 gap-3">
-                    {/* System Theme Option */}
-                    <button
-                      type="button"
-                      onClick={() => updateThemePreference('system')}
-                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
-                        themePreference === 'system' 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Monitor className="h-5 w-5" />
-                        <div className="text-left">
-                          <div className="font-medium">System</div>
-                          <div className="text-sm text-muted-foreground">
-                            Follow device theme preference
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Palette className="h-5 w-5" />
+                        Theme Settings
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Theme Selection */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Choose your theme</h4>
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* System Theme Option */}
+                          <button
+                            type="button"
+                            onClick={() => updateThemePreference('system')}
+                            className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
+                              themePreference === 'system'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Monitor className="h-5 w-5" />
+                              <div className="text-left">
+                                <div className="font-medium">System</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Follow device theme preference
+                                </div>
+                              </div>
+                            </div>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 ${
+                                themePreference === 'system'
+                                  ? 'border-primary bg-primary'
+                                  : 'border-border'
+                              }`}
+                            />
+                          </button>
+
+                          {/* Light Theme Option */}
+                          <button
+                            type="button"
+                            onClick={() => updateThemePreference('light')}
+                            className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
+                              themePreference === 'light'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Sun className="h-5 w-5" />
+                              <div className="text-left">
+                                <div className="font-medium">Light</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Always use light theme
+                                </div>
+                              </div>
+                            </div>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 ${
+                                themePreference === 'light'
+                                  ? 'border-primary bg-primary'
+                                  : 'border-border'
+                              }`}
+                            />
+                          </button>
+
+                          {/* Dark Theme Option */}
+                          <button
+                            type="button"
+                            onClick={() => updateThemePreference('dark')}
+                            className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
+                              themePreference === 'dark'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Moon className="h-5 w-5" />
+                              <div className="text-left">
+                                <div className="font-medium">Dark</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Always use dark theme
+                                </div>
+                              </div>
+                            </div>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 ${
+                                themePreference === 'dark'
+                                  ? 'border-primary bg-primary'
+                                  : 'border-border'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Current Theme Status */}
+                      <div className="bg-muted/50 p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Current Theme</h4>
+                        <div className="flex items-center gap-2 text-sm">
+                          {currentTheme === 'dark' ? (
+                            <Moon className="h-4 w-4" />
+                          ) : (
+                            <Sun className="h-4 w-4" />
+                          )}
+                          <span className="capitalize">{currentTheme} mode is active</span>
+                          {themePreference === 'system' && (
+                            <Badge variant="outline" className="ml-2">
+                              Auto
+                            </Badge>
+                          )}
+                        </div>
+                        {themePreference === 'system' && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Theme automatically switches based on your device settings
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Theme Preview */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium">Preview</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Light Preview */}
+                          <div className="p-3 rounded-lg border bg-white text-black">
+                            <div className="text-xs font-medium mb-1">Light Theme</div>
+                            <div className="text-xs text-gray-600">Clean and bright interface</div>
+                            <div className="mt-2 h-2 bg-blue-500 rounded-full w-3/4"></div>
+                          </div>
+
+                          {/* Dark Preview */}
+                          <div className="p-3 rounded-lg border bg-gray-900 text-white">
+                            <div className="text-xs font-medium mb-1">Dark Theme</div>
+                            <div className="text-xs text-gray-300">Easy on the eyes</div>
+                            <div className="mt-2 h-2 bg-blue-400 rounded-full w-3/4"></div>
                           </div>
                         </div>
                       </div>
-                      <div className={`w-4 h-4 rounded-full border-2 ${
-                        themePreference === 'system'
-                          ? 'border-primary bg-primary'
-                          : 'border-border'
-                      }`} />
-                    </button>
-
-                    {/* Light Theme Option */}
-                    <button
-                      type="button"
-                      onClick={() => updateThemePreference('light')}
-                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
-                        themePreference === 'light' 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Sun className="h-5 w-5" />
-                        <div className="text-left">
-                          <div className="font-medium">Light</div>
-                          <div className="text-sm text-muted-foreground">
-                            Always use light theme
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`w-4 h-4 rounded-full border-2 ${
-                        themePreference === 'light'
-                          ? 'border-primary bg-primary'
-                          : 'border-border'
-                      }`} />
-                    </button>
-
-                    {/* Dark Theme Option */}
-                    <button
-                      type="button"
-                      onClick={() => updateThemePreference('dark')}
-                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors hover:bg-muted/50 ${
-                        themePreference === 'dark' 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Moon className="h-5 w-5" />
-                        <div className="text-left">
-                          <div className="font-medium">Dark</div>
-                          <div className="text-sm text-muted-foreground">
-                            Always use dark theme
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`w-4 h-4 rounded-full border-2 ${
-                        themePreference === 'dark'
-                          ? 'border-primary bg-primary'
-                          : 'border-border'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Current Theme Status */}
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Current Theme</h4>
-                  <div className="flex items-center gap-2 text-sm">
-                    {currentTheme === 'dark' ? (
-                      <Moon className="h-4 w-4" />
-                    ) : (
-                      <Sun className="h-4 w-4" />
-                    )}
-                    <span className="capitalize">{currentTheme} mode is active</span>
-                    {themePreference === 'system' && (
-                      <Badge variant="outline" className="ml-2">Auto</Badge>
-                    )}
-                  </div>
-                  {themePreference === 'system' && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Theme automatically switches based on your device settings
-                    </p>
-                  )}
-                </div>
-
-                {/* Theme Preview */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Preview</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Light Preview */}
-                    <div className="p-3 rounded-lg border bg-white text-black">
-                      <div className="text-xs font-medium mb-1">Light Theme</div>
-                      <div className="text-xs text-gray-600">Clean and bright interface</div>
-                      <div className="mt-2 h-2 bg-blue-500 rounded-full w-3/4"></div>
-                    </div>
-                    
-                    {/* Dark Preview */}
-                    <div className="p-3 rounded-lg border bg-gray-900 text-white">
-                      <div className="text-xs font-medium mb-1">Dark Theme</div>
-                      <div className="text-xs text-gray-300">Easy on the eyes</div>
-                      <div className="mt-2 h-2 bg-blue-400 rounded-full w-3/4"></div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
                 </div>
               </ScrollArea>
             </div>
@@ -555,7 +577,9 @@ export default function Settings({ onClose }: SettingsProps) {
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
-                          <label htmlFor={serverNameId} className="text-sm font-medium">Name *</label>
+                          <label htmlFor={serverNameId} className="text-sm font-medium">
+                            Name *
+                          </label>
                           <Input
                             id={serverNameId}
                             value={newServer.name}
@@ -564,7 +588,9 @@ export default function Settings({ onClose }: SettingsProps) {
                           />
                         </div>
                         <div>
-                          <label htmlFor={serverUrlId} className="text-sm font-medium">URL *</label>
+                          <label htmlFor={serverUrlId} className="text-sm font-medium">
+                            URL *
+                          </label>
                           <Input
                             id={serverUrlId}
                             value={newServer.url}
@@ -573,7 +599,9 @@ export default function Settings({ onClose }: SettingsProps) {
                           />
                         </div>
                         <div>
-                          <label htmlFor={transportTypeId} className="text-sm font-medium">Transport Type</label>
+                          <label htmlFor={transportTypeId} className="text-sm font-medium">
+                            Transport Type
+                          </label>
                           <select
                             id={transportTypeId}
                             value={newServer.transportType}
@@ -590,7 +618,9 @@ export default function Settings({ onClose }: SettingsProps) {
                           </select>
                         </div>
                         <div>
-                          <label htmlFor={serverDescriptionId} className="text-sm font-medium">Description</label>
+                          <label htmlFor={serverDescriptionId} className="text-sm font-medium">
+                            Description
+                          </label>
                           <Textarea
                             id={serverDescriptionId}
                             value={newServer.description}
@@ -607,7 +637,9 @@ export default function Settings({ onClose }: SettingsProps) {
                             checked={newServer.enabled}
                             onCheckedChange={(enabled) => setNewServer({ ...newServer, enabled })}
                           />
-                          <label htmlFor={serverEnabledId} className="text-sm">Enable server</label>
+                          <label htmlFor={serverEnabledId} className="text-sm">
+                            Enable server
+                          </label>
                         </div>
                         <div className="flex gap-2">
                           <Button
@@ -638,8 +670,8 @@ export default function Settings({ onClose }: SettingsProps) {
                             <SettingsIcon className="h-12 w-12 text-muted-foreground mb-4" />
                             <h3 className="text-lg font-medium mb-2">No MCP Servers Configured</h3>
                             <p className="text-muted-foreground mb-4">
-                              Add your first MCP server to enhance your AI conversations with external
-                              tools and data.
+                              Add your first MCP server to enhance your AI conversations with
+                              external tools and data.
                             </p>
                             <Button onClick={() => setShowAddDialog(true)}>
                               <Plus className="h-4 w-4 mr-2" />
@@ -672,7 +704,9 @@ export default function Settings({ onClose }: SettingsProps) {
                                         {server.transportType.toUpperCase()}
                                       </Badge>
                                     </div>
-                                    <p className="text-sm text-muted-foreground mb-2">{server.url}</p>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      {server.url}
+                                    </p>
                                     {server.description && (
                                       <p className="text-sm text-muted-foreground mb-2">
                                         {server.description}
