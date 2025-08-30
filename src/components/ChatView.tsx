@@ -1,7 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, MicIcon, Settings as SettingsIcon } from 'lucide-react';
+import { BotIcon, MicIcon, MicOffIcon, Settings as SettingsIcon, Loader2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -77,6 +77,7 @@ export default function ChatView() {
   const [modelModalOpen, setModelModalOpen] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
+  const [isRecording, setIsRecording] = useState<boolean>(false);
 
   useEffect(() => {
     // Check if we have a stored API key and initialize MCP
@@ -302,6 +303,7 @@ export default function ChatView() {
 
       // Handle recording completion
       mediaRecorder.onstop = async () => {
+        setIsRecording(false);
         try {
           // Create audio blob from chunks
           const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
@@ -339,7 +341,7 @@ export default function ChatView() {
 
       // Start recording for 5 seconds
       mediaRecorder.start();
-      setStatus('streaming');
+      setIsRecording(true);
 
       // Auto-stop after 5 seconds
       setTimeout(() => {
@@ -349,6 +351,7 @@ export default function ChatView() {
       }, 5000);
     } catch (error) {
       console.error('Voice input error:', error);
+      setIsRecording(false);
       alert('Microphone access denied or not available');
     }
   };
@@ -489,12 +492,16 @@ export default function ChatView() {
 
       {/* Fixed Input Area with safe area */}
       <div className="border-t py-4 safe-bottom safe-x flex-shrink-0">
-        <PromptInput onSubmit={handleFormSubmit}>
+        <PromptInput 
+          onSubmit={handleFormSubmit}
+          className={isRecording ? 'ring-2 ring-red-500 ring-opacity-50 shadow-lg shadow-red-200 dark:shadow-red-900/20' : ''}
+        >
           <PromptInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            disabled={status === 'streaming'}
+            placeholder={isRecording ? "🎤 Recording... (5 seconds)" : "Type your message..."}
+            disabled={isRecording || status === 'streaming'}
+            className={isRecording ? 'bg-red-50 dark:bg-red-950/20' : ''}
           />
           <PromptInputToolbar>
             <PromptInputTools>
@@ -503,10 +510,22 @@ export default function ChatView() {
                 <McpIcon size={16} />
                 <span>MCP</span>
               </PromptInputButton>
-              {/* Microphone button with text label */}
-              <PromptInputButton type="button" onClick={handleVoiceInput}>
-                <MicIcon size={16} />
-                <span>Mic</span>
+              {/* Enhanced Microphone button with recording state */}
+              <PromptInputButton 
+                type="button" 
+                onClick={handleVoiceInput}
+                disabled={isRecording || status === 'submitted'}
+                variant={isRecording ? 'default' : 'ghost'}
+                className={isRecording ? 'bg-red-500 text-white animate-pulse hover:bg-red-600' : ''}
+              >
+                {isRecording ? (
+                  <MicOffIcon size={16} />
+                ) : status === 'submitted' && !isRecording ? (
+                  <Loader2Icon size={16} className="animate-spin" />
+                ) : (
+                  <MicIcon size={16} />
+                )}
+                <span>{isRecording ? 'Recording...' : status === 'submitted' && !isRecording ? 'Processing...' : 'Mic'}</span>
               </PromptInputButton>
               {/* Model switcher button with text label */}
               <PromptInputButton type="button" onClick={toggleModelModal}>
