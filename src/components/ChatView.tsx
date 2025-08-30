@@ -41,6 +41,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 import { mcpManager } from '@/services/mcpManager';
 import Settings from './Settings';
@@ -74,6 +75,8 @@ export default function ChatView() {
 
   // New state for AI Elements features
   const [toolsModalOpen, setToolsModalOpen] = useState<boolean>(false);
+  const [availableServers, setAvailableServers] = useState<any[]>([]);
+  const [serverStatuses, setServerStatuses] = useState<Map<string, any>>(new Map());
   const [modelModalOpen, setModelModalOpen] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
@@ -143,56 +146,38 @@ export default function ChatView() {
     try {
       const openai = createOpenAI({ apiKey });
 
-      // Create demo tools for testing MCP functionality
-      const tools = {
-        calculator: tool({
-          description: 'Perform basic mathematical calculations',
-          inputSchema: z.object({
-            expression: z
-              .string()
-              .describe('Mathematical expression to evaluate (e.g., "2 + 2", "10 * 5")'),
-          }),
-          execute: async ({ expression }: { expression: string }) => {
+      // Get tools from MCP manager
+      const mcpTools = await mcpManager.getAllTools();
+      const tools: Record<string, any> = {};
+
+      // Convert MCP tools to AI SDK format
+      for (const [toolName, toolDef] of Object.entries(mcpTools)) {
+        const inputSchema = toolDef.inputSchema || { type: 'object', properties: {} };
+        
+        tools[toolName] = tool({
+          description: toolDef.description || `Tool from ${toolDef._mcpServerName}`,
+          inputSchema: z.object(
+            Object.fromEntries(
+              Object.entries(inputSchema.properties || {}).map(([key, prop]: [string, any]) => [
+                key,
+                prop.type === 'string' 
+                  ? z.string().describe(prop.description || key)
+                  : prop.type === 'number'
+                  ? z.number().describe(prop.description || key)
+                  : z.any().describe(prop.description || key)
+              ])
+            )
+          ),
+          execute: async (args: Record<string, any>) => {
             try {
-              // Simple safe evaluation for demo purposes
-              const result = Function(
-                `"use strict"; return (${expression.replace(/[^0-9+\-*/.() ]/g, '')})`
-              )();
-              return { calculation: expression, result: result.toString() };
-            } catch {
-              return { calculation: expression, result: 'Error: Invalid expression' };
+              return await mcpManager.callTool(toolName, args);
+            } catch (error) {
+              console.error(`Failed to execute tool ${toolName}:`, error);
+              return { error: error instanceof Error ? error.message : 'Tool execution failed' };
             }
           },
-        }),
-        timeInfo: tool({
-          description: 'Get current time and date information',
-          inputSchema: z.object({
-            timezone: z.string().optional().describe('Timezone (optional, defaults to local)'),
-          }),
-          execute: async ({ timezone }: { timezone?: string }) => {
-            const now = new Date();
-            return {
-              currentTime: now.toLocaleString(),
-              timestamp: now.getTime(),
-              timezone: timezone || 'local',
-            };
-          },
-        }),
-        textAnalyzer: tool({
-          description: 'Analyze text for word count, character count, etc.',
-          inputSchema: z.object({
-            text: z.string().describe('Text to analyze'),
-          }),
-          execute: async ({ text }: { text: string }) => {
-            return {
-              text: text,
-              wordCount: text.split(/\s+/).filter((word: string) => word.length > 0).length,
-              characterCount: text.length,
-              characterCountNoSpaces: text.replace(/\s/g, '').length,
-            };
-          },
-        }),
-      };
+        });
+      }
 
       // Convert messages to the format expected by generateText
       const formattedMessages = messages.concat(userMessage).map((msg) => ({
@@ -362,8 +347,28 @@ export default function ChatView() {
     }
   };
 
-  const toggleToolsModal = () => {
+  const toggleToolsModal = async () => {
+    if (!toolsModalOpen) {
+      // Load server data when opening modal
+      const servers = mcpManager.getServerConfigs();
+      const statuses = mcpManager.getServerStatuses();
+      setAvailableServers(servers);
+      setServerStatuses(statuses);
+    }
     setToolsModalOpen(!toolsModalOpen);
+  };
+
+  const toggleServerEnabled = async (serverId: string, enabled: boolean) => {
+    try {
+      await mcpManager.updateServer(serverId, { enabled });
+      // Refresh server data
+      const servers = mcpManager.getServerConfigs();
+      const statuses = mcpManager.getServerStatuses();
+      setAvailableServers(servers);
+      setServerStatuses(statuses);
+    } catch (error) {
+      console.error('Failed to toggle server:', error);
+    }
   };
 
   const toggleModelModal = () => {
@@ -544,29 +549,61 @@ export default function ChatView() {
         </PromptInput>
       </div>
 
-      {/* Tools Selection Modal */}
+      {/* MCP Server Selection Modal */}
       <Dialog open={toolsModalOpen} onOpenChange={setToolsModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Select Tools</DialogTitle>
+            <DialogTitle>MCP Server Selection</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Available demo tools (MCP integration coming soon):
+              Enable or disable MCP servers to control which tools are available to the AI.
             </p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm">Calculator</span>
-                <span className="text-xs text-muted-foreground">Always enabled</span>
-              </div>
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm">Time Info</span>
-                <span className="text-xs text-muted-foreground">Always enabled</span>
-              </div>
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm">Text Analyzer</span>
-                <span className="text-xs text-muted-foreground">Always enabled</span>
-              </div>
+            <div className="space-y-3">
+              {availableServers.map((server) => {
+                const status = serverStatuses.get(server.id);
+                const isConnected = status?.connected || false;
+                const toolCount = status?.toolCount || 0;
+                const hasError = status?.error;
+
+                return (
+                  <div key={server.id} className="flex items-center justify-between py-3 px-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-medium">{server.name}</h4>
+                        {server.readonly && (
+                          <span className="text-xs bg-muted px-2 py-1 rounded">Built-in</span>
+                        )}
+                        {isConnected && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            {toolCount} tools
+                          </span>
+                        )}
+                        {hasError && (
+                          <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                            Error
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{server.description}</p>
+                      {hasError && (
+                        <p className="text-xs text-red-600 mt-1">{status.error}</p>
+                      )}
+                    </div>
+                    <Switch
+                      checked={server.enabled}
+                      onCheckedChange={(enabled) => toggleServerEnabled(server.id, enabled)}
+                    />
+                  </div>
+                );
+              })}
+              
+              {availableServers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No MCP servers configured.</p>
+                  <p className="text-xs mt-1">Go to Settings → Tools & MCP to add servers.</p>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

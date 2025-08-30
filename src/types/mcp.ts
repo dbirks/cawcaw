@@ -5,9 +5,10 @@ export interface MCPServerConfig {
   name: string;
   url: string;
   enabled: boolean;
-  transportType: 'sse' | 'http';
+  transportType: 'sse' | 'http' | 'streamableHttp';
   description?: string;
   createdAt: number;
+  readonly?: boolean; // For hardcoded servers
 }
 
 export interface MCPToolCall {
