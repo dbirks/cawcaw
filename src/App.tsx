@@ -15,8 +15,12 @@ function App() {
         await StatusBar.setOverlaysWebView({ overlay: true });
 
         // Set style based on current theme
+        // Style.Dark = dark text (for light backgrounds)
+        // Style.Light = light text (for dark backgrounds)
         const statusBarStyle = currentTheme === 'dark' ? Style.Light : Style.Dark;
         await StatusBar.setStyle({ style: statusBarStyle });
+        
+        console.log(`StatusBar style set to: ${statusBarStyle} for theme: ${currentTheme}`);
       } catch (error) {
         // StatusBar API might not be available on web/development
         console.log('StatusBar initialization skipped:', error);

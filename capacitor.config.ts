@@ -14,7 +14,6 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       overlaysWebView: true, // Enable immersive mode for modern blurred status bar
-      style: 'default', // Will auto-adapt based on content
       backgroundColor: '#00000000' // Transparent background for blur effect
     },
     Keyboard: {
