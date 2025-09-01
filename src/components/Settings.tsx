@@ -2,7 +2,6 @@ import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
   Brain,
   Edit,
-  Key,
   Lock,
   Monitor,
   Moon,
@@ -54,8 +53,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const [activeTab, setActiveTab] = useState('llm');
 
   // API Key state
-  const [currentApiKey, setCurrentApiKey] = useState<string>('');
-  const [tempApiKey, setTempApiKey] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>('');
   const [isUpdatingKey, setIsUpdatingKey] = useState(false);
 
   // Theme management
@@ -86,8 +84,7 @@ export default function Settings({ onClose }: SettingsProps) {
   } | null>(null);
 
   // Generate unique IDs for form elements
-  const currentApiKeyId = useId();
-  const updateApiKeyId = useId();
+  const apiKeyId = useId();
   const serverNameId = useId();
   const serverUrlId = useId();
   const transportTypeId = useId();
@@ -114,10 +111,10 @@ export default function Settings({ onClose }: SettingsProps) {
       setServers(configs);
       setServerStatuses(mcpManager.getServerStatuses());
 
-      // Load current API key (masked)
+      // Load current API key
       const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
       if (result?.value) {
-        setCurrentApiKey(`sk-...${result.value.slice(-6)}`);
+        setApiKey(result.value);
       }
 
       // Load OAuth statuses for servers that require OAuth
@@ -140,23 +137,18 @@ export default function Settings({ onClose }: SettingsProps) {
     loadSettings();
   }, [loadSettings]);
 
-  const handleUpdateApiKey = async () => {
-    if (!tempApiKey.trim()) {
-      alert('Please enter an API key');
-      return;
-    }
-
-    setIsUpdatingKey(true);
-    try {
-      await SecureStoragePlugin.set({ key: 'openai_api_key', value: tempApiKey });
-      setCurrentApiKey(`sk-...${tempApiKey.slice(-6)}`);
-      setTempApiKey('');
-      alert('✅ API key updated successfully');
-    } catch (error) {
-      console.error('Failed to update API key:', error);
-      alert('❌ Failed to update API key');
-    } finally {
-      setIsUpdatingKey(false);
+  const handleApiKeyChange = async (newValue: string) => {
+    setApiKey(newValue);
+    
+    if (newValue.trim()) {
+      setIsUpdatingKey(true);
+      try {
+        await SecureStoragePlugin.set({ key: 'openai_api_key', value: newValue.trim() });
+      } catch (error) {
+        console.error('Failed to save API key:', error);
+      } finally {
+        setIsUpdatingKey(false);
+      }
     }
   };
 
@@ -168,8 +160,7 @@ export default function Settings({ onClose }: SettingsProps) {
     ) {
       try {
         await SecureStoragePlugin.remove({ key: 'openai_api_key' });
-        setCurrentApiKey('');
-        alert('✅ API key cleared');
+        setApiKey('');
       } catch (error) {
         console.error('Failed to clear API key:', error);
         alert('❌ Failed to clear API key');
@@ -411,48 +402,34 @@ export default function Settings({ onClose }: SettingsProps) {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Current API Key */}
+                      {/* API Key */}
                       <div>
-                        <label htmlFor={currentApiKeyId} className="text-sm font-medium mb-2 block">
-                          Current API Key
+                        <label htmlFor={apiKeyId} className="text-sm font-medium mb-2 block">
+                          OpenAI API Key
                         </label>
                         <div className="flex items-center gap-2">
-                          <Input
-                            id={currentApiKeyId}
-                            value={currentApiKey || 'Not configured'}
-                            readOnly
-                            className="flex-1"
-                          />
+                          <div className="flex-1 relative">
+                            <Input
+                              id={apiKeyId}
+                              type="password"
+                              placeholder="sk-..."
+                              value={apiKey}
+                              onChange={(e) => handleApiKeyChange(e.target.value)}
+                              className="pr-8"
+                            />
+                            {isUpdatingKey && (
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                              </div>
+                            )}
+                          </div>
                           <Button
                             variant="outline"
                             onClick={handleClearApiKey}
-                            disabled={!currentApiKey}
+                            disabled={!apiKey.trim()}
+                            size="sm"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Update API Key */}
-                      <div>
-                        <label htmlFor={updateApiKeyId} className="text-sm font-medium mb-2 block">
-                          Update API Key
-                        </label>
-                        <div className="space-y-3">
-                          <Input
-                            id={updateApiKeyId}
-                            type="password"
-                            placeholder="sk-..."
-                            value={tempApiKey}
-                            onChange={(e) => setTempApiKey(e.target.value)}
-                          />
-                          <Button
-                            onClick={handleUpdateApiKey}
-                            disabled={!tempApiKey.trim() || isUpdatingKey}
-                            className="w-full"
-                          >
-                            <Key className="h-4 w-4 mr-2" />
-                            {isUpdatingKey ? 'Updating...' : 'Update API Key'}
                           </Button>
                         </div>
                       </div>
