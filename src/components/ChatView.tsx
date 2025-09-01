@@ -34,12 +34,14 @@ import {
   ToolOutput,
 } from '@/components/ai-elements/tool';
 import { McpIcon } from '@/components/icons/McpIcon';
+import { AssistantIcon } from '@/components/icons/AssistantIcon';
 
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
@@ -490,10 +492,15 @@ export default function ChatView() {
                       return null;
                     })}
                   </MessageContent>
-                  <MessageAvatar
-                    src={message.role === 'assistant' ? '/robot-icon.png' : '/user-icon.png'}
-                    name={message.role === 'assistant' ? 'Assistant' : 'You'}
-                  />
+                  {message.role === 'assistant' ? (
+                    <Avatar className="size-8 ring ring-1 ring-border">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        <AssistantIcon size={16} />
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <MessageAvatar src="/user-icon.png" name="You" />
+                  )}
                 </Message>
               ))}
             </div>
