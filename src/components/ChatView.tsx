@@ -1,7 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon } from 'lucide-react';
+import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -10,7 +10,7 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation';
-import { Message, MessageAvatar, MessageContent } from '@/components/ai-elements/message';
+import { Message, MessageContent } from '@/components/ai-elements/message';
 import {
   PromptInput,
   PromptInputButton,
@@ -499,7 +499,11 @@ export default function ChatView() {
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <MessageAvatar src="/user-icon.png" name="You" />
+                    <Avatar className="size-8 ring ring-1 ring-border">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        <User size={16} />
+                      </AvatarFallback>
+                    </Avatar>
                   )}
                 </Message>
               ))}
