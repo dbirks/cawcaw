@@ -562,7 +562,6 @@ export default function ChatView() {
                                 </span>
                               )}
                             </div>
-                            {server.enabled && <Check className="h-4 w-4" />}
                           </div>
                         </PromptInputMcpSelectItem>
                       );

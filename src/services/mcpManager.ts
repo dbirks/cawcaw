@@ -242,18 +242,7 @@ class MCPManager {
   }
 
   private initializeWithDefaultServers() {
-    this.serverConfigs = [
-      {
-        id: 'demo-mcp-server',
-        name: 'Demo Tools (Test Server)',
-        url: 'http://localhost:3001', // Will be replaced with mock client
-        enabled: true,
-        transportType: 'http-streamable',
-        description: 'Built-in demo tools for testing MCP protocol and tool calls.',
-        createdAt: Date.now(),
-        readonly: true,
-      },
-    ];
+    this.serverConfigs = [];
   }
 
   // Load server configurations from secure storage
@@ -399,11 +388,8 @@ class MCPManager {
         }
       }
 
-      // Create appropriate MCP client based on server type
-      const client =
-        config.id === 'demo-mcp-server'
-          ? new DemoMCPClient()
-          : new HTTPMCPClient(config.url, config.transportType, oauthTokens);
+      // Create appropriate MCP client
+      const client = new HTTPMCPClient(config.url, config.transportType, oauthTokens);
 
       // Test the connection by listing tools
       const tools = await client.listTools();
@@ -556,9 +542,7 @@ class MCPManager {
   }> {
     try {
       // First test basic connection without OAuth
-      const client = config.name === 'Demo Tools (Test Server)'
-        ? new DemoMCPClient()
-        : new HTTPMCPClient(config.url, config.transportType);
+      const client = new HTTPMCPClient(config.url, config.transportType);
       
       try {
         await client.listTools();
