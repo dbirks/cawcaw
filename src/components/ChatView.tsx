@@ -535,8 +535,16 @@ export default function ChatView() {
                 <PopoverTrigger asChild>
                   <PromptInputButton>
                     <McpIcon size={16} />
-                    <span className="hidden sm:inline">
-                      {availableServers.filter((s) => s.enabled).length} servers
+                    <span className="hidden md:inline">
+                      Model Context Protocol
+                    </span>
+                    <span className="hidden sm:inline md:hidden">
+                      {(() => {
+                        const enabledCount = availableServers.filter((s) => s.enabled).length;
+                        return enabledCount === 0 ? 'No tools' : 
+                               enabledCount === 1 ? '1 tool' : 
+                               `${enabledCount} tools`;
+                      })()}
                     </span>
                   </PromptInputButton>
                 </PopoverTrigger>
@@ -591,7 +599,7 @@ export default function ChatView() {
                 ) : (
                   <MicIcon size={16} />
                 )}
-                <span>
+                <span className="hidden sm:inline">
                   {isRecording
                     ? 'Stop'
                     : status === 'submitted' && !isRecording
