@@ -144,18 +144,22 @@ export default function ChatView() {
 
   const handleMcpCommand = async (command: string) => {
     // Parse /mcp command more flexibly: "/mcp <url>" or variations
-    let commandText = command.toLowerCase().startsWith('/mcp ') 
-      ? command.slice(5).trim() // Remove "/mcp " prefix
-      : command.toLowerCase() === '/mcp' 
+    let commandText = command.toLowerCase().startsWith('/mcp ')
+      ? command
+          .slice(5)
+          .trim() // Remove "/mcp " prefix
+      : command.toLowerCase() === '/mcp'
         ? '' // Just "/mcp" with no args
         : command.slice(4).trim(); // Remove "/mcp" prefix for other forms
-    
+
     if (!commandText) {
-      addSystemMessage('❌ Please provide a full MCP endpoint URL. Example: `/mcp example.com/mcp`');
+      addSystemMessage(
+        '❌ Please provide a full MCP endpoint URL. Example: `/mcp example.com/mcp`'
+      );
       return;
     }
 
-    // Handle common patterns like "add example.com" 
+    // Handle common patterns like "add example.com"
     if (commandText.toLowerCase().startsWith('add ')) {
       commandText = commandText.slice(4).trim();
     }
@@ -163,24 +167,26 @@ export default function ChatView() {
     // Extract URL - could be just the URL or URL with additional params
     const parts = commandText.split(/\s+/);
     let url = parts[0];
-    
+
     // If URL doesn't have protocol, assume https
     if (!url.match(/^https?:\/\//)) {
       url = `https://${url}`;
     }
-    
+
     // Use the exact endpoint the user provided - don't modify it
-    
+
     // Generate a friendly name from the URL
     let hostname = '';
     try {
       hostname = new URL(url).hostname;
       // Validate the URL properly
     } catch {
-      addSystemMessage('❌ Invalid URL format. Please provide a complete MCP endpoint like `https://example.com/mcp`');
+      addSystemMessage(
+        '❌ Invalid URL format. Please provide a complete MCP endpoint like `https://example.com/mcp`'
+      );
       return;
     }
-    
+
     const name = parts[1] || hostname;
     const transportType = (parts[2] as 'http-streamable' | 'sse') || 'http-streamable';
 
@@ -208,9 +214,11 @@ export default function ChatView() {
 
       if (testResult.connectionSuccess) {
         // Show success and ask for confirmation
-        const authInfo = testResult.requiresAuth ? '\n🔐 OAuth authentication will be required.' : '';
+        const authInfo = testResult.requiresAuth
+          ? '\n🔐 OAuth authentication will be required.'
+          : '';
         const confirmMessage = `✅ Successfully connected to ${hostname}!${authInfo}\n\nAdd this MCP server to your configuration?`;
-        
+
         if (confirm(confirmMessage)) {
           // Add the server
           const _serverConfig = await mcpManager.addServer({
@@ -228,7 +236,9 @@ export default function ChatView() {
           setAvailableServers(servers);
           setServerStatuses(statuses);
 
-          const authNote = testResult.requiresAuth ? ' You can authenticate via Settings → Tools & MCP.' : '';
+          const authNote = testResult.requiresAuth
+            ? ' You can authenticate via Settings → Tools & MCP.'
+            : '';
           addSystemMessage(`✅ Added "${name}" to your MCP servers!${authNote}`);
         } else {
           addSystemMessage('👍 No problem! You can always add it later through Settings.');
@@ -239,7 +249,7 @@ export default function ChatView() {
         if (testResult.error) {
           addSystemMessage(`Details: ${testResult.error}`);
         }
-        
+
         if (testResult.detailedError) {
           console.error('Detailed MCP connection error:', testResult.detailedError);
         }
