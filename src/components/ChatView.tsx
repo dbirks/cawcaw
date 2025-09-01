@@ -23,11 +23,6 @@ import {
   PromptInputModelSelectContent,
   PromptInputModelSelectItem,
   PromptInputModelSelectValue,
-  PromptInputMcpSelect,
-  PromptInputMcpSelectTrigger,
-  PromptInputMcpSelectContent,
-  PromptInputMcpSelectItem,
-  PromptInputMcpSelectValue,
 } from '@/components/ai-elements/prompt-input';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'; // For reasoning models like o1 and o3-mini
 import { Response } from '@/components/ai-elements/response';
@@ -42,6 +37,7 @@ import { McpIcon } from '@/components/icons/McpIcon';
 
 // UI Components
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
@@ -81,6 +77,7 @@ export default function ChatView() {
   const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
+  const [mcpPopoverOpen, setMcpPopoverOpen] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [currentRecording, setCurrentRecording] = useState<{
     mediaRecorder: MediaRecorder;
@@ -529,31 +526,28 @@ export default function ChatView() {
           <PromptInputToolbar>
             <PromptInputTools>
               {/* MCP Server selector */}
-              <PromptInputMcpSelect>
-                <PromptInputMcpSelectTrigger>
-                  <McpIcon size={16} />
-                  <PromptInputMcpSelectValue>
+              <Popover open={mcpPopoverOpen} onOpenChange={setMcpPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <PromptInputButton>
+                    <McpIcon size={16} />
                     {availableServers.filter(s => s.enabled).length} servers
-                  </PromptInputMcpSelectValue>
-                </PromptInputMcpSelectTrigger>
-                <PromptInputMcpSelectContent>
-                  {availableServers.length === 0 ? (
-                    <PromptInputMcpSelectItem value="no-servers" disabled>
-                      <span className="text-muted-foreground">No servers configured</span>
-                    </PromptInputMcpSelectItem>
-                  ) : (
-                    availableServers.map((server) => {
-                      const status = serverStatuses.get(server.id);
-                      return (
-                        <PromptInputMcpSelectItem 
-                          key={server.id} 
-                          value={server.id}
-                          onSelect={(e) => {
-                            e.preventDefault(); // Prevent dropdown from closing
-                            toggleServerEnabled(server.id);
-                          }}
-                        >
-                          <div className="flex items-center justify-between w-full">
+                  </PromptInputButton>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="start">
+                  <div className="p-1">
+                    {availableServers.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        No servers configured
+                      </div>
+                    ) : (
+                      availableServers.map((server) => {
+                        const status = serverStatuses.get(server.id);
+                        return (
+                          <div
+                            key={server.id}
+                            className="flex items-center justify-between w-full cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                            onClick={() => toggleServerEnabled(server.id)}
+                          >
                             <div className="flex items-center gap-2">
                               <span>{server.name}</span>
                               {!status?.connected && (
@@ -562,13 +556,18 @@ export default function ChatView() {
                                 </span>
                               )}
                             </div>
+                            <div className="flex size-4 items-center justify-center">
+                              {server.enabled && (
+                                <div className="size-2 rounded-full bg-primary" />
+                              )}
+                            </div>
                           </div>
-                        </PromptInputMcpSelectItem>
-                      );
-                    })
-                  )}
-                </PromptInputMcpSelectContent>
-              </PromptInputMcpSelect>
+                        );
+                      })
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
               {/* Enhanced Microphone button with recording state */}
               <PromptInputButton
                 type="button"

@@ -47,6 +47,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('llm');
 
   // API Key state
   const [currentApiKey, setCurrentApiKey] = useState<string>('');
@@ -298,7 +299,7 @@ export default function Settings({ onClose }: SettingsProps) {
         </div>
 
         {/* Settings Tabs */}
-        <Tabs defaultValue="llm" className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="llm" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
