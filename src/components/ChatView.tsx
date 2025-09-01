@@ -595,52 +595,28 @@ export default function ChatView() {
                 </PromptInputModelSelectTrigger>
                 <PromptInputModelSelectContent>
                   <PromptInputModelSelectItem value="gpt-4.1">
-                    <div className="flex items-center justify-between w-full">
-                      <span>GPT-4.1</span>
-                      {selectedModel === 'gpt-4.1' && <Check className="h-4 w-4" />}
-                    </div>
+                    GPT-4.1
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4.1-mini">
-                    <div className="flex items-center justify-between w-full">
-                      <span>GPT-4.1 Mini</span>
-                      {selectedModel === 'gpt-4.1-mini' && <Check className="h-4 w-4" />}
-                    </div>
+                    GPT-4.1 Mini
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4o">
-                    <div className="flex items-center justify-between w-full">
-                      <span>GPT-4o</span>
-                      {selectedModel === 'gpt-4o' && <Check className="h-4 w-4" />}
-                    </div>
+                    GPT-4o
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4o-mini">
-                    <div className="flex items-center justify-between w-full">
-                      <span>GPT-4o Mini</span>
-                      {selectedModel === 'gpt-4o-mini' && <Check className="h-4 w-4" />}
-                    </div>
+                    GPT-4o Mini
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4-turbo">
-                    <div className="flex items-center justify-between w-full">
-                      <span>GPT-4 Turbo</span>
-                      {selectedModel === 'gpt-4-turbo' && <Check className="h-4 w-4" />}
-                    </div>
+                    GPT-4 Turbo
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4">
-                    <div className="flex items-center justify-between w-full">
-                      <span>GPT-4</span>
-                      {selectedModel === 'gpt-4' && <Check className="h-4 w-4" />}
-                    </div>
+                    GPT-4
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="o1">
-                    <div className="flex items-center justify-between w-full">
-                      <span>o1</span>
-                      {selectedModel === 'o1' && <Check className="h-4 w-4" />}
-                    </div>
+                    o1
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="o3-mini">
-                    <div className="flex items-center justify-between w-full">
-                      <span>o3 Mini</span>
-                      {selectedModel === 'o3-mini' && <Check className="h-4 w-4" />}
-                    </div>
+                    o3 Mini
                   </PromptInputModelSelectItem>
                 </PromptInputModelSelectContent>
               </PromptInputModelSelect>
