@@ -367,31 +367,34 @@ export default function Settings({ onClose }: SettingsProps) {
   }
 
   return (
-    <div className="h-dvh bg-background p-4">
+    <div className="h-dvh bg-background p-3 sm:p-4">
       <div className="max-w-4xl mx-auto flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <Button variant="outline" onClick={onClose}>
-            <X className="h-4 w-4 mr-2" />
-            Close
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
+          <Button variant="outline" onClick={onClose} size="sm" className="sm:size-default">
+            <X className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Close</span>
           </Button>
         </div>
 
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="llm" className="flex items-center gap-2">
+            <TabsTrigger value="llm" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Brain className="h-4 w-4" />
-              LLM Provider
+              <span className="hidden sm:inline">LLM Provider</span>
+              <span className="sm:hidden">LLM</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-2">
+            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-4 w-4" />
-              Appearance
+              <span className="hidden sm:inline">Appearance</span>
+              <span className="sm:hidden">Theme</span>
             </TabsTrigger>
-            <TabsTrigger value="tools" className="flex items-center gap-2">
+            <TabsTrigger value="tools" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Wrench className="h-4 w-4" />
-              Tools & MCP
+              <span className="hidden sm:inline">Tools & MCP</span>
+              <span className="sm:hidden">Tools</span>
             </TabsTrigger>
           </TabsList>
 
@@ -931,8 +934,8 @@ export default function Settings({ onClose }: SettingsProps) {
                           const status = serverStatuses.get(server.id);
                           return (
                             <Card key={server.id}>
-                              <CardContent className="p-4">
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="flex flex-col gap-3 sm:gap-4">
                                   <div className="flex-1 min-w-0">
                                     <div className="mb-3">
                                       <h3 className="font-medium mb-2">{server.name}</h3>
@@ -989,46 +992,55 @@ export default function Settings({ onClose }: SettingsProps) {
                                       </p>
                                     )}
                                   </div>
-                                  <div className="flex items-center justify-end gap-2 flex-shrink-0">
-                                    {server.requiresAuth &&
-                                      (oauthStatuses.get(server.id) ? (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleOAuthDisconnect(server.id)}
-                                        >
-                                          <Lock className="h-4 w-4" />
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleOAuthAuthenticate(server.id)}
-                                        >
-                                          <Unlock className="h-4 w-4" />
-                                        </Button>
-                                      ))}
-                                    <Switch
-                                      checked={server.enabled}
-                                      onCheckedChange={(enabled) =>
-                                        handleToggleServer(server.id, enabled)
-                                      }
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleStartEditServer(server)}
-                                      disabled={server.readonly}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleRemoveServer(server.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 border-t border-border/50">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-muted-foreground">Enabled</span>
+                                      <Switch
+                                        checked={server.enabled}
+                                        onCheckedChange={(enabled) =>
+                                          handleToggleServer(server.id, enabled)
+                                        }
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {server.requiresAuth &&
+                                        (oauthStatuses.get(server.id) ? (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleOAuthDisconnect(server.id)}
+                                            className="px-3 py-2"
+                                          >
+                                            <Lock className="h-4 w-4" />
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleOAuthAuthenticate(server.id)}
+                                            className="px-3 py-2"
+                                          >
+                                            <Unlock className="h-4 w-4" />
+                                          </Button>
+                                        ))}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleStartEditServer(server)}
+                                        disabled={server.readonly}
+                                        className="px-3 py-2"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRemoveServer(server.id)}
+                                        className="px-3 py-2"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               </CardContent>
