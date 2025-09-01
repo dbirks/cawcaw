@@ -24,7 +24,12 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noUnknownAtRules": "off",
+        "noDuplicateProperties": "off"
+      },
+      "complexity": {
+        "noImportantStyles": "off"
       }
     }
   },

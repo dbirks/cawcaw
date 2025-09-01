@@ -634,12 +634,12 @@ export default function ChatView() {
                   <PromptInputModelSelectItem value="gpt-4o-mini">
                     gpt-4o-mini
                   </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4-turbo">
-                    gpt-4-turbo
-                  </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4">gpt-4</PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="o1">o1</PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="o4-mini">o4-mini</PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="o3">o3</PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="o3-mini">o3-mini</PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4o-with-web-search">
+                    gpt-4o + Web Search
+                  </PromptInputModelSelectItem>
                 </PromptInputModelSelectContent>
               </PromptInputModelSelect>
             </PromptInputTools>
