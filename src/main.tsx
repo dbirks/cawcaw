@@ -7,8 +7,10 @@ import App from './App.tsx';
 
 // Initialize StatusBar on mobile platforms
 if (Capacitor.isNativePlatform()) {
+  // Use Style.Default for automatic light/dark mode adaptation
   StatusBar.setStyle({ style: Style.Default }).catch(console.error);
-  StatusBar.setOverlaysWebView({ overlay: false }).catch(console.error);
+  // Enable overlay for full-bleed design with proper safe areas
+  StatusBar.setOverlaysWebView({ overlay: true }).catch(console.error);
 }
 
 const rootElement = document.getElementById('root');
