@@ -173,10 +173,18 @@ class MCPManager {
           }
         }
 
-        // Add user's custom servers
+        // Add user's custom servers, filtering out demo tools and test servers
         for (const userServer of userServers) {
           if (!defaultServers.find((s) => s.id === userServer.id)) {
-            allServers.push(userServer);
+            // Skip demo tools and test servers
+            const isDemoServer = userServer.name?.includes('Demo Tools') || 
+                               userServer.name?.includes('Everything Test Server') ||
+                               userServer.url?.includes('built-in://demo') ||
+                               userServer.url?.includes('@modelcontextprotocol/server-everything');
+            
+            if (!isDemoServer) {
+              allServers.push(userServer);
+            }
           }
         }
 
@@ -187,6 +195,41 @@ class MCPManager {
       console.error('Failed to load MCP configurations:', error);
     }
     return this.serverConfigs;
+  }
+
+  // Clean up demo servers from storage
+  async cleanupDemoServers(): Promise<void> {
+    try {
+      const result = await SecureStoragePlugin.get({ key: MCP_STORAGE_KEY });
+      if (result?.value) {
+        const config: MCPManagerConfig = JSON.parse(result.value);
+        const userServers = config.servers || [];
+        
+        // Filter out demo servers
+        const cleanedServers = userServers.filter(server => {
+          const isDemoServer = server.name?.includes('Demo Tools') || 
+                             server.name?.includes('Everything Test Server') ||
+                             server.url?.includes('built-in://demo') ||
+                             server.url?.includes('@modelcontextprotocol/server-everything');
+          return !isDemoServer;
+        });
+        
+        // Save cleaned configuration
+        const cleanedConfig: MCPManagerConfig = {
+          ...config,
+          servers: cleanedServers
+        };
+        
+        await SecureStoragePlugin.set({
+          key: MCP_STORAGE_KEY,
+          value: JSON.stringify(cleanedConfig),
+        });
+        
+        this.serverConfigs = cleanedServers;
+      }
+    } catch (error) {
+      console.error('Failed to cleanup demo servers:', error);
+    }
   }
 
   // Save server configurations to secure storage

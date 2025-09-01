@@ -1,6 +1,7 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
   Brain,
+  Edit,
   Key,
   Lock,
   Monitor,
@@ -16,7 +17,6 @@ import {
   WifiOff,
   Wrench,
   X,
-  Zap,
 } from 'lucide-react';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 import { useCallback, useEffect, useId, useState } from 'react';
@@ -48,6 +48,8 @@ export default function Settings({ onClose }: SettingsProps) {
   const [servers, setServers] = useState<MCPServerConfig[]>([]);
   const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingServerId, setEditingServerId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('llm');
 
@@ -61,6 +63,15 @@ export default function Settings({ onClose }: SettingsProps) {
 
   // New server form state
   const [newServer, setNewServer] = useState({
+    name: '',
+    url: '',
+    transportType: 'http-streamable' as 'http-streamable' | 'sse',
+    description: '',
+    enabled: true,
+  });
+
+  // Edit server form state
+  const [editServer, setEditServer] = useState({
     name: '',
     url: '',
     transportType: 'http-streamable' as 'http-streamable' | 'sse',
@@ -82,6 +93,11 @@ export default function Settings({ onClose }: SettingsProps) {
   const transportTypeId = useId();
   const serverDescriptionId = useId();
   const serverEnabledId = useId();
+  const editServerNameId = useId();
+  const editServerUrlId = useId();
+  const editTransportTypeId = useId();
+  const editServerDescriptionId = useId();
+  const editServerEnabledId = useId();
 
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [oauthStatuses, setOAuthStatuses] = useState<Map<string, boolean>>(new Map());
@@ -90,6 +106,9 @@ export default function Settings({ onClose }: SettingsProps) {
     try {
       setIsLoading(true);
 
+      // Clean up demo servers first
+      await mcpManager.cleanupDemoServers();
+      
       // Load MCP servers
       const configs = await mcpManager.loadConfigurations();
       setServers(configs);
@@ -222,6 +241,66 @@ export default function Settings({ onClose }: SettingsProps) {
       console.error('Failed to add server:', error);
       alert('Failed to add server. Please check the configuration.');
     }
+  };
+
+  const handleEditServer = async () => {
+    if (!editServer.name.trim() || !editServer.url.trim() || !editingServerId) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      await mcpManager.updateServer(editingServerId, {
+        name: editServer.name,
+        url: editServer.url,
+        transportType: editServer.transportType,
+        description: editServer.description,
+        enabled: editServer.enabled,
+      });
+      
+      setShowEditDialog(false);
+      setEditingServerId(null);
+      setEditServer({
+        name: '',
+        url: '',
+        transportType: 'http-streamable',
+        description: '',
+        enabled: true,
+      });
+      await loadSettings();
+    } catch (error) {
+      console.error('Failed to update server:', error);
+      alert('Failed to update server. Please check the configuration.');
+    }
+  };
+
+  const handleStartEditServer = (server: MCPServerConfig) => {
+    if (server.readonly) {
+      alert('This server configuration is readonly and cannot be edited.');
+      return;
+    }
+    
+    setEditingServerId(server.id);
+    setEditServer({
+      name: server.name,
+      url: server.url,
+      transportType: server.transportType,
+      description: server.description || '',
+      enabled: server.enabled,
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditDialog(false);
+    setEditingServerId(null);
+    setEditServer({
+      name: '',
+      url: '',
+      transportType: 'http-streamable',
+      description: '',
+      enabled: true,
+    });
   };
 
   const handleToggleServer = async (serverId: string, enabled: boolean) => {
@@ -726,6 +805,108 @@ export default function Settings({ onClose }: SettingsProps) {
                           </ScrollArea>
                         </DialogContent>
                       </Dialog>
+
+                      {/* Edit Server Dialog */}
+                      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                        <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+                          <DialogHeader>
+                            <DialogTitle>Edit MCP Server</DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="flex-1 pr-4">
+                            <div className="space-y-4">
+                              <div>
+                                <label htmlFor={editServerNameId} className="text-sm font-medium">
+                                  Name *
+                                </label>
+                                <Input
+                                  id={editServerNameId}
+                                  value={editServer.name}
+                                  onChange={(e) =>
+                                    setEditServer({ ...editServer, name: e.target.value })
+                                  }
+                                  placeholder="My MCP Server"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={editServerUrlId} className="text-sm font-medium">
+                                  URL *
+                                </label>
+                                <Input
+                                  id={editServerUrlId}
+                                  value={editServer.url}
+                                  onChange={(e) =>
+                                    setEditServer({ ...editServer, url: e.target.value })
+                                  }
+                                  placeholder="https://example.com/mcp"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={editTransportTypeId} className="text-sm font-medium">
+                                  Transport Type
+                                </label>
+                                <select
+                                  id={editTransportTypeId}
+                                  value={editServer.transportType}
+                                  onChange={(e) =>
+                                    setEditServer({
+                                      ...editServer,
+                                      transportType: e.target.value as 'http-streamable' | 'sse',
+                                    })
+                                  }
+                                  className="w-full p-2 border rounded-md"
+                                >
+                                  <option value="http-streamable">
+                                    HTTP Streamable (Recommended)
+                                  </option>
+                                  <option value="sse">SSE (Server-Sent Events)</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label
+                                  htmlFor={editServerDescriptionId}
+                                  className="text-sm font-medium"
+                                >
+                                  Description
+                                </label>
+                                <Textarea
+                                  id={editServerDescriptionId}
+                                  value={editServer.description}
+                                  onChange={(e) =>
+                                    setEditServer({ ...editServer, description: e.target.value })
+                                  }
+                                  placeholder="Optional description..."
+                                  rows={2}
+                                />
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id={editServerEnabledId}
+                                  checked={editServer.enabled}
+                                  onCheckedChange={(enabled) =>
+                                    setEditServer({ ...editServer, enabled })
+                                  }
+                                />
+                                <label htmlFor={editServerEnabledId} className="text-sm">
+                                  Enable server
+                                </label>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={handleCancelEdit}
+                                  className="flex-1"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button onClick={handleEditServer} className="flex-1">
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </div>
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
                     </div>
 
                     {/* Server List */}
@@ -833,6 +1014,14 @@ export default function Settings({ onClose }: SettingsProps) {
                                         handleToggleServer(server.id, enabled)
                                       }
                                     />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleStartEditServer(server)}
+                                      disabled={server.readonly}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
                                     <Button
                                       variant="outline"
                                       size="sm"
