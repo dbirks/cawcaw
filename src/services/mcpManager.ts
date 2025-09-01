@@ -538,15 +538,18 @@ class MCPManager {
     detailedError?: DetailedConnectionError;
   }> {
     const startTime = performance.now();
-    
-    const createDetailedError = (error: unknown, additionalInfo?: Partial<DetailedConnectionError>): DetailedConnectionError => {
+
+    const createDetailedError = (
+      error: unknown,
+      additionalInfo?: Partial<DetailedConnectionError>
+    ): DetailedConnectionError => {
       const baseError: DetailedConnectionError = {
         message: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
         duration: Math.round(performance.now() - startTime),
         ...additionalInfo,
       };
-      
+
       return baseError;
     };
 
@@ -556,7 +559,10 @@ class MCPManager {
 
       try {
         // Test connection with detailed error information
-        const connectionResult = await this.testConnectionDetailed(config.url, config.transportType);
+        const connectionResult = await this.testConnectionDetailed(
+          config.url,
+          config.transportType
+        );
         await client.close();
 
         if (connectionResult.success) {
@@ -735,7 +741,7 @@ class MCPManager {
       // Capture response details
       baseError.httpStatus = response.status;
       baseError.httpStatusText = response.statusText;
-      
+
       // Capture response headers
       const headers: Record<string, string> = {};
       response.headers.forEach((value, key) => {
