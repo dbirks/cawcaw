@@ -528,7 +528,9 @@ export default function ChatView() {
                 <PopoverTrigger asChild>
                   <PromptInputButton>
                     <McpIcon size={16} />
-                    {availableServers.filter((s) => s.enabled).length} servers
+                    <span className="hidden sm:inline">
+                      {availableServers.filter((s) => s.enabled).length} servers
+                    </span>
                   </PromptInputButton>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="start">
@@ -594,7 +596,9 @@ export default function ChatView() {
               <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
                 <PromptInputModelSelectTrigger>
                   <BotIcon size={16} />
-                  <PromptInputModelSelectValue placeholder="Select model" />
+                  <div className="hidden sm:block">
+                    <PromptInputModelSelectValue placeholder="Select model" />
+                  </div>
                 </PromptInputModelSelectTrigger>
                 <PromptInputModelSelectContent>
                   <PromptInputModelSelectItem value="gpt-4.1">gpt-4.1</PromptInputModelSelectItem>
