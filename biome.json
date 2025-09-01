@@ -42,7 +42,7 @@
   },
   "overrides": [
     {
-      "include": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+      "includes": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
       "linter": {
         "rules": {
           "suspicious": {
