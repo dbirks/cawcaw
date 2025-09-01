@@ -1,7 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, Check, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon } from 'lucide-react';
+import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -14,15 +14,15 @@ import { Message, MessageAvatar, MessageContent } from '@/components/ai-elements
 import {
   PromptInput,
   PromptInputButton,
+  PromptInputModelSelect,
+  PromptInputModelSelectContent,
+  PromptInputModelSelectItem,
+  PromptInputModelSelectTrigger,
+  PromptInputModelSelectValue,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputTools,
-  PromptInputModelSelect,
-  PromptInputModelSelectTrigger,
-  PromptInputModelSelectContent,
-  PromptInputModelSelectItem,
-  PromptInputModelSelectValue,
 } from '@/components/ai-elements/prompt-input';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'; // For reasoning models like o1 and o3-mini
 import { Response } from '@/components/ai-elements/response';
@@ -37,9 +37,9 @@ import { McpIcon } from '@/components/icons/McpIcon';
 
 // UI Components
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
@@ -104,7 +104,7 @@ export default function ChatView() {
         // Initialize MCP servers and load data
         await mcpManager.loadConfigurations();
         await mcpManager.connectToEnabledServers();
-        
+
         // Load server data for compact selector
         const servers = mcpManager.getServerConfigs();
         const statuses = mcpManager.getServerStatuses();
@@ -152,8 +152,7 @@ export default function ChatView() {
 
       // Get tools from MCP manager
       const mcpTools = await mcpManager.getAllTools();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tools: Record<string, any> = {};
+      const tools: Record<string, ReturnType<typeof tool>> = {};
 
       // Convert MCP tools to AI SDK format
       for (const [toolName, toolDef] of Object.entries(mcpTools)) {
@@ -161,7 +160,7 @@ export default function ChatView() {
 
         // Sanitize tool name for OpenAI: only letters, numbers, underscores, and hyphens
         const sanitizedToolName = toolName.replace(/[^a-zA-Z0-9_-]/g, '_');
-        
+
         // Debug logging
         if (toolName !== sanitizedToolName) {
           console.log(`Tool name sanitized: "${toolName}" -> "${sanitizedToolName}"`);
@@ -360,11 +359,10 @@ export default function ChatView() {
     }
   };
 
-
   const toggleServerEnabled = async (serverId: string) => {
-    const server = availableServers.find(s => s.id === serverId);
+    const server = availableServers.find((s) => s.id === serverId);
     if (!server) return;
-    
+
     const enabled = !server.enabled;
     try {
       await mcpManager.updateServer(serverId, { enabled });
@@ -377,7 +375,6 @@ export default function ChatView() {
       console.error('Failed to toggle server:', error);
     }
   };
-
 
   const handleModelSelect = async (modelId: string) => {
     setSelectedModel(modelId);
@@ -530,7 +527,7 @@ export default function ChatView() {
                 <PopoverTrigger asChild>
                   <PromptInputButton>
                     <McpIcon size={16} />
-                    {availableServers.filter(s => s.enabled).length} servers
+                    {availableServers.filter((s) => s.enabled).length} servers
                   </PromptInputButton>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="start">
@@ -543,9 +540,10 @@ export default function ChatView() {
                       availableServers.map((server) => {
                         const status = serverStatuses.get(server.id);
                         return (
-                          <div
+                          <button
                             key={server.id}
-                            className="flex items-center justify-between w-full cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                            type="button"
+                            className="flex items-center justify-between w-full cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground border-none bg-transparent"
                             onClick={() => toggleServerEnabled(server.id)}
                           >
                             <div className="flex items-center gap-2">
@@ -557,11 +555,9 @@ export default function ChatView() {
                               )}
                             </div>
                             <div className="flex size-4 items-center justify-center">
-                              {server.enabled && (
-                                <div className="size-2 rounded-full bg-primary" />
-                              )}
+                              {server.enabled && <div className="size-2 rounded-full bg-primary" />}
                             </div>
-                          </div>
+                          </button>
                         );
                       })
                     )}
@@ -600,30 +596,20 @@ export default function ChatView() {
                   <PromptInputModelSelectValue placeholder="Select model" />
                 </PromptInputModelSelectTrigger>
                 <PromptInputModelSelectContent>
-                  <PromptInputModelSelectItem value="gpt-4.1">
-                    gpt-4.1
-                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4.1">gpt-4.1</PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4.1-mini">
                     gpt-4.1-mini
                   </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4o">
-                    gpt-4o
-                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4o">gpt-4o</PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4o-mini">
                     gpt-4o-mini
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4-turbo">
                     gpt-4-turbo
                   </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4">
-                    gpt-4
-                  </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="o1">
-                    o1
-                  </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="o3-mini">
-                    o3-mini
-                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4">gpt-4</PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="o1">o1</PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="o3-mini">o3-mini</PromptInputModelSelectItem>
                 </PromptInputModelSelectContent>
               </PromptInputModelSelect>
             </PromptInputTools>
@@ -631,8 +617,6 @@ export default function ChatView() {
           </PromptInputToolbar>
         </PromptInput>
       </div>
-
-
     </div>
   );
 }

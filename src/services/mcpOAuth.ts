@@ -30,7 +30,7 @@ export class MCPOAuthManager {
       const resourceMetadataUrl = new URL('/.well-known/oauth-protected-resource', serverUrl);
       const resourceResponse = await fetch(resourceMetadataUrl.toString(), {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
         },
       });
@@ -47,7 +47,7 @@ export class MCPOAuthManager {
       const authMetadataUrl = new URL('/.well-known/oauth-authorization-server', authServerUrl);
       const authResponse = await fetch(authMetadataUrl.toString(), {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
         },
       });
@@ -72,7 +72,10 @@ export class MCPOAuthManager {
   }
 
   // Perform dynamic client registration (RFC7591)
-  async registerClient(discovery: MCPOAuthDiscovery, _serverUrl: string): Promise<{
+  async registerClient(
+    discovery: MCPOAuthDiscovery,
+    _serverUrl: string
+  ): Promise<{
     clientId: string;
     clientSecret?: string;
   }> {
@@ -95,7 +98,7 @@ export class MCPOAuthManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
       },
       body: JSON.stringify(registrationData),
@@ -136,13 +139,15 @@ export class MCPOAuthManager {
         value: JSON.stringify({ clientId, clientSecret }),
       });
     } else {
-      throw new Error('Server does not support dynamic client registration. Manual configuration required.');
+      throw new Error(
+        'Server does not support dynamic client registration. Manual configuration required.'
+      );
     }
 
     // Step 3: Generate PKCE parameters
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
-    
+
     // Store code verifier for later use
     await SecureStoragePlugin.set({
       key: `${OAUTH_STORAGE_PREFIX}verifier_${serverId}`,
@@ -162,11 +167,11 @@ export class MCPOAuthManager {
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('redirect_uri', this.getRedirectUri());
-    
+
     if (discovery.supportedScopes && discovery.supportedScopes.length > 0) {
       authUrl.searchParams.set('scope', discovery.supportedScopes.join(' '));
     }
-    
+
     // Add state parameter for CSRF protection
     const state = generateCodeVerifier();
     authUrl.searchParams.set('state', state);
@@ -188,7 +193,7 @@ export class MCPOAuthManager {
     const storedState = await SecureStoragePlugin.get({
       key: `${OAUTH_STORAGE_PREFIX}state_${serverId}`,
     });
-    
+
     if (storedState?.value !== receivedState) {
       throw new Error('Invalid state parameter - possible CSRF attack');
     }
@@ -199,7 +204,7 @@ export class MCPOAuthManager {
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
     ]);
-    
+
     if (!verifierResult?.value || !clientResult?.value || !discoveryResult?.value) {
       throw new Error('OAuth flow data not found - restart authentication');
     }
@@ -225,7 +230,7 @@ export class MCPOAuthManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
       },
       body: tokenRequestBody,
@@ -241,9 +246,7 @@ export class MCPOAuthManager {
     const tokens: MCPOAuthTokens = {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token,
-      tokenExpiresAt: tokenData.expires_in
-        ? Date.now() + tokenData.expires_in * 1000
-        : undefined,
+      tokenExpiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : undefined,
       clientId: clientData.clientId,
       clientSecret: clientData.clientSecret,
     };
@@ -293,7 +296,7 @@ export class MCPOAuthManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
       },
       body: refreshBody,
@@ -309,9 +312,7 @@ export class MCPOAuthManager {
       ...tokens,
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token || tokens.refreshToken,
-      tokenExpiresAt: tokenData.expires_in
-        ? Date.now() + tokenData.expires_in * 1000
-        : undefined,
+      tokenExpiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : undefined,
     };
 
     await this.storeOAuthTokens(serverId, updatedTokens);

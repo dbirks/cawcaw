@@ -20,101 +20,6 @@ interface MCPClient {
   close(): Promise<void>;
 }
 
-// Mock MCP client with built-in demo tools
-class DemoMCPClient implements MCPClient {
-  async listTools(): Promise<Record<string, MCPToolDefinition>> {
-    return {
-      echo: {
-        description: 'Echo back the provided text',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            message: {
-              type: 'string',
-              description: 'The message to echo back',
-            },
-          },
-          required: ['message'],
-        },
-      },
-      random_number: {
-        description: 'Generate a random number between min and max',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            min: {
-              type: 'number',
-              description: 'Minimum value (default: 1)',
-            },
-            max: {
-              type: 'number',
-              description: 'Maximum value (default: 100)',
-            },
-          },
-        },
-      },
-      uppercase: {
-        description: 'Convert text to uppercase',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            text: {
-              type: 'string',
-              description: 'Text to convert to uppercase',
-            },
-          },
-          required: ['text'],
-        },
-      },
-    };
-  }
-
-  async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
-    switch (name) {
-      case 'echo':
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Echo: ${args.message || '(no message provided)'}`,
-            },
-          ],
-        };
-
-      case 'random_number': {
-        const min = typeof args.min === 'number' ? args.min : 1;
-        const max = typeof args.max === 'number' ? args.max : 100;
-        const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Random number between ${min} and ${max}: ${randomNum}`,
-            },
-          ],
-        };
-      }
-
-      case 'uppercase':
-        return {
-          content: [
-            {
-              type: 'text',
-              text: typeof args.text === 'string' ? args.text.toUpperCase() : 'NO TEXT PROVIDED',
-            },
-          ],
-        };
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  }
-
-  async close(): Promise<void> {
-    // No cleanup needed for demo client
-  }
-}
-
 // HTTP/Streamable HTTP MCP client implementation
 class HTTPMCPClient implements MCPClient {
   private baseUrl: string;
@@ -373,7 +278,7 @@ class MCPManager {
       if (config.requiresAuth) {
         // Load stored tokens
         oauthTokens = (await mcpOAuthManager.loadOAuthTokens(serverId)) || undefined;
-        
+
         if (oauthTokens) {
           // Refresh token if needed
           if (oauthTokens.accessToken) {
@@ -543,14 +448,14 @@ class MCPManager {
     try {
       // First test basic connection without OAuth
       const client = new HTTPMCPClient(config.url, config.transportType);
-      
+
       try {
         await client.listTools();
         await client.close();
-        
+
         // Basic connection works, now check if OAuth is available as an option
         const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
-        
+
         return {
           connectionSuccess: true,
           requiresAuth: false, // Works without auth, OAuth is optional
@@ -559,7 +464,7 @@ class MCPManager {
       } catch (basicError) {
         // Basic connection failed, check if OAuth might be required
         const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
-        
+
         if (oauthTest.supportsOAuth && oauthTest.discovery) {
           return {
             connectionSuccess: true,
@@ -567,7 +472,7 @@ class MCPManager {
             oauthDiscovery: oauthTest.discovery,
           };
         }
-        
+
         // Neither basic nor OAuth worked
         throw basicError;
       }
@@ -603,14 +508,14 @@ class MCPManager {
     if (!config?.requiresAuth) {
       throw new Error('Server does not require OAuth authentication');
     }
-    
+
     return await mcpOAuthManager.startOAuthFlow(serverId, config.url);
   }
 
   // Complete OAuth flow with authorization code
   async completeOAuthFlow(serverId: string, code: string, state: string): Promise<void> {
     const tokens = await mcpOAuthManager.exchangeCodeForToken(serverId, code, state);
-    
+
     // Try to connect now that we have tokens
     if (tokens.accessToken) {
       await this.connectToServer(serverId);

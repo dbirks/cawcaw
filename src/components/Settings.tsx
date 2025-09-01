@@ -65,7 +65,7 @@ export default function Settings({ onClose }: SettingsProps) {
     description: '',
     enabled: true,
   });
-  
+
   const [connectionTestResult, setConnectionTestResult] = useState<{
     success: boolean;
     requiresAuth: boolean;
@@ -191,7 +191,6 @@ export default function Settings({ onClose }: SettingsProps) {
     }
   };
 
-
   // MCP Server Functions
   const handleAddServer = async () => {
     if (!newServer.name.trim() || !newServer.url.trim()) {
@@ -205,7 +204,7 @@ export default function Settings({ onClose }: SettingsProps) {
         ...newServer,
         requiresAuth: connectionTestResult?.requiresAuth || false,
       };
-      
+
       await mcpManager.addServer(serverConfig);
       setNewServer({
         name: '',
@@ -255,14 +254,14 @@ export default function Settings({ onClose }: SettingsProps) {
       setConnectionTestResult({
         success: result.connectionSuccess,
         requiresAuth: result.requiresAuth,
-        error: result.error
+        error: result.error,
       });
     } catch (error) {
       console.error('Test connection error:', error);
       setConnectionTestResult({
         success: false,
         requiresAuth: false,
-        error: error instanceof Error ? error.message : 'Connection test failed'
+        error: error instanceof Error ? error.message : 'Connection test failed',
       });
     } finally {
       setIsTestingConnection(false);
@@ -673,16 +672,20 @@ export default function Settings({ onClose }: SettingsProps) {
                                           <WifiOff className="h-4 w-4 text-red-500" />
                                         )}
                                         <span className="text-sm font-medium">
-                                          {connectionTestResult.success ? 'Connection Successful' : 'Connection Failed'}
+                                          {connectionTestResult.success
+                                            ? 'Connection Successful'
+                                            : 'Connection Failed'}
                                         </span>
                                       </div>
-                                      
+
                                       {connectionTestResult.success && (
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                           {connectionTestResult.requiresAuth ? (
                                             <>
                                               <Lock className="h-3 w-3" />
-                                              <span>OAuth authentication required (auto-configured)</span>
+                                              <span>
+                                                OAuth authentication required (auto-configured)
+                                              </span>
                                             </>
                                           ) : (
                                             <>
@@ -692,12 +695,13 @@ export default function Settings({ onClose }: SettingsProps) {
                                           )}
                                         </div>
                                       )}
-                                      
-                                      {!connectionTestResult.success && connectionTestResult.error && (
-                                        <p className="text-xs text-red-600 mt-1">
-                                          {connectionTestResult.error}
-                                        </p>
-                                      )}
+
+                                      {!connectionTestResult.success &&
+                                        connectionTestResult.error && (
+                                          <p className="text-xs text-red-600 mt-1">
+                                            {connectionTestResult.error}
+                                          </p>
+                                        )}
                                     </CardContent>
                                   </Card>
                                 </div>
@@ -768,7 +772,10 @@ export default function Settings({ onClose }: SettingsProps) {
                                         </Badge>
                                         {server.requiresAuth &&
                                           (oauthStatuses.get(server.id) ? (
-                                            <Badge variant="default" className="bg-blue-500 text-xs">
+                                            <Badge
+                                              variant="default"
+                                              className="bg-blue-500 text-xs"
+                                            >
                                               <Unlock className="h-3 w-3 mr-1" />
                                               OAuth Connected
                                             </Badge>
