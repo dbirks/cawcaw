@@ -358,10 +358,10 @@ export default function Settings({ onClose }: SettingsProps) {
   }
 
   return (
-    <div className="h-dvh bg-background p-3 sm:p-4">
+    <div className="h-dvh bg-background">
       <div className="max-w-4xl mx-auto flex flex-col h-full">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
+        {/* Header with safe area */}
+        <div className="flex items-center justify-between mb-4 sm:mb-6 pt-4 pb-4 safe-top safe-x">
           <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
           <Button variant="outline" onClick={onClose} size="sm" className="sm:size-default">
             <X className="h-4 w-4 sm:mr-2" />
@@ -377,15 +377,15 @@ export default function Settings({ onClose }: SettingsProps) {
               <span className="hidden sm:inline">LLM Provider</span>
               <span className="sm:hidden">LLM</span>
             </TabsTrigger>
+            <TabsTrigger value="tools" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Wrench className="h-4 w-4" />
+              <span className="hidden sm:inline">Tools & MCP</span>
+              <span className="sm:hidden">MCP</span>
+            </TabsTrigger>
             <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
               <span className="sm:hidden">Theme</span>
-            </TabsTrigger>
-            <TabsTrigger value="tools" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Wrench className="h-4 w-4" />
-              <span className="hidden sm:inline">Tools & MCP</span>
-              <span className="sm:hidden">Tools</span>
             </TabsTrigger>
           </TabsList>
 
@@ -393,7 +393,7 @@ export default function Settings({ onClose }: SettingsProps) {
           <TabsContent value="llm" className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full">
-                <div className="pr-4">
+                <div className="pr-4 safe-x safe-bottom">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -474,7 +474,7 @@ export default function Settings({ onClose }: SettingsProps) {
           <TabsContent value="appearance" className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full">
-                <div className="pr-4">
+                <div className="pr-4 safe-x safe-bottom">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -573,48 +573,6 @@ export default function Settings({ onClose }: SettingsProps) {
                         </div>
                       </div>
 
-                      {/* Current Theme Status */}
-                      <div className="bg-muted/50 p-4 rounded-lg">
-                        <h4 className="font-medium mb-2">Current Theme</h4>
-                        <div className="flex items-center gap-2 text-sm">
-                          {currentTheme === 'dark' ? (
-                            <Moon className="h-4 w-4" />
-                          ) : (
-                            <Sun className="h-4 w-4" />
-                          )}
-                          <span className="capitalize">{currentTheme} mode is active</span>
-                          {themePreference === 'system' && (
-                            <Badge variant="outline" className="ml-2">
-                              Auto
-                            </Badge>
-                          )}
-                        </div>
-                        {themePreference === 'system' && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Theme automatically switches based on your device settings
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Theme Preview */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium">Preview</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* Light Preview */}
-                          <div className="p-3 rounded-lg border bg-white text-black">
-                            <div className="text-xs font-medium mb-1">Light Theme</div>
-                            <div className="text-xs text-gray-600">Clean and bright interface</div>
-                            <div className="mt-2 h-2 bg-blue-500 rounded-full w-3/4"></div>
-                          </div>
-
-                          {/* Dark Preview */}
-                          <div className="p-3 rounded-lg border bg-gray-900 text-white">
-                            <div className="text-xs font-medium mb-1">Dark Theme</div>
-                            <div className="text-xs text-gray-300">Easy on the eyes</div>
-                            <div className="mt-2 h-2 bg-blue-400 rounded-full w-3/4"></div>
-                          </div>
-                        </div>
-                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -626,7 +584,7 @@ export default function Settings({ onClose }: SettingsProps) {
           <TabsContent value="tools" className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full">
-                <div className="space-y-6 pr-4">
+                <div className="space-y-6 pr-4 safe-x safe-bottom">
                   {/* Configured Servers */}
                   <div>
                     <div className="flex items-center justify-between mb-4">

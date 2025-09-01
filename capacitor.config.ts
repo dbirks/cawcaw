@@ -4,9 +4,12 @@ const config: CapacitorConfig = {
   appId: 'app.cawcaw',
   appName: 'caw caw',
   webDir: 'dist',
+  assets: {
+    iconPath: 'ios-icon.png'
+  },
   ios: {
     preferredContentMode: 'mobile',
-    contentInset: 'always' // Auto-adjust scroll view insets for safe area
+    contentInset: 'never' // Let CSS handle safe areas to avoid double padding
   },
   plugins: {
     SplashScreen: {

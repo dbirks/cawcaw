@@ -154,7 +154,7 @@ export default function ChatView() {
 
       // Get tools from MCP manager
       const mcpTools = await mcpManager.getAllTools();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools require flexible typing
       const tools: Record<string, any> = {};
 
       // Convert MCP tools to AI SDK format
