@@ -57,7 +57,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const [isUpdatingKey, setIsUpdatingKey] = useState(false);
 
   // Theme management
-  const { themePreference, currentTheme, updateThemePreference } = useTheme();
+  const { themePreference, updateThemePreference } = useTheme();
 
   // New server form state
   const [newServer, setNewServer] = useState({
