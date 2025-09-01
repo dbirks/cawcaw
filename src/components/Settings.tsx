@@ -2,6 +2,7 @@ import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
   Brain,
   Key,
+  Lock,
   Monitor,
   Moon,
   Palette,
@@ -10,6 +11,7 @@ import {
   Sun,
   TestTube,
   Trash2,
+  Unlock,
   Wifi,
   WifiOff,
   Wrench,
@@ -58,10 +60,16 @@ export default function Settings({ onClose }: SettingsProps) {
   const [newServer, setNewServer] = useState({
     name: '',
     url: '',
-    transportType: 'sse' as 'sse' | 'http',
+    transportType: 'http-streamable' as 'http-streamable' | 'sse',
     description: '',
     enabled: true,
   });
+  
+  const [connectionTestResult, setConnectionTestResult] = useState<{
+    success: boolean;
+    requiresAuth: boolean;
+    error?: string;
+  } | null>(null);
 
   // Generate unique IDs for form elements
   const currentApiKeyId = useId();
@@ -73,6 +81,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const serverEnabledId = useId();
 
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [oauthStatuses, setOAuthStatuses] = useState<Map<string, boolean>>(new Map());
 
   const loadSettings = useCallback(async () => {
     try {
@@ -88,6 +97,16 @@ export default function Settings({ onClose }: SettingsProps) {
       if (result?.value) {
         setCurrentApiKey(`sk-...${result.value.slice(-6)}`);
       }
+
+      // Load OAuth statuses for servers that require OAuth
+      const oauthStatusMap = new Map<string, boolean>();
+      for (const server of configs) {
+        if (server.requiresAuth) {
+          const hasValidTokens = await mcpManager.hasValidOAuthTokens(server.id);
+          oauthStatusMap.set(server.id, hasValidTokens);
+        }
+      }
+      setOAuthStatuses(oauthStatusMap);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -136,6 +155,42 @@ export default function Settings({ onClose }: SettingsProps) {
     }
   };
 
+  // OAuth Functions
+  const handleOAuthAuthenticate = async (serverId: string) => {
+    try {
+      const authUrl = await mcpManager.startOAuthFlow(serverId);
+
+      // Open OAuth URL in system browser
+      if (typeof window !== 'undefined' && 'open' in window) {
+        window.open(authUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        // Fallback - copy URL to clipboard
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(authUrl);
+          alert('OAuth URL copied to clipboard. Please open it in your browser.');
+        } else {
+          alert(`Please open this URL in your browser: ${authUrl}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to start OAuth flow:', error);
+      alert('Failed to start OAuth authentication. Please check your configuration.');
+    }
+  };
+
+  const handleOAuthDisconnect = async (serverId: string) => {
+    if (confirm('Are you sure you want to disconnect OAuth authentication for this server?')) {
+      try {
+        await mcpManager.clearOAuthTokens(serverId);
+        await loadSettings(); // Refresh the UI
+      } catch (error) {
+        console.error('Failed to clear OAuth tokens:', error);
+        alert('Failed to disconnect OAuth authentication.');
+      }
+    }
+  };
+
+
   // MCP Server Functions
   const handleAddServer = async () => {
     if (!newServer.name.trim() || !newServer.url.trim()) {
@@ -144,14 +199,21 @@ export default function Settings({ onClose }: SettingsProps) {
     }
 
     try {
-      await mcpManager.addServer(newServer);
+      // Use test result to determine if OAuth is required
+      const serverConfig = {
+        ...newServer,
+        requiresAuth: connectionTestResult?.requiresAuth || false,
+      };
+      
+      await mcpManager.addServer(serverConfig);
       setNewServer({
         name: '',
         url: '',
-        transportType: 'sse',
+        transportType: 'http-streamable',
         description: '',
         enabled: true,
       });
+      setConnectionTestResult(null);
       setShowAddDialog(false);
       await loadSettings();
     } catch (error) {
@@ -188,51 +250,22 @@ export default function Settings({ onClose }: SettingsProps) {
 
     setIsTestingConnection(true);
     try {
-      const success = await mcpManager.testConnection(newServer);
-      if (success) {
-        alert('✅ Connection successful!');
-      } else {
-        alert('❌ Connection failed. Please check the URL and try again.');
-      }
+      const result = await mcpManager.testServerWithOAuthDiscovery(newServer);
+      setConnectionTestResult({
+        success: result.connectionSuccess,
+        requiresAuth: result.requiresAuth,
+        error: result.error
+      });
     } catch (error) {
       console.error('Test connection error:', error);
-      alert('❌ Connection test failed');
+      setConnectionTestResult({
+        success: false,
+        requiresAuth: false,
+        error: error instanceof Error ? error.message : 'Connection test failed'
+      });
     } finally {
       setIsTestingConnection(false);
     }
-  };
-
-  // Public MCP servers for easy setup
-  const publicServers = [
-    {
-      name: 'Demo Tools (Built-in)',
-      url: 'built-in://demo-tools',
-      description: 'Built-in tools: calculator, time, text analyzer (always works)',
-      transportType: 'http' as const,
-    },
-    {
-      name: 'Local MCP Server Example',
-      url: 'http://localhost:8000/mcp',
-      description: 'Example local server URL (requires running local MCP server)',
-      transportType: 'http' as const,
-    },
-    {
-      name: 'Custom MCP Server',
-      url: '',
-      description: 'Add your own MCP server URL',
-      transportType: 'sse' as const,
-    },
-  ];
-
-  const addPublicServer = (server: (typeof publicServers)[0]) => {
-    setNewServer({
-      name: server.name,
-      url: server.url,
-      transportType: server.transportType,
-      description: server.description,
-      enabled: true,
-    });
-    setShowAddDialog(true);
   };
 
   if (isLoading) {
@@ -533,37 +566,6 @@ export default function Settings({ onClose }: SettingsProps) {
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full">
                 <div className="space-y-6 pr-4">
-                  {/* Quick Setup */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Quick Setup</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {publicServers.map((server, index) => (
-                          <Card key={index} className="border-dashed">
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h3 className="font-medium">{server.name}</h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    {server.description}
-                                  </p>
-                                  <Badge variant="outline" className="mt-2">
-                                    {server.transportType.toUpperCase()}
-                                  </Badge>
-                                </div>
-                                <Button size="sm" onClick={() => addPublicServer(server)}>
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
                   {/* Configured Servers */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -617,13 +619,15 @@ export default function Settings({ onClose }: SettingsProps) {
                                   onChange={(e) =>
                                     setNewServer({
                                       ...newServer,
-                                      transportType: e.target.value as 'sse' | 'http',
+                                      transportType: e.target.value as 'http-streamable' | 'sse',
                                     })
                                   }
                                   className="w-full p-2 border rounded-md"
                                 >
+                                  <option value="http-streamable">
+                                    HTTP Streamable (Recommended)
+                                  </option>
                                   <option value="sse">SSE (Server-Sent Events)</option>
-                                  <option value="http">HTTP</option>
                                 </select>
                               </div>
                               <div>
@@ -655,6 +659,48 @@ export default function Settings({ onClose }: SettingsProps) {
                                   Enable server
                                 </label>
                               </div>
+
+                              {/* Connection Test Results */}
+                              {connectionTestResult && (
+                                <div className="pt-4 border-t">
+                                  <Card className="bg-muted/30">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        {connectionTestResult.success ? (
+                                          <Wifi className="h-4 w-4 text-green-500" />
+                                        ) : (
+                                          <WifiOff className="h-4 w-4 text-red-500" />
+                                        )}
+                                        <span className="text-sm font-medium">
+                                          {connectionTestResult.success ? 'Connection Successful' : 'Connection Failed'}
+                                        </span>
+                                      </div>
+                                      
+                                      {connectionTestResult.success && (
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                          {connectionTestResult.requiresAuth ? (
+                                            <>
+                                              <Lock className="h-3 w-3" />
+                                              <span>OAuth authentication required (auto-configured)</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Unlock className="h-3 w-3" />
+                                              <span>No authentication required</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      {!connectionTestResult.success && connectionTestResult.error && (
+                                        <p className="text-xs text-red-600 mt-1">
+                                          {connectionTestResult.error}
+                                        </p>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              )}
                               <div className="flex gap-2">
                                 <Button
                                   variant="outline"
@@ -714,8 +760,22 @@ export default function Settings({ onClose }: SettingsProps) {
                                         </Badge>
                                       )}
                                       <Badge variant="outline">
-                                        {server.transportType.toUpperCase()}
+                                        {server.transportType === 'http-streamable'
+                                          ? 'HTTP-STREAMABLE'
+                                          : server.transportType.toUpperCase()}
                                       </Badge>
+                                      {server.requiresAuth &&
+                                        (oauthStatuses.get(server.id) ? (
+                                          <Badge variant="default" className="bg-blue-500">
+                                            <Unlock className="h-3 w-3 mr-1" />
+                                            OAuth Connected
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="destructive">
+                                            <Lock className="h-3 w-3 mr-1" />
+                                            OAuth Required
+                                          </Badge>
+                                        ))}
                                     </div>
                                     <p className="text-sm text-muted-foreground mb-2">
                                       {server.url}
@@ -737,6 +797,24 @@ export default function Settings({ onClose }: SettingsProps) {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2">
+                                    {server.requiresAuth &&
+                                      (oauthStatuses.get(server.id) ? (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleOAuthDisconnect(server.id)}
+                                        >
+                                          <Lock className="h-4 w-4" />
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleOAuthAuthenticate(server.id)}
+                                        >
+                                          <Unlock className="h-4 w-4" />
+                                        </Button>
+                                      ))}
                                     <Switch
                                       checked={server.enabled}
                                       onCheckedChange={(enabled) =>

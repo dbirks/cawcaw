@@ -1,14 +1,32 @@
 // MCP (Model Context Protocol) related types
 
+export interface MCPOAuthDiscovery {
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+  registrationEndpoint?: string;
+  supportedGrantTypes: string[];
+  supportedScopes?: string[];
+}
+
+export interface MCPOAuthTokens {
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: number;
+  clientId?: string; // From dynamic registration
+  clientSecret?: string; // From dynamic registration
+}
+
 export interface MCPServerConfig {
   id: string;
   name: string;
   url: string;
   enabled: boolean;
-  transportType: 'sse' | 'http' | 'streamableHttp';
+  transportType: 'sse' | 'http-streamable';
   description?: string;
   createdAt: number;
   readonly?: boolean; // For hardcoded servers
+  requiresAuth?: boolean; // Discovered automatically
+  oauthDiscovery?: MCPOAuthDiscovery; // Discovered endpoints
 }
 
 export interface MCPToolCall {

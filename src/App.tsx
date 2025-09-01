@@ -19,7 +19,7 @@ function App() {
         // Style.Light = light text (for dark backgrounds)
         const statusBarStyle = currentTheme === 'dark' ? Style.Light : Style.Dark;
         await StatusBar.setStyle({ style: statusBarStyle });
-        
+
         console.log(`StatusBar style set to: ${statusBarStyle} for theme: ${currentTheme}`);
       } catch (error) {
         // StatusBar API might not be available on web/development

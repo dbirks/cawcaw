@@ -1,6 +1,9 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+import { mcpOAuthManager } from '@/services/mcpOAuth';
 import type {
   MCPManagerConfig,
+  MCPOAuthDiscovery,
+  MCPOAuthTokens,
   MCPServerConfig,
   MCPServerStatus,
   MCPToolDefinition,
@@ -115,25 +118,34 @@ class DemoMCPClient implements MCPClient {
 // HTTP/Streamable HTTP MCP client implementation
 class HTTPMCPClient implements MCPClient {
   private baseUrl: string;
-  private transport: 'http' | 'streamableHttp';
+  private transport: 'http-streamable' | 'sse';
+  private oauthConfig?: MCPOAuthTokens;
 
-  constructor(baseUrl: string, transport: 'http' | 'streamableHttp') {
+  constructor(baseUrl: string, transport: 'http-streamable' | 'sse', oauthConfig?: MCPOAuthTokens) {
     this.baseUrl = baseUrl;
     this.transport = transport;
+    this.oauthConfig = oauthConfig;
   }
 
   async listTools(): Promise<Record<string, MCPToolDefinition>> {
     try {
-      // Use transport for future protocol variations
+      // Use transport for protocol variations
       const endpoint =
-        this.transport === 'streamableHttp'
-          ? `${this.baseUrl}/tools/list`
+        this.transport === 'http-streamable'
+          ? `${this.baseUrl}/mcp/list_tools`
           : `${this.baseUrl}/tools/list`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add OAuth authorization header if available
+      if (this.oauthConfig?.accessToken) {
+        headers.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),
@@ -170,16 +182,23 @@ class HTTPMCPClient implements MCPClient {
 
   async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     try {
-      // Use transport for future protocol variations
+      // Use transport for protocol variations
       const endpoint =
-        this.transport === 'streamableHttp'
-          ? `${this.baseUrl}/tools/call`
+        this.transport === 'http-streamable'
+          ? `${this.baseUrl}/mcp/call_tool`
           : `${this.baseUrl}/tools/call`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add OAuth authorization header if available
+      if (this.oauthConfig?.accessToken) {
+        headers.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),
@@ -229,7 +248,7 @@ class MCPManager {
         name: 'Demo Tools (Test Server)',
         url: 'http://localhost:3001', // Will be replaced with mock client
         enabled: true,
-        transportType: 'http',
+        transportType: 'http-streamable',
         description: 'Built-in demo tools for testing MCP protocol and tool calls.',
         createdAt: Date.now(),
         readonly: true,
@@ -359,11 +378,32 @@ class MCPManager {
       // Disconnect existing client if any
       await this.disconnectFromServer(serverId);
 
+      let oauthTokens: MCPOAuthTokens | undefined;
+
+      // Handle OAuth authentication if required
+      if (config.requiresAuth) {
+        // Load stored tokens
+        oauthTokens = (await mcpOAuthManager.loadOAuthTokens(serverId)) || undefined;
+        
+        if (oauthTokens) {
+          // Refresh token if needed
+          if (oauthTokens.accessToken) {
+            oauthTokens = await mcpOAuthManager.refreshTokenIfNeeded(serverId, oauthTokens);
+          }
+
+          if (!oauthTokens.accessToken) {
+            throw new Error('OAuth authentication required - no valid access token');
+          }
+        } else {
+          throw new Error('OAuth authentication required but no tokens found');
+        }
+      }
+
       // Create appropriate MCP client based on server type
       const client =
         config.id === 'demo-mcp-server'
           ? new DemoMCPClient()
-          : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
+          : new HTTPMCPClient(config.url, config.transportType, oauthTokens);
 
       // Test the connection by listing tools
       const tools = await client.listTools();
@@ -507,19 +547,43 @@ class MCPManager {
     return toolsInfo;
   }
 
-  // Test connection to a server
-  async testConnection(config: Omit<MCPServerConfig, 'id' | 'createdAt'>): Promise<boolean> {
+  // Test server and discover OAuth capabilities automatically
+  async testServerWithOAuthDiscovery(config: Omit<MCPServerConfig, 'id' | 'createdAt'>): Promise<{
+    connectionSuccess: boolean;
+    requiresAuth: boolean;
+    oauthDiscovery?: MCPOAuthDiscovery;
+    error?: string;
+  }> {
     try {
-      const client =
-        config.name === 'Demo Tools (Test Server)'
-          ? new DemoMCPClient()
-          : new HTTPMCPClient(config.url, config.transportType as 'http' | 'streamableHttp');
+      // First test OAuth capabilities
+      const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
+      
+      if (oauthTest.supportsOAuth && oauthTest.discovery) {
+        return {
+          connectionSuccess: true,
+          requiresAuth: true,
+          oauthDiscovery: oauthTest.discovery,
+        };
+      }
+      
+      // Test basic connection without OAuth
+      const client = config.name === 'Demo Tools (Test Server)'
+        ? new DemoMCPClient()
+        : new HTTPMCPClient(config.url, config.transportType);
+      
       await client.listTools();
       await client.close();
-      return true;
+      
+      return {
+        connectionSuccess: true,
+        requiresAuth: false,
+      };
     } catch (error) {
-      console.error('Test connection failed:', error);
-      return false;
+      return {
+        connectionSuccess: false,
+        requiresAuth: false,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
     }
   }
 
@@ -536,6 +600,40 @@ class MCPManager {
   // Get server statuses
   getServerStatuses(): Map<string, MCPServerStatus> {
     return new Map(this.serverStatuses);
+  }
+
+  // OAuth authentication methods
+
+  // Start OAuth flow for a server
+  async startOAuthFlow(serverId: string): Promise<string> {
+    const config = this.serverConfigs.find((s) => s.id === serverId);
+    if (!config?.requiresAuth) {
+      throw new Error('Server does not require OAuth authentication');
+    }
+    
+    return await mcpOAuthManager.startOAuthFlow(serverId, config.url);
+  }
+
+  // Complete OAuth flow with authorization code
+  async completeOAuthFlow(serverId: string, code: string, state: string): Promise<void> {
+    const tokens = await mcpOAuthManager.exchangeCodeForToken(serverId, code, state);
+    
+    // Try to connect now that we have tokens
+    if (tokens.accessToken) {
+      await this.connectToServer(serverId);
+    }
+  }
+
+  // Check if server has valid OAuth tokens
+  async hasValidOAuthTokens(serverId: string): Promise<boolean> {
+    const storedTokens = await mcpOAuthManager.loadOAuthTokens(serverId);
+    return !!storedTokens?.accessToken;
+  }
+
+  // Clear OAuth tokens for server
+  async clearOAuthTokens(serverId: string): Promise<void> {
+    await mcpOAuthManager.clearOAuthTokens(serverId);
+    await this.disconnectFromServer(serverId);
   }
 
   // Cleanup all connections
