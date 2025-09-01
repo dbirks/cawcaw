@@ -829,7 +829,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                                             }
                                                           </div>
                                                           {connectionTestResult.detailedError
-                                                            .jsonRpcError.data && (
+                                                            .jsonRpcError.data != null && (
                                                             <div className="font-mono text-xs">
                                                               Data:{' '}
                                                               {JSON.stringify(
@@ -837,7 +837,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                                                   .jsonRpcError.data,
                                                                 null,
                                                                 2
-                                                              )}
+                                                              ) || 'null'}
                                                             </div>
                                                           )}
                                                         </div>

@@ -221,7 +221,7 @@ export default function ChatView() {
 
         if (confirm(confirmMessage)) {
           // Add the server
-          const _serverConfig = await mcpManager.addServer({
+          await mcpManager.addServer({
             name,
             url,
             transportType,
