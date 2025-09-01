@@ -142,7 +142,7 @@ class MCPManager {
   private serverStatuses: Map<string, MCPServerStatus> = new Map();
 
   constructor() {
-    // Initialize with the "Everything" test server
+    // Initialize with empty server configurations
     this.initializeWithDefaultServers();
   }
 

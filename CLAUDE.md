@@ -82,7 +82,7 @@ This eliminates the need for a separate Express backend server while maintaining
 **ChatView.tsx**: Main chat interface component
 - Manages API key input/storage using Capacitor Secure Storage
 - Direct integration with OpenAI via `createOpenAI({ apiKey })`
-- Built-in demo tools (calculator, time, text analyzer) for testing MCP functionality
+- MCP server integration for external tools
 - Handles tool call expansion/collapse UI
 - Uses AI SDK v5.0's `generateText` with tool integration
 
@@ -94,7 +94,6 @@ This eliminates the need for a separate Express backend server while maintaining
 
 **mcpManager.ts**: MCP (Model Context Protocol) integration
 - Manages external tool server connections
-- Built-in mock tools for demo purposes
 - Secure storage of MCP server configurations
 - Server status tracking and connection management
 
@@ -102,7 +101,7 @@ This eliminates the need for a separate Express backend server while maintaining
 This project uses AI SDK v5.0 with significant architectural changes:
 - Direct client-side OpenAI integration (no backend proxy)
 - Uses `generateText` with tool integration for MCP functionality  
-- Built-in tools defined using `tool()` helper with Zod schemas
+- MCP tools defined using `tool()` helper with Zod schemas
 - Tool call results displayed in expandable UI components
 - Status handling for streaming responses
 
@@ -169,7 +168,7 @@ Use `pnpm dev` to start the development server. The app now runs entirely client
 - MCP server configurations also stored securely
 
 ### MCP Development
-- **Testing**: Use built-in demo tools (calculator, time, text analyzer) 
+- **Testing**: Connect external MCP servers for tool functionality
 - **Adding Servers**: Use Settings → Tools & MCP → Quick Setup for common configurations
 - **Custom Servers**: Support for HTTP and SSE transport protocols
 - **Debugging**: MCP server status shown in real-time in Settings interface
