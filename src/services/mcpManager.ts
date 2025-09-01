@@ -34,11 +34,12 @@ class HTTPMCPClient implements MCPClient {
 
   async listTools(): Promise<Record<string, MCPToolDefinition>> {
     try {
-      // Use transport for protocol variations
+      // Use proper MCP protocol endpoints
       const endpoint =
         this.transport === 'http-streamable'
-          ? `${this.baseUrl}/mcp/list_tools`
-          : `${this.baseUrl}/tools/list`;
+          ? `${this.baseUrl}/mcp` // Streamable HTTP uses single /mcp endpoint
+          : `${this.baseUrl}/messages`; // SSE transport uses /messages for requests
+          
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -87,11 +88,12 @@ class HTTPMCPClient implements MCPClient {
 
   async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     try {
-      // Use transport for protocol variations
+      // Use proper MCP protocol endpoints
       const endpoint =
         this.transport === 'http-streamable'
-          ? `${this.baseUrl}/mcp/call_tool`
-          : `${this.baseUrl}/tools/call`;
+          ? `${this.baseUrl}/mcp` // Streamable HTTP uses single /mcp endpoint
+          : `${this.baseUrl}/messages`; // SSE transport uses /messages for requests
+          
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -133,6 +135,39 @@ class HTTPMCPClient implements MCPClient {
 
   async close(): Promise<void> {
     // HTTP clients don't need explicit closing
+  }
+
+  // Test basic MCP server connectivity
+  async testConnection(): Promise<boolean> {
+    try {
+      // For SSE transport, first try to check if the /mcp endpoint exists
+      if (this.transport === 'sse') {
+        const sseEndpoint = `${this.baseUrl}/mcp`;
+        const headers: Record<string, string> = {};
+        
+        if (this.oauthConfig?.accessToken) {
+          headers.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
+        }
+        
+        // Try a GET request to /mcp to see if SSE endpoint exists
+        const sseResponse = await fetch(sseEndpoint, {
+          method: 'GET',
+          headers,
+        });
+        
+        // For SSE, a successful response or 400 (bad request without proper SSE headers) indicates server exists
+        if (sseResponse.ok || sseResponse.status === 400) {
+          return true;
+        }
+      }
+      
+      // Try the standard tools/list request
+      await this.listTools();
+      return true;
+    } catch (error) {
+      console.error(`MCP connection test failed for ${this.baseUrl}:`, error);
+      return false;
+    }
   }
 }
 
@@ -493,17 +528,21 @@ class MCPManager {
       const client = new HTTPMCPClient(config.url, config.transportType);
 
       try {
-        await client.listTools();
+        const connectionWorked = await client.testConnection();
         await client.close();
 
-        // Basic connection works, now check if OAuth is available as an option
-        const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
+        if (connectionWorked) {
+          // Basic connection works, now check if OAuth is available as an option
+          const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
 
-        return {
-          connectionSuccess: true,
-          requiresAuth: false, // Works without auth, OAuth is optional
-          oauthDiscovery: oauthTest.supportsOAuth ? oauthTest.discovery : undefined,
-        };
+          return {
+            connectionSuccess: true,
+            requiresAuth: false, // Works without auth, OAuth is optional
+            oauthDiscovery: oauthTest.supportsOAuth ? oauthTest.discovery : undefined,
+          };
+        } else {
+          throw new Error('Connection test failed');
+        }
       } catch (basicError) {
         // Basic connection failed, check if OAuth might be required
         const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
