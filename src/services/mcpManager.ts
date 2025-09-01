@@ -13,6 +13,23 @@ import type {
 
 const MCP_STORAGE_KEY = 'mcp_server_configs';
 
+// Detailed error information for connection testing
+interface DetailedConnectionError {
+  message: string;
+  httpStatus?: number;
+  httpStatusText?: string;
+  responseHeaders?: Record<string, string>;
+  responseBody?: string;
+  networkError?: boolean;
+  jsonRpcError?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  };
+  timestamp: string;
+  duration?: number;
+}
+
 // Interface for MCP client (both real and mock)
 interface MCPClient {
   listTools(): Promise<Record<string, MCPToolDefinition>>;
@@ -34,11 +51,8 @@ class HTTPMCPClient implements MCPClient {
 
   async listTools(): Promise<Record<string, MCPToolDefinition>> {
     try {
-      // Use proper MCP protocol endpoints
-      const endpoint =
-        this.transport === 'http-streamable'
-          ? `${this.baseUrl}/mcp` // Streamable HTTP uses single /mcp endpoint
-          : `${this.baseUrl}/messages`; // SSE transport uses /messages for requests
+      // Use the exact endpoint URL provided by the user
+      const endpoint = this.baseUrl;
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -88,11 +102,8 @@ class HTTPMCPClient implements MCPClient {
 
   async callTool(name: string, args: Record<string, unknown>): Promise<MCPToolResult> {
     try {
-      // Use proper MCP protocol endpoints
-      const endpoint =
-        this.transport === 'http-streamable'
-          ? `${this.baseUrl}/mcp` // Streamable HTTP uses single /mcp endpoint
-          : `${this.baseUrl}/messages`; // SSE transport uses /messages for requests
+      // Use the exact endpoint URL provided by the user
+      const endpoint = this.baseUrl;
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -140,9 +151,9 @@ class HTTPMCPClient implements MCPClient {
   // Test basic MCP server connectivity
   async testConnection(): Promise<boolean> {
     try {
-      // For SSE transport, first try to check if the /mcp endpoint exists
+      // For SSE transport, first try to check the provided endpoint
       if (this.transport === 'sse') {
-        const sseEndpoint = `${this.baseUrl}/mcp`;
+        const sseEndpoint = this.baseUrl;
         const headers: Record<string, string> = {};
 
         if (this.oauthConfig?.accessToken) {
@@ -524,16 +535,31 @@ class MCPManager {
     requiresAuth: boolean;
     oauthDiscovery?: MCPOAuthDiscovery;
     error?: string;
+    detailedError?: DetailedConnectionError;
   }> {
+    const startTime = performance.now();
+    
+    const createDetailedError = (error: unknown, additionalInfo?: Partial<DetailedConnectionError>): DetailedConnectionError => {
+      const baseError: DetailedConnectionError = {
+        message: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+        duration: Math.round(performance.now() - startTime),
+        ...additionalInfo,
+      };
+      
+      return baseError;
+    };
+
     try {
-      // First test basic connection without OAuth
+      // First test basic connection without OAuth with detailed error capture
       const client = new HTTPMCPClient(config.url, config.transportType);
 
       try {
-        const connectionWorked = await client.testConnection();
+        // Test connection with detailed error information
+        const connectionResult = await this.testConnectionDetailed(config.url, config.transportType);
         await client.close();
 
-        if (connectionWorked) {
+        if (connectionResult.success) {
           // Basic connection works, now check if OAuth is available as an option
           const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
 
@@ -543,9 +569,17 @@ class MCPManager {
             oauthDiscovery: oauthTest.supportsOAuth ? oauthTest.discovery : undefined,
           };
         } else {
-          throw new Error('Connection test failed');
+          throw new Error(connectionResult.error || 'Connection test failed');
         }
       } catch (basicError) {
+        // Create detailed error for basic connection failure
+        const detailedError = await this.captureDetailedConnectionError(
+          basicError,
+          config.url,
+          config.transportType,
+          startTime
+        );
+
         // Basic connection failed, check if OAuth might be required
         const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
 
@@ -554,17 +588,26 @@ class MCPManager {
             connectionSuccess: true,
             requiresAuth: true,
             oauthDiscovery: oauthTest.discovery,
+            error: detailedError.message,
+            detailedError,
           };
         }
 
         // Neither basic nor OAuth worked
-        throw basicError;
+        return {
+          connectionSuccess: false,
+          requiresAuth: false,
+          error: detailedError.message,
+          detailedError,
+        };
       }
     } catch (error) {
+      const detailedError = createDetailedError(error);
       return {
         connectionSuccess: false,
         requiresAuth: false,
-        error: error instanceof Error ? error.message : 'Connection failed',
+        error: detailedError.message,
+        detailedError,
       };
     }
   }
@@ -616,6 +659,121 @@ class MCPManager {
   async clearOAuthTokens(serverId: string): Promise<void> {
     await mcpOAuthManager.clearOAuthTokens(serverId);
     await this.disconnectFromServer(serverId);
+  }
+
+  // Test connection with detailed error information
+  private async testConnectionDetailed(
+    baseUrl: string,
+    _transport: 'http-streamable' | 'sse'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Use the exact endpoint URL provided by the user
+      const endpoint = baseUrl;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/list',
+          params: {},
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message || 'MCP server error');
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  // Capture detailed connection error information
+  private async captureDetailedConnectionError(
+    error: unknown,
+    baseUrl: string,
+    _transport: 'http-streamable' | 'sse',
+    startTime: number
+  ): Promise<DetailedConnectionError> {
+    const baseError = {
+      message: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+      duration: Math.round(performance.now() - startTime),
+    } as DetailedConnectionError;
+
+    // Try to capture more detailed error information
+    try {
+      // Use the exact endpoint URL provided by the user
+      const endpoint = baseUrl;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/list',
+          params: {},
+        }),
+      });
+
+      // Capture response details
+      baseError.httpStatus = response.status;
+      baseError.httpStatusText = response.statusText;
+      
+      // Capture response headers
+      const headers: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      baseError.responseHeaders = headers;
+
+      // Try to capture response body
+      try {
+        const text = await response.text();
+        baseError.responseBody = text;
+
+        // Check if it's JSON-RPC error
+        if (text.startsWith('{')) {
+          const jsonResponse = JSON.parse(text);
+          if (jsonResponse.error) {
+            baseError.jsonRpcError = {
+              code: jsonResponse.error.code || -1,
+              message: jsonResponse.error.message || 'Unknown JSON-RPC error',
+              data: jsonResponse.error.data,
+            };
+          }
+        }
+      } catch {
+        // Response body couldn't be read as text
+        baseError.responseBody = 'Unable to read response body';
+      }
+    } catch (fetchError) {
+      // Network-level error
+      baseError.networkError = true;
+      if (fetchError instanceof Error) {
+        if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
+          baseError.message = 'Network error: Unable to reach server (CORS, network, or DNS issue)';
+        }
+      }
+    }
+
+    return baseError;
   }
 
   // Cleanup all connections

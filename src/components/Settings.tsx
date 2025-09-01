@@ -1,10 +1,15 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
   Brain,
+  ChevronDown,
+  ChevronRight,
+  Clock,
   Edit,
+  Info,
   Lock,
   Monitor,
   Moon,
+  Network,
   Palette,
   Plus,
   Settings as SettingsIcon,
@@ -81,7 +86,24 @@ export default function Settings({ onClose }: SettingsProps) {
     success: boolean;
     requiresAuth: boolean;
     error?: string;
+    detailedError?: {
+      message: string;
+      httpStatus?: number;
+      httpStatusText?: string;
+      responseHeaders?: Record<string, string>;
+      responseBody?: string;
+      networkError?: boolean;
+      jsonRpcError?: {
+        code: number;
+        message: string;
+        data?: unknown;
+      };
+      timestamp: string;
+      duration?: number;
+    };
   } | null>(null);
+
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
 
   // Generate unique IDs for form elements
   const apiKeyId = useId();
@@ -226,6 +248,7 @@ export default function Settings({ onClose }: SettingsProps) {
         enabled: true,
       });
       setConnectionTestResult(null);
+      setShowErrorDetails(false);
       setShowAddDialog(false);
       await loadSettings();
     } catch (error) {
@@ -327,14 +350,22 @@ export default function Settings({ onClose }: SettingsProps) {
         success: result.connectionSuccess,
         requiresAuth: result.requiresAuth,
         error: result.error,
+        detailedError: result.detailedError,
       });
+      setShowErrorDetails(false); // Reset expanded state
     } catch (error) {
       console.error('Test connection error:', error);
       setConnectionTestResult({
         success: false,
         requiresAuth: false,
         error: error instanceof Error ? error.message : 'Connection test failed',
+        detailedError: {
+          message: error instanceof Error ? error.message : 'Connection test failed',
+          timestamp: new Date().toISOString(),
+          networkError: true,
+        },
       });
+      setShowErrorDetails(false); // Reset expanded state
     } finally {
       setIsTestingConnection(false);
     }
@@ -725,9 +756,108 @@ export default function Settings({ onClose }: SettingsProps) {
 
                                       {!connectionTestResult.success &&
                                         connectionTestResult.error && (
-                                          <p className="text-xs text-red-600 mt-1">
-                                            {connectionTestResult.error}
-                                          </p>
+                                          <div className="mt-2 space-y-2">
+                                            <p className="text-xs text-red-600">
+                                              {connectionTestResult.error}
+                                            </p>
+                                            
+                                            {connectionTestResult.detailedError && (
+                                              <div className="border-t border-border/50 pt-2">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setShowErrorDetails(!showErrorDetails)}
+                                                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                  {showErrorDetails ? (
+                                                    <ChevronDown className="h-3 w-3" />
+                                                  ) : (
+                                                    <ChevronRight className="h-3 w-3" />
+                                                  )}
+                                                  <Info className="h-3 w-3" />
+                                                  Error Details
+                                                </button>
+                                                
+                                                {showErrorDetails && (
+                                                  <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 rounded text-xs space-y-1">
+                                                    <div className="font-mono text-red-700 dark:text-red-300">
+                                                      {connectionTestResult.detailedError.message}
+                                                    </div>
+                                                    
+                                                    {connectionTestResult.detailedError.httpStatus && (
+                                                      <div className="flex items-center gap-2">
+                                                        <Network className="h-3 w-3 text-muted-foreground" />
+                                                        <span className="text-muted-foreground">HTTP Status:</span>
+                                                        <span className="font-mono">
+                                                          {connectionTestResult.detailedError.httpStatus} {connectionTestResult.detailedError.httpStatusText}
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                    
+                                                    {connectionTestResult.detailedError.jsonRpcError && (
+                                                      <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                          <span className="text-muted-foreground">JSON-RPC Error:</span>
+                                                        </div>
+                                                        <div className="pl-4 space-y-1">
+                                                          <div className="font-mono text-xs">
+                                                            Code: {connectionTestResult.detailedError.jsonRpcError.code}
+                                                          </div>
+                                                          <div className="font-mono text-xs">
+                                                            Message: {connectionTestResult.detailedError.jsonRpcError.message}
+                                                          </div>
+                                                          {connectionTestResult.detailedError.jsonRpcError.data && (
+                                                            <div className="font-mono text-xs">
+                                                              Data: {JSON.stringify(connectionTestResult.detailedError.jsonRpcError.data, null, 2)}
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                    
+                                                    {connectionTestResult.detailedError.responseBody && (
+                                                      <div className="space-y-1">
+                                                        <span className="text-muted-foreground">Response:</span>
+                                                        <pre className="font-mono text-xs bg-muted/50 p-1 rounded overflow-x-auto max-w-full">
+                                                          {connectionTestResult.detailedError.responseBody.length > 200
+                                                            ? `${connectionTestResult.detailedError.responseBody.substring(0, 200)}...`
+                                                            : connectionTestResult.detailedError.responseBody}
+                                                        </pre>
+                                                      </div>
+                                                    )}
+                                                    
+                                                    {connectionTestResult.detailedError.responseHeaders && Object.keys(connectionTestResult.detailedError.responseHeaders).length > 0 && (
+                                                      <div className="space-y-1">
+                                                        <span className="text-muted-foreground">Headers:</span>
+                                                        <div className="pl-2 space-y-1">
+                                                          {Object.entries(connectionTestResult.detailedError.responseHeaders).map(([key, value]) => (
+                                                            <div key={key} className="font-mono text-xs">
+                                                              <span className="text-muted-foreground">{key}:</span> {value}
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                    
+                                                    <div className="flex items-center gap-4 pt-1 border-t border-border/30">
+                                                      <div className="flex items-center gap-1">
+                                                        <Clock className="h-3 w-3 text-muted-foreground" />
+                                                        <span className="text-muted-foreground">Duration:</span>
+                                                        <span className="font-mono">
+                                                          {connectionTestResult.detailedError.duration || 0}ms
+                                                        </span>
+                                                      </div>
+                                                      <div className="flex items-center gap-1">
+                                                        <span className="text-muted-foreground">Time:</span>
+                                                        <span className="font-mono text-xs">
+                                                          {new Date(connectionTestResult.detailedError.timestamp).toLocaleTimeString()}
+                                                        </span>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
                                         )}
                                     </CardContent>
                                   </Card>
