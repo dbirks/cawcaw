@@ -39,7 +39,7 @@ class HTTPMCPClient implements MCPClient {
         this.transport === 'http-streamable'
           ? `${this.baseUrl}/mcp` // Streamable HTTP uses single /mcp endpoint
           : `${this.baseUrl}/messages`; // SSE transport uses /messages for requests
-          
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -93,7 +93,7 @@ class HTTPMCPClient implements MCPClient {
         this.transport === 'http-streamable'
           ? `${this.baseUrl}/mcp` // Streamable HTTP uses single /mcp endpoint
           : `${this.baseUrl}/messages`; // SSE transport uses /messages for requests
-          
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -144,23 +144,23 @@ class HTTPMCPClient implements MCPClient {
       if (this.transport === 'sse') {
         const sseEndpoint = `${this.baseUrl}/mcp`;
         const headers: Record<string, string> = {};
-        
+
         if (this.oauthConfig?.accessToken) {
           headers.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
         }
-        
+
         // Try a GET request to /mcp to see if SSE endpoint exists
         const sseResponse = await fetch(sseEndpoint, {
           method: 'GET',
           headers,
         });
-        
+
         // For SSE, a successful response or 400 (bad request without proper SSE headers) indicates server exists
         if (sseResponse.ok || sseResponse.status === 400) {
           return true;
         }
       }
-      
+
       // Try the standard tools/list request
       await this.listTools();
       return true;
@@ -212,11 +212,12 @@ class MCPManager {
         for (const userServer of userServers) {
           if (!defaultServers.find((s) => s.id === userServer.id)) {
             // Skip demo tools and test servers
-            const isDemoServer = userServer.name?.includes('Demo Tools') || 
-                               userServer.name?.includes('Everything Test Server') ||
-                               userServer.url?.includes('built-in://demo') ||
-                               userServer.url?.includes('@modelcontextprotocol/server-everything');
-            
+            const isDemoServer =
+              userServer.name?.includes('Demo Tools') ||
+              userServer.name?.includes('Everything Test Server') ||
+              userServer.url?.includes('built-in://demo') ||
+              userServer.url?.includes('@modelcontextprotocol/server-everything');
+
             if (!isDemoServer) {
               allServers.push(userServer);
             }
@@ -239,27 +240,28 @@ class MCPManager {
       if (result?.value) {
         const config: MCPManagerConfig = JSON.parse(result.value);
         const userServers = config.servers || [];
-        
+
         // Filter out demo servers
-        const cleanedServers = userServers.filter(server => {
-          const isDemoServer = server.name?.includes('Demo Tools') || 
-                             server.name?.includes('Everything Test Server') ||
-                             server.url?.includes('built-in://demo') ||
-                             server.url?.includes('@modelcontextprotocol/server-everything');
+        const cleanedServers = userServers.filter((server) => {
+          const isDemoServer =
+            server.name?.includes('Demo Tools') ||
+            server.name?.includes('Everything Test Server') ||
+            server.url?.includes('built-in://demo') ||
+            server.url?.includes('@modelcontextprotocol/server-everything');
           return !isDemoServer;
         });
-        
+
         // Save cleaned configuration
         const cleanedConfig: MCPManagerConfig = {
           ...config,
-          servers: cleanedServers
+          servers: cleanedServers,
         };
-        
+
         await SecureStoragePlugin.set({
           key: MCP_STORAGE_KEY,
           value: JSON.stringify(cleanedConfig),
         });
-        
+
         this.serverConfigs = cleanedServers;
       }
     } catch (error) {

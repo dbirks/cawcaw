@@ -1,7 +1,14 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon, User } from 'lucide-react';
+import {
+  BotIcon,
+  Loader2Icon,
+  MicIcon,
+  MicOffIcon,
+  Settings as SettingsIcon,
+  User,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -35,13 +42,12 @@ import {
 } from '@/components/ai-elements/tool';
 import { McpIcon } from '@/components/icons/McpIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
-
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
@@ -539,15 +545,15 @@ export default function ChatView() {
                 <PopoverTrigger asChild>
                   <PromptInputButton>
                     <McpIcon size={16} />
-                    <span className="hidden md:inline">
-                      Model Context Protocol
-                    </span>
+                    <span className="hidden md:inline">Model Context Protocol</span>
                     <span className="hidden sm:inline md:hidden">
                       {(() => {
                         const enabledCount = availableServers.filter((s) => s.enabled).length;
-                        return enabledCount === 0 ? 'No tools' : 
-                               enabledCount === 1 ? '1 tool' : 
-                               `${enabledCount} tools`;
+                        return enabledCount === 0
+                          ? 'No tools'
+                          : enabledCount === 1
+                            ? '1 tool'
+                            : `${enabledCount} tools`;
                       })()}
                     </span>
                   </PromptInputButton>

@@ -17,8 +17,8 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,7 +105,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
       // Clean up demo servers first
       await mcpManager.cleanupDemoServers();
-      
+
       // Load MCP servers
       const configs = await mcpManager.loadConfigurations();
       setServers(configs);
@@ -139,7 +139,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const handleApiKeyChange = async (newValue: string) => {
     setApiKey(newValue);
-    
+
     if (newValue.trim()) {
       setIsUpdatingKey(true);
       try {
@@ -248,7 +248,7 @@ export default function Settings({ onClose }: SettingsProps) {
         description: editServer.description,
         enabled: editServer.enabled,
       });
-      
+
       setShowEditDialog(false);
       setEditingServerId(null);
       setEditServer({
@@ -270,7 +270,7 @@ export default function Settings({ onClose }: SettingsProps) {
       alert('This server configuration is readonly and cannot be edited.');
       return;
     }
-    
+
     setEditingServerId(server.id);
     setEditServer({
       name: server.name,
@@ -372,17 +372,26 @@ export default function Settings({ onClose }: SettingsProps) {
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="llm" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <TabsTrigger
+              value="llm"
+              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
               <Brain className="h-4 w-4" />
               <span className="hidden sm:inline">LLM Provider</span>
               <span className="sm:hidden">LLM</span>
             </TabsTrigger>
-            <TabsTrigger value="tools" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <TabsTrigger
+              value="tools"
+              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
               <Wrench className="h-4 w-4" />
               <span className="hidden sm:inline">Tools & MCP</span>
               <span className="sm:hidden">MCP</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <TabsTrigger
+              value="appearance"
+              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
               <span className="sm:hidden">Theme</span>
@@ -572,7 +581,6 @@ export default function Settings({ onClose }: SettingsProps) {
                           </button>
                         </div>
                       </div>
-
                     </CardContent>
                   </Card>
                 </div>
@@ -779,7 +787,10 @@ export default function Settings({ onClose }: SettingsProps) {
                                 />
                               </div>
                               <div>
-                                <label htmlFor={editTransportTypeId} className="text-sm font-medium">
+                                <label
+                                  htmlFor={editTransportTypeId}
+                                  className="text-sm font-medium"
+                                >
                                   Transport Type
                                 </label>
                                 <select
