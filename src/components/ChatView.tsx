@@ -152,7 +152,8 @@ export default function ChatView() {
 
       // Get tools from MCP manager
       const mcpTools = await mcpManager.getAllTools();
-      const tools: Record<string, ReturnType<typeof tool>> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tools: Record<string, any> = {};
 
       // Convert MCP tools to AI SDK format
       for (const [toolName, toolDef] of Object.entries(mcpTools)) {
