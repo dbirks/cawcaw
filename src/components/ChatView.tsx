@@ -602,28 +602,28 @@ export default function ChatView() {
                 </PromptInputModelSelectTrigger>
                 <PromptInputModelSelectContent>
                   <PromptInputModelSelectItem value="gpt-4.1">
-                    GPT-4.1
+                    gpt-4.1
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4.1-mini">
-                    GPT-4.1 Mini
+                    gpt-4.1-mini
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4o">
-                    GPT-4o
+                    gpt-4o
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4o-mini">
-                    GPT-4o Mini
+                    gpt-4o-mini
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4-turbo">
-                    GPT-4 Turbo
+                    gpt-4-turbo
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="gpt-4">
-                    GPT-4
+                    gpt-4
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="o1">
                     o1
                   </PromptInputModelSelectItem>
                   <PromptInputModelSelectItem value="o3-mini">
-                    o3 Mini
+                    o3-mini
                   </PromptInputModelSelectItem>
                 </PromptInputModelSelectContent>
               </PromptInputModelSelect>
