@@ -34,7 +34,6 @@ import {
   ToolOutput,
 } from '@/components/ai-elements/tool';
 import { McpIcon } from '@/components/icons/McpIcon';
-import { AssistantIcon } from '@/components/icons/AssistantIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 
 // UI Components
