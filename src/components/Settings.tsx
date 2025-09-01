@@ -18,6 +18,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -323,7 +324,7 @@ export default function Settings({ onClose }: SettingsProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Zap className="h-5 w-5" />
+                        <OpenAIIcon size={20} />
                         OpenAI Configuration
                       </CardTitle>
                     </CardHeader>

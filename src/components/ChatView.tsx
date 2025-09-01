@@ -35,6 +35,7 @@ import {
 } from '@/components/ai-elements/tool';
 import { McpIcon } from '@/components/icons/McpIcon';
 import { AssistantIcon } from '@/components/icons/AssistantIcon';
+import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -494,8 +495,8 @@ export default function ChatView() {
                   </MessageContent>
                   {message.role === 'assistant' ? (
                     <Avatar className="size-8 ring ring-1 ring-border">
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        <AssistantIcon size={16} />
+                      <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
+                        <OpenAIIcon size={16} />
                       </AvatarFallback>
                     </Avatar>
                   ) : (
