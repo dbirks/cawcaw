@@ -162,7 +162,15 @@ export default function ChatView() {
       for (const [toolName, toolDef] of Object.entries(mcpTools)) {
         const inputSchema = toolDef.inputSchema || { type: 'object', properties: {} };
 
-        tools[toolName] = tool({
+        // Sanitize tool name for OpenAI: only letters, numbers, underscores, and hyphens
+        const sanitizedToolName = toolName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        
+        // Debug logging
+        if (toolName !== sanitizedToolName) {
+          console.log(`Tool name sanitized: "${toolName}" -> "${sanitizedToolName}"`);
+        }
+
+        tools[sanitizedToolName] = tool({
           description: toolDef.description || `Tool from ${toolDef._mcpServerName}`,
           inputSchema: z.object(
             Object.fromEntries(
