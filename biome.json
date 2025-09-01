@@ -5,9 +5,6 @@
     "clientKind": "git",
     "useIgnoreFile": true
   },
-  "files": {
-    "includes": ["src/**/*.{ts,tsx,js,jsx}"]
-  },
   "formatter": {
     "enabled": true,
     "lineWidth": 100,
@@ -45,7 +42,7 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+      "include": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
       "linter": {
         "rules": {
           "suspicious": {
