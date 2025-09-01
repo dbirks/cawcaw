@@ -196,3 +196,45 @@ export const PromptInputModelSelectValue = ({
   className,
   ...props
 }: PromptInputModelSelectValueProps) => <SelectValue className={cn(className)} {...props} />;
+
+// MCP Server Select Components
+export type PromptInputMcpSelectProps = ComponentProps<typeof Select>;
+
+export const PromptInputMcpSelect = (props: PromptInputMcpSelectProps) => <Select {...props} />;
+
+export type PromptInputMcpSelectTriggerProps = ComponentProps<typeof SelectTrigger>;
+
+export const PromptInputMcpSelectTrigger = ({
+  className,
+  ...props
+}: PromptInputMcpSelectTriggerProps) => (
+  <SelectTrigger
+    className={cn(
+      'border-none bg-transparent font-medium text-muted-foreground shadow-none transition-colors',
+      'hover:bg-accent hover:text-foreground [&[aria-expanded="true"]]:bg-accent [&[aria-expanded="true"]]:text-foreground',
+      className
+    )}
+    {...props}
+  />
+);
+
+export type PromptInputMcpSelectContentProps = ComponentProps<typeof SelectContent>;
+
+export const PromptInputMcpSelectContent = ({
+  className,
+  ...props
+}: PromptInputMcpSelectContentProps) => <SelectContent className={cn(className)} {...props} />;
+
+export type PromptInputMcpSelectItemProps = ComponentProps<typeof SelectItem>;
+
+export const PromptInputMcpSelectItem = ({
+  className,
+  ...props
+}: PromptInputMcpSelectItemProps) => <SelectItem className={cn(className)} {...props} />;
+
+export type PromptInputMcpSelectValueProps = ComponentProps<typeof SelectValue>;
+
+export const PromptInputMcpSelectValue = ({
+  className,
+  ...props
+}: PromptInputMcpSelectValueProps) => <SelectValue className={cn(className)} {...props} />;

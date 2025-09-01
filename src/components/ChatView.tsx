@@ -1,7 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon } from 'lucide-react';
+import { BotIcon, Check, Loader2Icon, MicIcon, MicOffIcon, Settings as SettingsIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -18,6 +18,16 @@ import {
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputTools,
+  PromptInputModelSelect,
+  PromptInputModelSelectTrigger,
+  PromptInputModelSelectContent,
+  PromptInputModelSelectItem,
+  PromptInputModelSelectValue,
+  PromptInputMcpSelect,
+  PromptInputMcpSelectTrigger,
+  PromptInputMcpSelectContent,
+  PromptInputMcpSelectItem,
+  PromptInputMcpSelectValue,
 } from '@/components/ai-elements/prompt-input';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'; // For reasoning models like o1 and o3-mini
 import { Response } from '@/components/ai-elements/response';
@@ -75,10 +85,8 @@ export default function ChatView() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // New state for AI Elements features
-  const [toolsModalOpen, setToolsModalOpen] = useState<boolean>(false);
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
   const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
-  const [modelModalOpen, setModelModalOpen] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -104,9 +112,15 @@ export default function ChatView() {
           setSelectedModel(modelResult.value);
         }
 
-        // Initialize MCP servers
+        // Initialize MCP servers and load data
         await mcpManager.loadConfigurations();
         await mcpManager.connectToEnabledServers();
+        
+        // Load server data for compact selector
+        const servers = mcpManager.getServerConfigs();
+        const statuses = mcpManager.getServerStatuses();
+        setAvailableServers(servers);
+        setServerStatuses(statuses);
       } catch (error) {
         console.log('Initialization error:', error);
       }
@@ -349,18 +363,12 @@ export default function ChatView() {
     }
   };
 
-  const toggleToolsModal = async () => {
-    if (!toolsModalOpen) {
-      // Load server data when opening modal
-      const servers = mcpManager.getServerConfigs();
-      const statuses = mcpManager.getServerStatuses();
-      setAvailableServers(servers);
-      setServerStatuses(statuses);
-    }
-    setToolsModalOpen(!toolsModalOpen);
-  };
 
-  const toggleServerEnabled = async (serverId: string, enabled: boolean) => {
+  const toggleServerEnabled = async (serverId: string) => {
+    const server = availableServers.find(s => s.id === serverId);
+    if (!server) return;
+    
+    const enabled = !server.enabled;
     try {
       await mcpManager.updateServer(serverId, { enabled });
       // Refresh server data
@@ -373,13 +381,9 @@ export default function ChatView() {
     }
   };
 
-  const toggleModelModal = () => {
-    setModelModalOpen(!modelModalOpen);
-  };
 
   const handleModelSelect = async (modelId: string) => {
     setSelectedModel(modelId);
-    setModelModalOpen(false);
 
     // Save selected model to secure storage
     try {
@@ -524,11 +528,48 @@ export default function ChatView() {
           />
           <PromptInputToolbar>
             <PromptInputTools>
-              {/* MCP Tools button */}
-              <PromptInputButton type="button" onClick={toggleToolsModal}>
-                <McpIcon size={16} />
-                <span>MCP</span>
-              </PromptInputButton>
+              {/* MCP Server selector */}
+              <PromptInputMcpSelect>
+                <PromptInputMcpSelectTrigger>
+                  <McpIcon size={16} />
+                  <PromptInputMcpSelectValue>
+                    {availableServers.filter(s => s.enabled).length} servers
+                  </PromptInputMcpSelectValue>
+                </PromptInputMcpSelectTrigger>
+                <PromptInputMcpSelectContent>
+                  {availableServers.length === 0 ? (
+                    <PromptInputMcpSelectItem value="no-servers" disabled>
+                      <span className="text-muted-foreground">No servers configured</span>
+                    </PromptInputMcpSelectItem>
+                  ) : (
+                    availableServers.map((server) => {
+                      const status = serverStatuses.get(server.id);
+                      return (
+                        <PromptInputMcpSelectItem 
+                          key={server.id} 
+                          value={server.id}
+                          onSelect={(e) => {
+                            e.preventDefault(); // Prevent dropdown from closing
+                            toggleServerEnabled(server.id);
+                          }}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2">
+                              <span>{server.name}</span>
+                              {!status?.connected && (
+                                <span className="text-xs text-muted-foreground">
+                                  {status?.error ? 'Error' : 'Disconnected'}
+                                </span>
+                              )}
+                            </div>
+                            {server.enabled && <Check className="h-4 w-4" />}
+                          </div>
+                        </PromptInputMcpSelectItem>
+                      );
+                    })
+                  )}
+                </PromptInputMcpSelectContent>
+              </PromptInputMcpSelect>
               {/* Enhanced Microphone button with recording state */}
               <PromptInputButton
                 type="button"
@@ -554,212 +595,70 @@ export default function ChatView() {
                       : 'Mic'}
                 </span>
               </PromptInputButton>
-              {/* Model switcher button with text label */}
-              <PromptInputButton type="button" onClick={toggleModelModal}>
-                <BotIcon size={16} />
-                <span>Model</span>
-              </PromptInputButton>
+              {/* Model selector */}
+              <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
+                <PromptInputModelSelectTrigger>
+                  <BotIcon size={16} />
+                  <PromptInputModelSelectValue placeholder="Select model" />
+                </PromptInputModelSelectTrigger>
+                <PromptInputModelSelectContent>
+                  <PromptInputModelSelectItem value="gpt-4.1">
+                    <div className="flex items-center justify-between w-full">
+                      <span>GPT-4.1</span>
+                      {selectedModel === 'gpt-4.1' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4.1-mini">
+                    <div className="flex items-center justify-between w-full">
+                      <span>GPT-4.1 Mini</span>
+                      {selectedModel === 'gpt-4.1-mini' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4o">
+                    <div className="flex items-center justify-between w-full">
+                      <span>GPT-4o</span>
+                      {selectedModel === 'gpt-4o' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4o-mini">
+                    <div className="flex items-center justify-between w-full">
+                      <span>GPT-4o Mini</span>
+                      {selectedModel === 'gpt-4o-mini' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4-turbo">
+                    <div className="flex items-center justify-between w-full">
+                      <span>GPT-4 Turbo</span>
+                      {selectedModel === 'gpt-4-turbo' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="gpt-4">
+                    <div className="flex items-center justify-between w-full">
+                      <span>GPT-4</span>
+                      {selectedModel === 'gpt-4' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="o1">
+                    <div className="flex items-center justify-between w-full">
+                      <span>o1</span>
+                      {selectedModel === 'o1' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                  <PromptInputModelSelectItem value="o3-mini">
+                    <div className="flex items-center justify-between w-full">
+                      <span>o3 Mini</span>
+                      {selectedModel === 'o3-mini' && <Check className="h-4 w-4" />}
+                    </div>
+                  </PromptInputModelSelectItem>
+                </PromptInputModelSelectContent>
+              </PromptInputModelSelect>
             </PromptInputTools>
             <PromptInputSubmit disabled={!input.trim() || status === 'streaming'} status={status} />
           </PromptInputToolbar>
         </PromptInput>
       </div>
 
-      {/* MCP Server Selection Modal */}
-      <Dialog open={toolsModalOpen} onOpenChange={setToolsModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>MCP Server Selection</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Enable or disable MCP servers to control which tools are available to the AI.
-            </p>
-            <div className="space-y-3">
-              {availableServers.map((server) => {
-                const status = serverStatuses.get(server.id);
-                const isConnected = status?.connected || false;
-                const toolCount = status?.toolCount || 0;
-                const hasError = status?.error;
 
-                return (
-                  <div
-                    key={server.id}
-                    className="flex items-center justify-between py-3 px-4 border rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-medium">{server.name}</h4>
-                        {server.readonly && (
-                          <span className="text-xs bg-muted px-2 py-1 rounded">Built-in</span>
-                        )}
-                        {isConnected && (
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                            {toolCount} tools
-                          </span>
-                        )}
-                        {hasError && (
-                          <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
-                            Error
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{server.description}</p>
-                      {hasError && <p className="text-xs text-red-600 mt-1">{status.error}</p>}
-                    </div>
-                    <Switch
-                      checked={server.enabled}
-                      onCheckedChange={(enabled) => toggleServerEnabled(server.id, enabled)}
-                    />
-                  </div>
-                );
-              })}
-
-              {availableServers.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No MCP servers configured.</p>
-                  <p className="text-xs mt-1">Go to Settings → Tools & MCP to add servers.</p>
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setToolsModalOpen(false)}>Done</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Model Selection Modal */}
-      <Dialog open={modelModalOpen} onOpenChange={setModelModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select AI Model</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Choose an OpenAI model for chat conversations:
-            </p>
-            <div className="space-y-2">
-              {/* GPT-4.1 Models */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">GPT-4.1 (Latest)</h4>
-                <div className="space-y-1 ml-4">
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('gpt-4.1')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'gpt-4.1' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">GPT-4.1</div>
-                    <div className="text-xs text-muted-foreground">Most capable, 1M context</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('gpt-4.1-mini')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'gpt-4.1-mini' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">GPT-4.1 Mini</div>
-                    <div className="text-xs text-muted-foreground">
-                      Fast, cost-effective, beats GPT-4o
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* GPT-4o Models */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">GPT-4o (Multimodal)</h4>
-                <div className="space-y-1 ml-4">
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('gpt-4o')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'gpt-4o' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">GPT-4o</div>
-                    <div className="text-xs text-muted-foreground">Multimodal flagship model</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('gpt-4o-mini')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'gpt-4o-mini' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">GPT-4o Mini</div>
-                    <div className="text-xs text-muted-foreground">
-                      Fast, affordable, 128K context
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* GPT-4 Models */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">GPT-4</h4>
-                <div className="space-y-1 ml-4">
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('gpt-4-turbo')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'gpt-4-turbo' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">GPT-4 Turbo</div>
-                    <div className="text-xs text-muted-foreground">
-                      Optimized for speed and cost
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('gpt-4')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'gpt-4' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">GPT-4</div>
-                    <div className="text-xs text-muted-foreground">Original GPT-4</div>
-                  </button>
-                </div>
-              </div>
-
-              {/* o-series Reasoning Models */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">Reasoning Models</h4>
-                <div className="space-y-1 ml-4">
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('o1')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'o1' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">o1</div>
-                    <div className="text-xs text-muted-foreground">Advanced reasoning</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect('o3-mini')}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
-                      selectedModel === 'o3-mini' ? 'bg-primary text-primary-foreground' : ''
-                    }`}
-                  >
-                    <div className="font-medium">o3 Mini</div>
-                    <div className="text-xs text-muted-foreground">Compact reasoning model</div>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setModelModalOpen(false)}>Done</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
