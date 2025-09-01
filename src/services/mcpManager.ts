@@ -555,29 +555,38 @@ class MCPManager {
     error?: string;
   }> {
     try {
-      // First test OAuth capabilities
-      const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
-      
-      if (oauthTest.supportsOAuth && oauthTest.discovery) {
-        return {
-          connectionSuccess: true,
-          requiresAuth: true,
-          oauthDiscovery: oauthTest.discovery,
-        };
-      }
-      
-      // Test basic connection without OAuth
+      // First test basic connection without OAuth
       const client = config.name === 'Demo Tools (Test Server)'
         ? new DemoMCPClient()
         : new HTTPMCPClient(config.url, config.transportType);
       
-      await client.listTools();
-      await client.close();
-      
-      return {
-        connectionSuccess: true,
-        requiresAuth: false,
-      };
+      try {
+        await client.listTools();
+        await client.close();
+        
+        // Basic connection works, now check if OAuth is available as an option
+        const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
+        
+        return {
+          connectionSuccess: true,
+          requiresAuth: false, // Works without auth, OAuth is optional
+          oauthDiscovery: oauthTest.supportsOAuth ? oauthTest.discovery : undefined,
+        };
+      } catch (basicError) {
+        // Basic connection failed, check if OAuth might be required
+        const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
+        
+        if (oauthTest.supportsOAuth && oauthTest.discovery) {
+          return {
+            connectionSuccess: true,
+            requiresAuth: true,
+            oauthDiscovery: oauthTest.discovery,
+          };
+        }
+        
+        // Neither basic nor OAuth worked
+        throw basicError;
+      }
     } catch (error) {
       return {
         connectionSuccess: false,
