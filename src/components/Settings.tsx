@@ -635,12 +635,12 @@ export default function Settings({ onClose }: SettingsProps) {
                             Add Server
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-                          <DialogHeader>
+                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col safe-top safe-bottom safe-x m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
+                          <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
                             <DialogTitle>Add MCP Server</DialogTitle>
                           </DialogHeader>
-                          <ScrollArea className="flex-1 pr-4">
-                            <div className="space-y-4">
+                          <ScrollArea className="flex-1 px-4 sm:px-6">
+                            <div className="space-y-4 py-4">
                               <div>
                                 <label htmlFor={serverNameId} className="text-sm font-medium">
                                   Name *
@@ -923,33 +923,37 @@ export default function Settings({ onClose }: SettingsProps) {
                                   </Card>
                                 </div>
                               )}
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  onClick={handleTestConnection}
-                                  disabled={isTestingConnection || !newServer.url.trim()}
-                                  className="flex-1"
-                                >
-                                  <TestTube className="h-4 w-4 mr-2" />
-                                  {isTestingConnection ? 'Testing...' : 'Test Connection'}
-                                </Button>
-                                <Button onClick={handleAddServer} className="flex-1">
-                                  Add Server
-                                </Button>
-                              </div>
                             </div>
                           </ScrollArea>
+                          
+                          {/* Dialog Footer with Action Buttons */}
+                          <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={handleTestConnection}
+                                disabled={isTestingConnection || !newServer.url.trim()}
+                                className="flex-1"
+                              >
+                                <TestTube className="h-4 w-4 mr-2" />
+                                {isTestingConnection ? 'Testing...' : 'Test Connection'}
+                              </Button>
+                              <Button onClick={handleAddServer} className="flex-1">
+                                Add Server
+                              </Button>
+                            </div>
+                          </div>
                         </DialogContent>
                       </Dialog>
 
                       {/* Edit Server Dialog */}
                       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-                        <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-                          <DialogHeader>
+                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col safe-top safe-bottom safe-x m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
+                          <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
                             <DialogTitle>Edit MCP Server</DialogTitle>
                           </DialogHeader>
-                          <ScrollArea className="flex-1 pr-4">
-                            <div className="space-y-4">
+                          <ScrollArea className="flex-1 px-4 sm:px-6">
+                            <div className="space-y-4 py-4">
                               <div>
                                 <label htmlFor={editServerNameId} className="text-sm font-medium">
                                   Name *
@@ -1030,20 +1034,24 @@ export default function Settings({ onClose }: SettingsProps) {
                                 </label>
                               </div>
 
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  onClick={handleCancelEdit}
-                                  className="flex-1"
-                                >
-                                  Cancel
-                                </Button>
-                                <Button onClick={handleEditServer} className="flex-1">
-                                  Save Changes
-                                </Button>
-                              </div>
                             </div>
                           </ScrollArea>
+                          
+                          {/* Dialog Footer with Action Buttons */}
+                          <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={handleCancelEdit}
+                                className="flex-1"
+                              >
+                                Cancel
+                              </Button>
+                              <Button onClick={handleEditServer} className="flex-1">
+                                Save Changes
+                              </Button>
+                            </div>
+                          </div>
                         </DialogContent>
                       </Dialog>
                     </div>
