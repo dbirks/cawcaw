@@ -755,29 +755,36 @@ export default function Settings({ onClose }: SettingsProps) {
                                               </>
                                             )}
                                           </div>
-                                          
-                                          {connectionTestResult.tools && connectionTestResult.tools.length > 0 && (
-                                            <div className="border-t border-border/50 pt-2">
-                                              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                                <Wrench className="h-3 w-3" />
-                                                <span>Available Tools ({connectionTestResult.tools.length})</span>
-                                              </div>
-                                              <div className="space-y-1 max-h-32 overflow-y-auto">
-                                                {connectionTestResult.tools.map((tool, index) => (
-                                                  <div key={index} className="flex items-start gap-2 text-xs p-2 bg-muted/20 rounded">
-                                                    <div className="flex-1 min-w-0">
-                                                      <div className="font-mono font-medium text-foreground truncate">
-                                                        {tool.name}
-                                                      </div>
-                                                      <div className="text-muted-foreground break-words">
-                                                        {tool.description}
+
+                                          {connectionTestResult.tools &&
+                                            connectionTestResult.tools.length > 0 && (
+                                              <div className="border-t border-border/50 pt-2">
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                                  <Wrench className="h-3 w-3" />
+                                                  <span>
+                                                    Available Tools (
+                                                    {connectionTestResult.tools.length})
+                                                  </span>
+                                                </div>
+                                                <div className="space-y-1 max-h-32 overflow-y-auto">
+                                                  {connectionTestResult.tools.map((tool, index) => (
+                                                    <div
+                                                      key={index}
+                                                      className="flex items-start gap-2 text-xs p-2 bg-muted/20 rounded"
+                                                    >
+                                                      <div className="flex-1 min-w-0">
+                                                        <div className="font-mono font-medium text-foreground truncate">
+                                                          {tool.name}
+                                                        </div>
+                                                        <div className="text-muted-foreground break-words">
+                                                          {tool.description}
+                                                        </div>
                                                       </div>
                                                     </div>
-                                                  </div>
-                                                ))}
+                                                  ))}
+                                                </div>
                                               </div>
-                                            </div>
-                                          )}
+                                            )}
                                         </div>
                                       )}
 
