@@ -673,7 +673,11 @@ class MCPManager {
   private async testConnectionDetailed(
     baseUrl: string,
     _transport: 'http-streamable' | 'sse'
-  ): Promise<{ success: boolean; error?: string; tools?: Array<{ name: string; description: string }> }> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    tools?: Array<{ name: string; description: string }>;
+  }> {
     try {
       // Use the exact endpoint URL provided by the user
       const endpoint = baseUrl;
