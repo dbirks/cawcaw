@@ -925,7 +925,7 @@ export default function Settings({ onClose }: SettingsProps) {
                               )}
                             </div>
                           </ScrollArea>
-                          
+
                           {/* Dialog Footer with Action Buttons */}
                           <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background">
                             <div className="flex gap-2">
@@ -1033,10 +1033,9 @@ export default function Settings({ onClose }: SettingsProps) {
                                   Enable server
                                 </label>
                               </div>
-
                             </div>
                           </ScrollArea>
-                          
+
                           {/* Dialog Footer with Action Buttons */}
                           <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background">
                             <div className="flex gap-2">
