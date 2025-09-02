@@ -14,6 +14,44 @@ import { httpClient } from '@/utils/httpClient';
 
 const MCP_STORAGE_KEY = 'mcp_server_configs';
 
+// MCP JSON-RPC response interfaces
+interface MCPJsonRpcError {
+  code: number;
+  message: string;
+  data?: unknown;
+}
+
+interface MCPJsonRpcResponse<T = unknown> {
+  jsonrpc: '2.0';
+  id: string | number;
+  result?: T;
+  error?: MCPJsonRpcError;
+}
+
+interface MCPInitializeResult {
+  protocolVersion: string;
+  capabilities?: {
+    roots?: {
+      listChanged?: boolean;
+    };
+    sampling?: Record<string, unknown>;
+    logging?: Record<string, unknown>;
+  };
+  serverInfo?: {
+    name: string;
+    version: string;
+  };
+  instructions?: string;
+}
+
+interface MCPToolsListResult {
+  tools: Array<{
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+  }>;
+}
+
 // Detailed error information for connection testing
 interface DetailedConnectionError {
   message: string;
@@ -94,7 +132,7 @@ class HTTPMCPClient implements MCPClient {
         throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
       }
 
-      const initData = await initResponse.json();
+      const initData = (await initResponse.json()) as MCPJsonRpcResponse<MCPInitializeResult>;
       if (initData.error) {
         throw new Error(`Initialization failed: ${initData.error.message || 'Unknown error'}`);
       }
@@ -134,7 +172,7 @@ class HTTPMCPClient implements MCPClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as MCPJsonRpcResponse<MCPToolsListResult>;
       if (data.error) {
         throw new Error(data.error.message || 'MCP server error');
       }
@@ -144,7 +182,7 @@ class HTTPMCPClient implements MCPClient {
         for (const tool of data.result.tools) {
           tools[tool.name] = {
             description: tool.description,
-            inputSchema: tool.inputSchema,
+            inputSchema: tool.inputSchema as MCPToolDefinition['inputSchema'],
           };
         }
       }
@@ -199,7 +237,7 @@ class HTTPMCPClient implements MCPClient {
           throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
         }
 
-        const initData = await initResponse.json();
+        const initData = (await initResponse.json()) as MCPJsonRpcResponse<MCPInitializeResult>;
         if (initData.error) {
           throw new Error(`Initialization failed: ${initData.error.message || 'Unknown error'}`);
         }
@@ -243,7 +281,7 @@ class HTTPMCPClient implements MCPClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as MCPJsonRpcResponse<MCPToolResult>;
       if (data.error) {
         throw new Error(data.error.message || 'Tool call failed');
       }
@@ -793,7 +831,7 @@ class MCPManager {
     try {
       // Use the exact endpoint URL provided by the user
       const endpoint = baseUrl;
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
@@ -826,7 +864,7 @@ class MCPManager {
         throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
       }
 
-      const initData = await initResponse.json();
+      const initData = (await initResponse.json()) as MCPJsonRpcResponse<MCPInitializeResult>;
       if (initData.error) {
         throw new Error(`Initialization failed: ${initData.error.message || 'Unknown error'}`);
       }
@@ -868,7 +906,7 @@ class MCPManager {
         throw new Error(`HTTP ${toolsResponse.status}: ${toolsResponse.statusText}`);
       }
 
-      const toolsData = await toolsResponse.json();
+      const toolsData = (await toolsResponse.json()) as MCPJsonRpcResponse<MCPToolsListResult>;
       if (toolsData.error) {
         throw new Error(`Tools list failed: ${toolsData.error.message || 'Unknown error'}`);
       }
