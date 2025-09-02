@@ -535,6 +535,7 @@ class MCPManager {
     requiresAuth: boolean;
     oauthDiscovery?: MCPOAuthDiscovery;
     error?: string;
+    tools?: Array<{ name: string; description: string }>;
     detailedError?: DetailedConnectionError;
   }> {
     const startTime = performance.now();
@@ -573,6 +574,7 @@ class MCPManager {
             connectionSuccess: true,
             requiresAuth: false, // Works without auth, OAuth is optional
             oauthDiscovery: oauthTest.supportsOAuth ? oauthTest.discovery : undefined,
+            tools: connectionResult.tools,
           };
         } else {
           throw new Error(connectionResult.error || 'Connection test failed');
@@ -671,16 +673,52 @@ class MCPManager {
   private async testConnectionDetailed(
     baseUrl: string,
     _transport: 'http-streamable' | 'sse'
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; tools?: Array<{ name: string; description: string }> }> {
     try {
       // Use the exact endpoint URL provided by the user
       const endpoint = baseUrl;
+      const headers = {
+        'Content-Type': 'application/json',
+      };
 
-      const response = await fetch(endpoint, {
+      // Step 1: Initialize the MCP session (required by MCP protocol)
+      console.log('Initializing MCP session...');
+      const initResponse = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'initialize',
+          params: {
+            protocolVersion: '2025-06-18',
+            capabilities: {
+              tools: {},
+            },
+            clientInfo: {
+              name: 'caw-caw',
+              version: '1.0.0',
+            },
+          },
+        }),
+      });
+
+      if (!initResponse.ok) {
+        throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
+      }
+
+      const initData = await initResponse.json();
+      if (initData.error) {
+        throw new Error(`Initialization failed: ${initData.error.message || 'Unknown error'}`);
+      }
+
+      console.log('MCP session initialized successfully');
+
+      // Step 2: Now list available tools
+      console.log('Listing available tools...');
+      const toolsResponse = await fetch(endpoint, {
+        method: 'POST',
+        headers,
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),
@@ -689,17 +727,30 @@ class MCPManager {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!toolsResponse.ok) {
+        throw new Error(`HTTP ${toolsResponse.status}: ${toolsResponse.statusText}`);
       }
 
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error.message || 'MCP server error');
+      const toolsData = await toolsResponse.json();
+      if (toolsData.error) {
+        throw new Error(`Tools list failed: ${toolsData.error.message || 'Unknown error'}`);
       }
 
-      return { success: true };
+      // Extract tools information
+      const tools: Array<{ name: string; description: string }> = [];
+      if (toolsData.result?.tools) {
+        for (const tool of toolsData.result.tools) {
+          tools.push({
+            name: tool.name,
+            description: tool.description || 'No description provided',
+          });
+        }
+      }
+
+      console.log(`Found ${tools.length} tools:`, tools);
+      return { success: true, tools };
     } catch (error) {
+      console.error('MCP connection test failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

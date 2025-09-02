@@ -86,6 +86,7 @@ export default function Settings({ onClose }: SettingsProps) {
     success: boolean;
     requiresAuth: boolean;
     error?: string;
+    tools?: Array<{ name: string; description: string }>;
     detailedError?: {
       message: string;
       httpStatus?: number;
@@ -350,6 +351,7 @@ export default function Settings({ onClose }: SettingsProps) {
         success: result.connectionSuccess,
         requiresAuth: result.requiresAuth,
         error: result.error,
+        tools: result.tools,
         detailedError: result.detailedError,
       });
       setShowErrorDetails(false); // Reset expanded state
@@ -737,19 +739,44 @@ export default function Settings({ onClose }: SettingsProps) {
                                       </div>
 
                                       {connectionTestResult.success && (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                          {connectionTestResult.requiresAuth ? (
-                                            <>
-                                              <Lock className="h-3 w-3" />
-                                              <span>
-                                                OAuth authentication required (auto-configured)
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Unlock className="h-3 w-3" />
-                                              <span>No authentication required</span>
-                                            </>
+                                        <div className="space-y-2">
+                                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            {connectionTestResult.requiresAuth ? (
+                                              <>
+                                                <Lock className="h-3 w-3" />
+                                                <span>
+                                                  OAuth authentication required (auto-configured)
+                                                </span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Unlock className="h-3 w-3" />
+                                                <span>No authentication required</span>
+                                              </>
+                                            )}
+                                          </div>
+                                          
+                                          {connectionTestResult.tools && connectionTestResult.tools.length > 0 && (
+                                            <div className="border-t border-border/50 pt-2">
+                                              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                                <Wrench className="h-3 w-3" />
+                                                <span>Available Tools ({connectionTestResult.tools.length})</span>
+                                              </div>
+                                              <div className="space-y-1 max-h-32 overflow-y-auto">
+                                                {connectionTestResult.tools.map((tool, index) => (
+                                                  <div key={index} className="flex items-start gap-2 text-xs p-2 bg-muted/20 rounded">
+                                                    <div className="flex-1 min-w-0">
+                                                      <div className="font-mono font-medium text-foreground truncate">
+                                                        {tool.name}
+                                                      </div>
+                                                      <div className="text-muted-foreground break-words">
+                                                        {tool.description}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
                                           )}
                                         </div>
                                       )}
