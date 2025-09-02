@@ -635,12 +635,12 @@ export default function Settings({ onClose }: SettingsProps) {
                             Add Server
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col safe-top safe-bottom safe-x m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
-                          <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
+                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
+                          <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
                             <DialogTitle>Add MCP Server</DialogTitle>
                           </DialogHeader>
-                          <ScrollArea className="flex-1 px-4 sm:px-6">
-                            <div className="space-y-4 py-4">
+                          <ScrollArea className="flex-1 px-4 sm:px-6 safe-x">
+                            <div className="space-y-4 py-4 pb-6">
                               <div>
                                 <label htmlFor={serverNameId} className="text-sm font-medium">
                                   Name *
@@ -927,7 +927,7 @@ export default function Settings({ onClose }: SettingsProps) {
                           </ScrollArea>
 
                           {/* Dialog Footer with Action Buttons */}
-                          <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background">
+                          <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background safe-bottom safe-x">
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
@@ -948,12 +948,12 @@ export default function Settings({ onClose }: SettingsProps) {
 
                       {/* Edit Server Dialog */}
                       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col safe-top safe-bottom safe-x m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
-                          <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
+                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
+                          <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
                             <DialogTitle>Edit MCP Server</DialogTitle>
                           </DialogHeader>
-                          <ScrollArea className="flex-1 px-4 sm:px-6">
-                            <div className="space-y-4 py-4">
+                          <ScrollArea className="flex-1 px-4 sm:px-6 safe-x">
+                            <div className="space-y-4 py-4 pb-6">
                               <div>
                                 <label htmlFor={editServerNameId} className="text-sm font-medium">
                                   Name *
@@ -1037,7 +1037,7 @@ export default function Settings({ onClose }: SettingsProps) {
                           </ScrollArea>
 
                           {/* Dialog Footer with Action Buttons */}
-                          <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background">
+                          <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background safe-bottom safe-x">
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
