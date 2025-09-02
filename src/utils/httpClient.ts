@@ -1,12 +1,11 @@
-import { CapacitorHttp } from '@capacitor/core';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 // Response interface that matches both fetch and CapacitorHttp
 export interface HttpResponse {
   status: number;
   statusText: string;
   headers: Headers | Record<string, string>;
-  json(): Promise<any>;
+  json(): Promise<unknown>;
   text(): Promise<string>;
   ok: boolean;
 }
@@ -17,7 +16,15 @@ export interface HttpRequestOptions {
   url: string;
   headers?: Record<string, string>;
   body?: string;
-  data?: any;
+  data?: unknown;
+}
+
+// Capacitor HTTP options interface
+interface CapacitorHttpOptions {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  data?: unknown;
 }
 
 /**
@@ -48,8 +55,8 @@ class HybridHttpClient {
    */
   private async makeCapacitorRequest(options: HttpRequestOptions): Promise<HttpResponse> {
     console.log(`[HybridHttpClient] Using CapacitorHttp for ${options.method} ${options.url}`);
-    
-    const capacitorOptions: any = {
+
+    const capacitorOptions: CapacitorHttpOptions = {
       url: options.url,
       method: options.method,
       headers: options.headers || {},
@@ -64,7 +71,7 @@ class HybridHttpClient {
 
     try {
       const response = await CapacitorHttp.request(capacitorOptions);
-      
+
       // Convert CapacitorHttp response to HttpResponse interface
       return {
         status: response.status,
@@ -76,7 +83,7 @@ class HybridHttpClient {
         },
         async text() {
           return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-        }
+        },
       };
     } catch (error) {
       console.error('[HybridHttpClient] CapacitorHttp request failed:', error);
@@ -89,7 +96,7 @@ class HybridHttpClient {
    */
   private async makeFetchRequest(options: HttpRequestOptions): Promise<HttpResponse> {
     console.log(`[HybridHttpClient] Using fetch for ${options.method} ${options.url}`);
-    
+
     const fetchOptions: RequestInit = {
       method: options.method,
       headers: options.headers,
@@ -101,7 +108,7 @@ class HybridHttpClient {
 
     try {
       const response = await fetch(options.url, fetchOptions);
-      
+
       // Convert fetch Response to HttpResponse interface
       return {
         status: response.status,
@@ -113,7 +120,7 @@ class HybridHttpClient {
         },
         async text() {
           return response.text();
-        }
+        },
       };
     } catch (error) {
       console.error('[HybridHttpClient] Fetch request failed:', error);
@@ -128,17 +135,21 @@ class HybridHttpClient {
     return this.request({ method: 'GET', url, headers });
   }
 
-  async post(url: string, data?: any, headers?: Record<string, string>): Promise<HttpResponse> {
+  async post(url: string, data?: unknown, headers?: Record<string, string>): Promise<HttpResponse> {
     const body = data ? JSON.stringify(data) : undefined;
     return this.request({ method: 'POST', url, headers, body });
   }
 
-  async put(url: string, data?: any, headers?: Record<string, string>): Promise<HttpResponse> {
+  async put(url: string, data?: unknown, headers?: Record<string, string>): Promise<HttpResponse> {
     const body = data ? JSON.stringify(data) : undefined;
     return this.request({ method: 'PUT', url, headers, body });
   }
 
-  async patch(url: string, data?: any, headers?: Record<string, string>): Promise<HttpResponse> {
+  async patch(
+    url: string,
+    data?: unknown,
+    headers?: Record<string, string>
+  ): Promise<HttpResponse> {
     const body = data ? JSON.stringify(data) : undefined;
     return this.request({ method: 'PATCH', url, headers, body });
   }
@@ -160,7 +171,7 @@ class HybridHttpClient {
   getPlatformInfo(): { platform: string; isNative: boolean } {
     return {
       platform: Capacitor.getPlatform(),
-      isNative: this.isNative
+      isNative: this.isNative,
     };
   }
 }
