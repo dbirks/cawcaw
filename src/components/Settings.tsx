@@ -637,9 +637,23 @@ export default function Settings({ onClose }: SettingsProps) {
                             Add Server
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
+                        <DialogContent 
+                          className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border"
+                          showCloseButton={false}
+                        >
                           <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
-                            <DialogTitle>Add MCP Server</DialogTitle>
+                            <div className="flex items-center justify-between">
+                              <DialogTitle>Add MCP Server</DialogTitle>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowAddDialog(false)}
+                                className="h-8 w-8 p-0 rounded-full"
+                              >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Close</span>
+                              </Button>
+                            </div>
                           </DialogHeader>
                           <ScrollArea className="flex-1 px-4 sm:px-6 safe-x">
                             <div className="space-y-4 py-4 pb-6">
@@ -982,9 +996,23 @@ export default function Settings({ onClose }: SettingsProps) {
 
                       {/* Edit Server Dialog */}
                       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-                        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border">
+                        <DialogContent 
+                          className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border"
+                          showCloseButton={false}
+                        >
                           <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
-                            <DialogTitle>Edit MCP Server</DialogTitle>
+                            <div className="flex items-center justify-between">
+                              <DialogTitle>Edit MCP Server</DialogTitle>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowEditDialog(false)}
+                                className="h-8 w-8 p-0 rounded-full"
+                              >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Close</span>
+                              </Button>
+                            </div>
                           </DialogHeader>
                           <ScrollArea className="flex-1 px-4 sm:px-6 safe-x">
                             <div className="space-y-4 py-4 pb-6">
