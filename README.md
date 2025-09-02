@@ -9,6 +9,84 @@ A cross-platform AI chat application built with React + Capacitor for iOS and An
 - 📱 Native iOS and Android apps
 - 🎨 Modern UI with Tailwind CSS + ShadCN/UI
 - ⚡ Built with Vite + TypeScript
+- 🔧 **MCP (Model Context Protocol) Support** - Connect to external tools and services
+
+## MCP (Model Context Protocol) Integration
+
+This app supports the [Model Context Protocol](https://modelcontextprotocol.io) for connecting AI to external tools and data sources.
+
+### Available MCP Servers
+
+For a curated list of production-ready remote MCP servers, see:
+**[awesome-remote-mcp-servers](https://github.com/jaw9c/awesome-remote-mcp-servers)**
+
+This repository contains 13+ publicly accessible MCP servers including:
+- Domain search and availability checking
+- Documentation APIs (Cloudflare, Astro)
+- Developer tools (Semgrep, GitMCP)
+- Financial data (Manifold Markets)
+- And more...
+
+### CORS Bypass Solution
+
+**🚀 CORS Problem Solved!** This app implements a **hybrid HTTP client** that automatically bypasses CORS restrictions on native mobile platforms using Capacitor's native HTTP capabilities.
+
+#### How It Works
+
+**Hybrid HTTP Client** (`src/utils/httpClient.ts`):
+- **Web Browser**: Uses standard `fetch` (subject to CORS)  
+- **Mobile App**: Uses `CapacitorHttp` (bypasses CORS completely)
+- **Automatic Detection**: Switches based on `Capacitor.isNativePlatform()`
+
+#### Configuration
+
+The solution is enabled via `capacitor.config.ts`:
+```typescript
+plugins: {
+  CapacitorHttp: {
+    enabled: true // Enable native HTTP to bypass CORS on mobile
+  }
+}
+```
+
+#### Results by Platform
+
+| Platform | HTTP Client | CORS Status | MCP Server Access |
+|----------|-------------|-------------|-------------------|
+| **Web Browser** | `fetch` | ❌ Blocked | Limited |
+| **iOS App** | `CapacitorHttp` | ✅ Bypassed | Full Access |
+| **Android App** | `CapacitorHttp` | ✅ Bypassed | Full Access |
+
+#### Logging & Debugging
+
+The hybrid client provides clear logging:
+```
+[MCPTest] Initializing MCP session for https://api.server.com/mcp (web)...
+[HybridHttpClient] Using fetch for POST https://api.server.com/mcp
+
+// vs on mobile:
+
+[MCPTest] Initializing MCP session for https://api.server.com/mcp (native)...
+[HybridHttpClient] Using CapacitorHttp for POST https://api.server.com/mcp
+```
+
+This means **all public MCP servers work perfectly in the mobile apps** while gracefully falling back to standard web behavior in browsers.
+
+### Session Management
+
+The app implements proper MCP protocol session management:
+- ✅ MCP session initialization with `initialize` method
+- ✅ Session ID capture from `Mcp-Session-Id` headers
+- ✅ Session ID inclusion in subsequent requests
+- ✅ Support for both HTTP-Streamable and SSE transports
+
+### MCP Configuration
+
+Access MCP settings via **Settings → Tools & MCP**:
+1. **Add Server** - Configure new MCP connections
+2. **Test Connection** - Verify server accessibility
+3. **OAuth Support** - For servers requiring authentication
+4. **Transport Types** - HTTP-Streamable (recommended) or SSE
 
 ## Development Setup
 

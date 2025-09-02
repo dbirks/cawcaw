@@ -21,6 +21,9 @@ const config: CapacitorConfig = {
     },
     Keyboard: {
       resize: 'native' // 'none' | 'body' | 'native' - prevents scroll issues
+    },
+    CapacitorHttp: {
+      enabled: true // Enable native HTTP to bypass CORS on mobile
     }
   }
 };

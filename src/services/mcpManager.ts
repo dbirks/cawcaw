@@ -1,5 +1,6 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { mcpOAuthManager } from '@/services/mcpOAuth';
+import { httpClient } from '@/utils/httpClient';
 import type {
   MCPManagerConfig,
   MCPOAuthDiscovery,
@@ -42,6 +43,7 @@ class HTTPMCPClient implements MCPClient {
   private baseUrl: string;
   private transport: 'http-streamable' | 'sse';
   private oauthConfig?: MCPOAuthTokens;
+  private sessionId?: string; // Store session ID for subsequent requests
 
   constructor(baseUrl: string, transport: 'http-streamable' | 'sse', oauthConfig?: MCPOAuthTokens) {
     this.baseUrl = baseUrl;
@@ -63,16 +65,59 @@ class HTTPMCPClient implements MCPClient {
         headers.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'tools/list',
-          params: {},
-        }),
-      });
+      // Step 1: Initialize the MCP session (required by MCP protocol)
+      console.log(`[MCPClient] Initializing session for ${endpoint}${httpClient.isNativePlatform() ? ' (native)' : ' (web)'}`);
+      
+      const initResponse = await httpClient.post(endpoint, {
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {
+            tools: {},
+          },
+          clientInfo: {
+            name: 'caw-caw',
+            version: '1.0.0',
+          },
+        },
+      }, headers);
+
+      if (!initResponse.ok) {
+        throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
+      }
+
+      const initData = await initResponse.json();
+      if (initData.error) {
+        throw new Error(`Initialization failed: ${initData.error.message || 'Unknown error'}`);
+      }
+
+      // Capture session ID from initialization response
+      let sessionId: string | null = null;
+      if (initResponse.headers instanceof Headers) {
+        sessionId = initResponse.headers.get('Mcp-Session-Id');
+      } else {
+        sessionId = initResponse.headers['Mcp-Session-Id'] || initResponse.headers['mcp-session-id'];
+      }
+      
+      if (sessionId) {
+        this.sessionId = sessionId;
+        console.log(`[MCPClient] Session established with ID: ${sessionId}`);
+      }
+
+      // Step 2: Now list available tools with session ID
+      const toolsHeaders = { ...headers };
+      if (this.sessionId) {
+        toolsHeaders['Mcp-Session-Id'] = this.sessionId;
+      }
+
+      const response = await httpClient.post(endpoint, {
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'tools/list',
+        params: {},
+      }, toolsHeaders);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -93,9 +138,10 @@ class HTTPMCPClient implements MCPClient {
         }
       }
 
+      console.log(`[MCPClient] Found ${Object.keys(tools).length} tools from ${endpoint}`);
       return tools;
     } catch (error) {
-      console.error(`Failed to list tools from ${this.baseUrl}:`, error);
+      console.error(`[MCPClient] Failed to list tools from ${this.baseUrl}:`, error);
       throw error;
     }
   }
@@ -114,19 +160,64 @@ class HTTPMCPClient implements MCPClient {
         headers.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      // If we don't have a session ID, initialize first
+      if (!this.sessionId) {
+        console.log(`[MCPClient] Initializing session for tool call ${name}`);
+        
+        const initResponse = await httpClient.post(endpoint, {
           jsonrpc: '2.0',
           id: Date.now(),
-          method: 'tools/call',
+          method: 'initialize',
           params: {
-            name,
-            arguments: args,
+            protocolVersion: '2025-06-18',
+            capabilities: {
+              tools: {},
+            },
+            clientInfo: {
+              name: 'caw-caw',
+              version: '1.0.0',
+            },
           },
-        }),
-      });
+        }, headers);
+
+        if (!initResponse.ok) {
+          throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
+        }
+
+        const initData = await initResponse.json();
+        if (initData.error) {
+          throw new Error(`Initialization failed: ${initData.error.message || 'Unknown error'}`);
+        }
+
+        // Capture session ID from initialization response
+        let sessionId: string | null = null;
+        if (initResponse.headers instanceof Headers) {
+          sessionId = initResponse.headers.get('Mcp-Session-Id');
+        } else {
+          sessionId = initResponse.headers['Mcp-Session-Id'] || initResponse.headers['mcp-session-id'];
+        }
+        
+        if (sessionId) {
+          this.sessionId = sessionId;
+          console.log(`[MCPClient] Session established with ID: ${sessionId}`);
+        }
+      }
+
+      // Step 2: Now call the tool with session ID
+      const toolHeaders = { ...headers };
+      if (this.sessionId) {
+        toolHeaders['Mcp-Session-Id'] = this.sessionId;
+      }
+
+      const response = await httpClient.post(endpoint, {
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'tools/call',
+        params: {
+          name,
+          arguments: args,
+        },
+      }, toolHeaders);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -137,9 +228,10 @@ class HTTPMCPClient implements MCPClient {
         throw new Error(data.error.message || 'Tool call failed');
       }
 
+      console.log(`[MCPClient] Successfully called tool ${name}`);
       return data.result;
     } catch (error) {
-      console.error(`Failed to call tool ${name}:`, error);
+      console.error(`[MCPClient] Failed to call tool ${name}:`, error);
       throw error;
     }
   }
@@ -686,26 +778,23 @@ class MCPManager {
       };
 
       // Step 1: Initialize the MCP session (required by MCP protocol)
-      console.log('Initializing MCP session...');
-      const initResponse = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'initialize',
-          params: {
-            protocolVersion: '2025-06-18',
-            capabilities: {
-              tools: {},
-            },
-            clientInfo: {
-              name: 'caw-caw',
-              version: '1.0.0',
-            },
+      console.log(`[MCPTest] Initializing MCP session for ${endpoint}${httpClient.isNativePlatform() ? ' (native)' : ' (web)'}...`);
+      
+      const initResponse = await httpClient.post(endpoint, {
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {
+            tools: {},
           },
-        }),
-      });
+          clientInfo: {
+            name: 'caw-caw',
+            version: '1.0.0',
+          },
+        },
+      }, headers);
 
       if (!initResponse.ok) {
         throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
@@ -716,20 +805,33 @@ class MCPManager {
         throw new Error(`Initialization failed: ${initData.error.message || 'Unknown error'}`);
       }
 
-      console.log('MCP session initialized successfully');
+      console.log('[MCPTest] MCP session initialized successfully');
 
-      // Step 2: Now list available tools
-      console.log('Listing available tools...');
-      const toolsResponse = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'tools/list',
-          params: {},
-        }),
-      });
+      // Capture session ID from initialization response
+      let sessionId: string | null = null;
+      if (initResponse.headers instanceof Headers) {
+        sessionId = initResponse.headers.get('Mcp-Session-Id');
+      } else {
+        sessionId = initResponse.headers['Mcp-Session-Id'] || initResponse.headers['mcp-session-id'];
+      }
+      
+      if (sessionId) {
+        console.log(`[MCPTest] MCP session established with ID: ${sessionId}`);
+      }
+
+      // Step 2: Now list available tools with session ID
+      console.log('[MCPTest] Listing available tools...');
+      const toolsHeaders = { ...headers };
+      if (sessionId) {
+        toolsHeaders['Mcp-Session-Id'] = sessionId;
+      }
+
+      const toolsResponse = await httpClient.post(endpoint, {
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'tools/list',
+        params: {},
+      }, toolsHeaders);
 
       if (!toolsResponse.ok) {
         throw new Error(`HTTP ${toolsResponse.status}: ${toolsResponse.statusText}`);
@@ -751,10 +853,10 @@ class MCPManager {
         }
       }
 
-      console.log(`Found ${tools.length} tools:`, tools);
+      console.log(`[MCPTest] Found ${tools.length} tools:`, tools);
       return { success: true, tools };
     } catch (error) {
-      console.error('MCP connection test failed:', error);
+      console.error('[MCPTest] MCP connection test failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -780,17 +882,13 @@ class MCPManager {
       // Use the exact endpoint URL provided by the user
       const endpoint = baseUrl;
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'tools/list',
-          params: {},
-        }),
+      const response = await httpClient.post(endpoint, {
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'tools/list',
+        params: {},
+      }, {
+        'Content-Type': 'application/json',
       });
 
       // Capture response details
@@ -798,11 +896,15 @@ class MCPManager {
       baseError.httpStatusText = response.statusText;
 
       // Capture response headers
-      const headers: Record<string, string> = {};
-      response.headers.forEach((value, key) => {
-        headers[key] = value;
-      });
-      baseError.responseHeaders = headers;
+      if (response.headers instanceof Headers) {
+        const headers: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+        baseError.responseHeaders = headers;
+      } else {
+        baseError.responseHeaders = response.headers as Record<string, string>;
+      }
 
       // Try to capture response body
       try {
