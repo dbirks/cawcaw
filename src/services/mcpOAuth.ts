@@ -151,6 +151,7 @@ export class MCPOAuthManager {
     const registrationData = {
       client_name: 'cawcaw - AI chat with tools',
       client_uri: 'https://cawcaw.app',
+      logo_uri: 'https://cawcaw.app/icon-512x512.png', // Standard OAuth logo field
       redirect_uris: [this.getRedirectUri()], // Don't include serverId in registration
       grant_types: ['authorization_code'],
       response_types: ['code'],
