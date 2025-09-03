@@ -9,10 +9,10 @@ type MCPVersion = (typeof MCP_SUPPORTED_VERSIONS)[number];
 // Helper function for version-negotiated HTTP requests
 async function makeVersionedMCPRequest(
   endpoint: string,
-  payload: object,
+  payloadTemplate: Record<string, unknown>,
   oauthConfig?: MCPOAuthTokens,
   supportedVersions = MCP_SUPPORTED_VERSIONS
-): Promise<{ response: Response; version: MCPVersion }> {
+): Promise<{ response: HttpResponse; version: MCPVersion }> {
   for (const version of supportedVersions) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -22,6 +22,12 @@ async function makeVersionedMCPRequest(
 
     if (oauthConfig?.accessToken) {
       headers.Authorization = `Bearer ${oauthConfig.accessToken}`;
+    }
+
+    // Update the payload with the current version being tried
+    const payload = { ...payloadTemplate };
+    if (payload.params && typeof payload.params === 'object' && payload.params !== null && 'protocolVersion' in payload.params) {
+      (payload.params as { protocolVersion: string }).protocolVersion = version;
     }
 
     try {
@@ -59,7 +65,7 @@ import type {
   MCPToolInfo,
   MCPToolResult,
 } from '@/types/mcp';
-import { httpClient } from '@/utils/httpClient';
+import { type HttpResponse, httpClient } from '@/utils/httpClient';
 
 const MCP_STORAGE_KEY = 'mcp_server_configs';
 
@@ -155,7 +161,7 @@ class HTTPMCPClient implements MCPClient {
           id: Date.now(),
           method: 'initialize',
           params: {
-            protocolVersion: version,
+            protocolVersion: 'PLACEHOLDER', // Will be replaced by makeVersionedMCPRequest
             capabilities: {
               tools: {},
             },
