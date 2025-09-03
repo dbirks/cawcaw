@@ -24,7 +24,7 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 
 export class MCPOAuthManager {
   // Discover if server requires OAuth and get endpoints
-  async discoverOAuthCapabilities(serverUrl: string): Promise<MCPOAuthDiscovery | null> {
+  async discoverOAuthCapabilities(serverUrl: string): Promise<MCPOAuthDiscovery | undefined> {
     try {
       // Step 1: Check for OAuth Protected Resource metadata (RFC8414)
       const resourceMetadataUrl = new URL('/.well-known/oauth-protected-resource', serverUrl);
@@ -37,7 +37,7 @@ export class MCPOAuthManager {
 
       if (!resourceResponse.ok) {
         // Server doesn't require OAuth
-        return null;
+        return undefined;
       }
 
       const resourceMetadata = await resourceResponse.json();
@@ -67,7 +67,7 @@ export class MCPOAuthManager {
       };
     } catch (error) {
       console.error('OAuth capability discovery failed:', error);
-      return null;
+      return undefined;
     }
   }
 

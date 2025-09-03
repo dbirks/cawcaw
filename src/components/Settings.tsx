@@ -41,7 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/hooks/useTheme';
 import { mcpManager } from '@/services/mcpManager';
-import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
+import type { MCPServerConfig, MCPServerStatus, MCPOAuthDiscovery } from '@/types/mcp';
 
 interface SettingsProps {
   onClose: () => void;
@@ -87,6 +87,7 @@ export default function Settings({ onClose }: SettingsProps) {
     requiresAuth: boolean;
     error?: string;
     tools?: Array<{ name: string; description: string }>;
+    oauthDiscovery?: MCPOAuthDiscovery;
     detailedError?: {
       message: string;
       httpStatus?: number;
@@ -354,6 +355,7 @@ export default function Settings({ onClose }: SettingsProps) {
         requiresAuth: result.requiresAuth,
         error: result.error,
         tools: result.tools,
+        oauthDiscovery: result.oauthDiscovery,
         detailedError: result.detailedError,
       });
       setShowErrorDetails(false); // Reset expanded state
