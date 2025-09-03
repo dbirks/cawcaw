@@ -37,7 +37,7 @@ function parseWWWAuthenticateHeader(authHeader: string): MCPOAuthDiscovery | und
   const params = bearerMatch[1];
   const paramRegex = /(\w+)="([^"]+)"/g;
   const parsedParams: Record<string, string> = {};
-  
+
   let match: RegExpExecArray | null;
   // biome-ignore lint/suspicious/noAssignInExpressions: RegExp.exec() pattern is standard
   while ((match = paramRegex.exec(params)) !== null) {
@@ -83,7 +83,7 @@ function generateMCPScope(resourceIdentifier: string): string {
   if (resourceIdentifier === 'huggingface.co') {
     return 'read-mcp';
   }
-  
+
   // Default MCP 2025-03-26 format for other providers
   return `${resourceIdentifier}/mcp:access`;
 }
@@ -95,8 +95,11 @@ export class MCPOAuthManagerCompliant {
 
     try {
       // Step 1: Make unauthenticated request to MCP server to get WWW-Authenticate header
-      debugLogger.info('oauth', '🌐 Making unauthenticated request to trigger WWW-Authenticate header');
-      
+      debugLogger.info(
+        'oauth',
+        '🌐 Making unauthenticated request to trigger WWW-Authenticate header'
+      );
+
       const response = await fetch(serverUrl, {
         method: 'POST',
         headers: {
@@ -149,10 +152,10 @@ export class MCPOAuthManagerCompliant {
   // Fallback: Try dynamic discovery from well-known endpoints
   private async tryWellKnownDiscovery(serverUrl: string): Promise<MCPOAuthDiscovery | undefined> {
     debugLogger.info('oauth', '🔄 Trying well-known OAuth discovery');
-    
+
     const resourceIdentifier = extractResourceIdentifier(serverUrl);
     const url = new URL(serverUrl);
-    
+
     // Try common well-known OAuth discovery endpoints
     const wellKnownEndpoints = [
       `${url.protocol}//${url.host}/.well-known/oauth-authorization-server`,
@@ -163,10 +166,10 @@ export class MCPOAuthManagerCompliant {
       try {
         debugLogger.info('oauth', `🔍 Checking well-known endpoint: ${endpoint}`);
         const response = await fetch(endpoint);
-        
+
         if (response.ok) {
           const config = await response.json();
-          
+
           if (config.authorization_endpoint && config.token_endpoint) {
             debugLogger.info('oauth', '✅ Found OAuth configuration via well-known discovery');
             return {
@@ -182,7 +185,7 @@ export class MCPOAuthManagerCompliant {
         debugLogger.debug('oauth', `Well-known endpoint ${endpoint} not available:`, error);
       }
     }
-    
+
     debugLogger.warn('oauth', 'No well-known OAuth discovery endpoints found');
     return undefined;
   }
@@ -193,11 +196,15 @@ export class MCPOAuthManagerCompliant {
     serverUrl: string,
     existingDiscovery?: MCPOAuthDiscovery
   ): Promise<string> {
-    debugLogger.info('oauth', '🔍 Starting MCP OAuth 2.1 compliant flow with dynamic registration', {
-      serverId,
-      serverUrl,
-      hasExistingDiscovery: !!existingDiscovery,
-    });
+    debugLogger.info(
+      'oauth',
+      '🔍 Starting MCP OAuth 2.1 compliant flow with dynamic registration',
+      {
+        serverId,
+        serverUrl,
+        hasExistingDiscovery: !!existingDiscovery,
+      }
+    );
 
     // Extract resource identifier for MCP scope
     const resourceIdentifier = extractResourceIdentifier(serverUrl);
@@ -253,10 +260,10 @@ export class MCPOAuthManagerCompliant {
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('redirect_uri', this.getRedirectUri());
-    
+
     // Use MCP-compliant scope format
     authUrl.searchParams.set('scope', mcpScope);
-    
+
     // Add resource identifier (RFC 8707)
     authUrl.searchParams.set('resource', serverUrl);
 
@@ -290,7 +297,7 @@ export class MCPOAuthManagerCompliant {
     clientSecret?: string;
   }> {
     debugLogger.info('oauth', '🏗️ Performing dynamic client registration (RFC 7591)');
-    
+
     if (!discovery.registrationEndpoint) {
       throw new Error('OAuth server does not support dynamic client registration');
     }
@@ -298,7 +305,7 @@ export class MCPOAuthManagerCompliant {
     // Extract server information for client metadata
     const url = new URL(serverUrl);
     const appName = `cawcaw MCP Client for ${url.hostname}`;
-    
+
     // Build client registration request (RFC 7591)
     const registrationRequest = {
       client_name: appName,
@@ -318,7 +325,7 @@ export class MCPOAuthManagerCompliant {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify(registrationRequest),
       });
@@ -343,7 +350,9 @@ export class MCPOAuthManagerCompliant {
       return credentials;
     } catch (error) {
       debugLogger.error('oauth', '❌ Dynamic client registration failed:', error);
-      throw new Error(`Failed to register OAuth client: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to register OAuth client: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -373,7 +382,12 @@ export class MCPOAuthManagerCompliant {
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
     ]);
 
-    if (!verifierResult?.value || !discoveryResult?.value || !resourceResult?.value || !clientResult?.value) {
+    if (
+      !verifierResult?.value ||
+      !discoveryResult?.value ||
+      !resourceResult?.value ||
+      !clientResult?.value
+    ) {
       throw new Error('OAuth flow data not found - restart authentication');
     }
 
@@ -409,7 +423,7 @@ export class MCPOAuthManagerCompliant {
     }
 
     const tokenData = await tokenResponse.json();
-    
+
     const tokens: MCPOAuthTokens = {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token,
@@ -459,14 +473,14 @@ export class MCPOAuthManagerCompliant {
   private getRedirectUri(): string {
     if (typeof window !== 'undefined') {
       const isCapacitor = 'capacitor' in window || window.location?.protocol === 'capacitor:';
-      
+
       if (isCapacitor) {
         return 'cawcaw://oauth-callback';
       }
-      
+
       return `${window.location.origin}/oauth/callback`;
     }
-    
+
     return 'cawcaw://oauth-callback';
   }
 

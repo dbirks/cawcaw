@@ -927,7 +927,7 @@ class MCPManager {
   // Clear OAuth tokens for server
   async clearOAuthTokens(serverId: string): Promise<void> {
     const oauthManager = getOAuthManager();
-    
+
     // Clear tokens using appropriate manager
     if (USE_MCP_OAUTH_2_1_COMPLIANT) {
       // For compliant manager, we need to implement clearOAuthTokens method
@@ -935,7 +935,7 @@ class MCPManager {
     } else {
       await mcpOAuthManager.clearOAuthTokens(serverId);
     }
-    
+
     await this.disconnectFromServer(serverId);
   }
 
