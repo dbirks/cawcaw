@@ -182,7 +182,7 @@ export class MCPOAuthManagerCompliant {
           }
         }
       } catch (error) {
-        debugLogger.debug('oauth', `Well-known endpoint ${endpoint} not available:`, error);
+        debugLogger.info('oauth', `Well-known endpoint ${endpoint} not available:`, error);
       }
     }
 
