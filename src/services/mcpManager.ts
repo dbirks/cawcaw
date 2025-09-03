@@ -116,7 +116,7 @@ class HTTPMCPClient implements MCPClient {
           id: Date.now(),
           method: 'initialize',
           params: {
-            protocolVersion: '2025-06-18',
+            protocolVersion: '2025-03-26',
             capabilities: {
               tools: {},
             },
@@ -221,7 +221,7 @@ class HTTPMCPClient implements MCPClient {
             id: Date.now(),
             method: 'initialize',
             params: {
-              protocolVersion: '2025-06-18',
+              protocolVersion: '2025-03-26',
               capabilities: {
                 tools: {},
               },
@@ -874,7 +874,7 @@ class MCPManager {
           id: Date.now(),
           method: 'initialize',
           params: {
-            protocolVersion: '2025-06-18',
+            protocolVersion: '2025-03-26',
             capabilities: {
               tools: {},
             },
