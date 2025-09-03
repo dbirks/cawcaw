@@ -1467,7 +1467,9 @@ export default function Settings({ onClose }: SettingsProps) {
                                       Show data
                                     </summary>
                                     <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-all">
-                                      {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
+                                      {typeof log.data === 'string'
+                                        ? log.data
+                                        : JSON.stringify(log.data, null, 2)}
                                     </pre>
                                   </details>
                                 )}

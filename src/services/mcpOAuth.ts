@@ -125,12 +125,27 @@ export class MCPOAuthManager {
     }
 
     // Filter scopes to only include commonly supported ones
-    const commonValidScopes = ['openid', 'profile', 'email', 'read-repos', 'write-repos', 'manage-repos', 'read-mcp', 'write-discussions', 'read-billing', 'inference-api', 'jobs', 'webhooks'];
-    const requestedScopes = discovery.supportedScopes?.filter(scope => commonValidScopes.includes(scope)) || ['openid'];
-    
+    const commonValidScopes = [
+      'openid',
+      'profile',
+      'email',
+      'read-repos',
+      'write-repos',
+      'manage-repos',
+      'read-mcp',
+      'write-discussions',
+      'read-billing',
+      'inference-api',
+      'jobs',
+      'webhooks',
+    ];
+    const requestedScopes = discovery.supportedScopes?.filter((scope) =>
+      commonValidScopes.includes(scope)
+    ) || ['openid'];
+
     debugLogger.info('oauth', '📋 Filtering OAuth scopes for registration', {
       supportedScopes: discovery.supportedScopes,
-      filteredScopes: requestedScopes
+      filteredScopes: requestedScopes,
     });
 
     const registrationData = {
