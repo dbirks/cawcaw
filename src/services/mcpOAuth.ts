@@ -399,22 +399,48 @@ export class MCPOAuthManager {
       tokenRequestBody.set('client_secret', clientData.clientSecret);
     }
 
+    debugLogger.info('oauth', '🌐 Making token exchange request', {
+      url: discovery.tokenEndpoint,
+      method: 'POST',
+      bodyParams: Object.fromEntries(tokenRequestBody),
+      hasClientSecret: !!clientData.clientSecret,
+    });
+
     const tokenResponse = await fetch(discovery.tokenEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
-        'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
+        // Remove MCP-Protocol-Version header - OAuth endpoints don't expect it
       },
       body: tokenRequestBody,
     });
 
+    debugLogger.info('oauth', '📡 Token exchange response received', {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      ok: tokenResponse.ok,
+      headers: Object.fromEntries(tokenResponse.headers.entries()),
+    });
+
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
+      debugLogger.error('oauth', '❌ Token exchange failed', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        errorText,
+        url: discovery.tokenEndpoint,
+      });
       throw new Error(`Token exchange failed: ${tokenResponse.status} ${errorText}`);
     }
 
     const tokenData = await tokenResponse.json();
+    debugLogger.info('oauth', '✅ Token exchange successful', {
+      hasAccessToken: !!tokenData.access_token,
+      hasRefreshToken: !!tokenData.refresh_token,
+      expiresIn: tokenData.expires_in,
+      tokenType: tokenData.token_type,
+    });
 
     const tokens: MCPOAuthTokens = {
       accessToken: tokenData.access_token,
