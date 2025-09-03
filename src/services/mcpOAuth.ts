@@ -388,10 +388,23 @@ export class MCPOAuthManager {
     // Get server configuration to use as resource indicator (RFC 8707)
     let serverUrl = '';
     try {
-      const serverConfigResult = await SecureStoragePlugin.get({ key: `mcp_server_${serverId}` });
+      const serverConfigResult = await SecureStoragePlugin.get({ key: 'mcp_server_configs' });
       if (serverConfigResult?.value) {
-        const serverConfig = JSON.parse(serverConfigResult.value);
-        serverUrl = serverConfig.url || '';
+        const config = JSON.parse(serverConfigResult.value);
+        const servers = config.servers || [];
+        const serverConfig = servers.find((s: { id: string; url?: string }) => s.id === serverId);
+        if (serverConfig) {
+          serverUrl = serverConfig.url || '';
+          debugLogger.info('oauth', '✅ Found server config for resource indicator', {
+            serverId,
+            serverUrl,
+          });
+        } else {
+          debugLogger.error('oauth', '⚠️ Server not found in config for resource indicator', {
+            serverId,
+            availableServerIds: servers.map((s: { id: string }) => s.id),
+          });
+        }
       }
     } catch (configError) {
       debugLogger.error('oauth', '⚠️ Could not retrieve server config for resource indicator', {
