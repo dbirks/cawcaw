@@ -40,8 +40,26 @@ CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
         const urlObj = new URL(url);
         code = urlObj.searchParams.get('code');
         state = urlObj.searchParams.get('state');
-        serverId = urlObj.searchParams.get('server_id');
         error = urlObj.searchParams.get('error');
+
+        // Extract serverId from encoded state parameter
+        if (state) {
+          try {
+            const stateData = JSON.parse(atob(state));
+            serverId = stateData.serverId;
+            debugLogger.info('oauth', '🔓 Extracted serverId from state parameter', {
+              serverId,
+              hasStateData: !!stateData,
+            });
+          } catch (stateParseError) {
+            debugLogger.warn('oauth', '⚠️ Failed to parse serverId from state', {
+              stateParseError:
+                stateParseError instanceof Error ? stateParseError.message : 'Unknown error',
+              state,
+            });
+          }
+        }
+
         debugLogger.info('oauth', '🔧 URL object parsing successful', {
           urlObj: urlObj.toString(),
         });
@@ -57,8 +75,24 @@ CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
           const searchParams = new URLSearchParams(params);
           code = searchParams.get('code');
           state = searchParams.get('state');
-          serverId = searchParams.get('server_id');
           error = searchParams.get('error');
+
+          // Extract serverId from encoded state parameter
+          if (state) {
+            try {
+              const stateData = JSON.parse(atob(state));
+              serverId = stateData.serverId;
+              debugLogger.info('oauth', '🔓 Manual parsing: extracted serverId from state', {
+                serverId,
+              });
+            } catch (stateParseError) {
+              debugLogger.warn('oauth', '⚠️ Manual parsing: failed to parse serverId from state', {
+                stateParseError:
+                  stateParseError instanceof Error ? stateParseError.message : 'Unknown error',
+              });
+            }
+          }
+
           debugLogger.info('oauth', '🔧 Manual parameter parsing attempted', { params });
         }
       }

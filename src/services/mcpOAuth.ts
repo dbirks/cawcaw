@@ -265,20 +265,26 @@ export class MCPOAuthManager {
       authUrl.searchParams.set('scope', discovery.supportedScopes.join(' '));
     }
 
-    // Add state parameter for CSRF protection
-    const state = generateCodeVerifier();
+    // Add state parameter for CSRF protection (includes serverId for tracking)
+    const csrfState = generateCodeVerifier();
+    const stateData = {
+      csrf: csrfState,
+      serverId: serverId,
+    };
+    const state = btoa(JSON.stringify(stateData)); // Base64 encode for URL safety
     authUrl.searchParams.set('state', state);
 
     const stateKey = `${OAUTH_STORAGE_PREFIX}state_${serverId}`;
-    debugLogger.info('oauth', '💾 Storing state parameter', {
+    debugLogger.info('oauth', '💾 Storing state parameter with serverId', {
       stateKey,
       serverId,
       stateLength: state.length,
+      csrfStateLength: csrfState.length,
     });
 
     await SecureStoragePlugin.set({
       key: stateKey,
-      value: state,
+      value: csrfState, // Store only the CSRF part for validation
     });
 
     return authUrl.toString();
@@ -306,14 +312,37 @@ export class MCPOAuthManager {
       key: stateKey,
     });
 
+    // Extract CSRF state from received state parameter (now contains both CSRF and serverId)
+    let receivedCsrfState: string;
+    try {
+      const stateData = JSON.parse(atob(receivedState));
+      receivedCsrfState = stateData.csrf;
+      debugLogger.info('oauth', '🔓 Extracted CSRF from received state', {
+        hasStateData: !!stateData,
+        hasReceivedCsrf: !!receivedCsrfState,
+        receivedServerId: stateData.serverId,
+      });
+    } catch (stateParseError) {
+      debugLogger.error('oauth', '❌ Failed to parse received state parameter', {
+        error: stateParseError instanceof Error ? stateParseError.message : 'Unknown error',
+        receivedState,
+      });
+      throw new Error('Invalid state parameter format');
+    }
+
     debugLogger.info('oauth', '🔍 State comparison', {
       hasStoredState: !!storedState?.value,
       storedStateLength: storedState?.value?.length,
       receivedStateLength: receivedState?.length,
-      statesMatch: storedState?.value === receivedState,
+      receivedCsrfLength: receivedCsrfState?.length,
+      csrfStatesMatch: storedState?.value === receivedCsrfState,
     });
 
-    if (storedState?.value !== receivedState) {
+    if (storedState?.value !== receivedCsrfState) {
+      debugLogger.error('oauth', '❌ CSRF state mismatch', {
+        storedCsrf: storedState?.value,
+        receivedCsrf: receivedCsrfState,
+      });
       throw new Error('Invalid state parameter - possible CSRF attack');
     }
 
@@ -530,11 +559,9 @@ export class MCPOAuthManager {
       });
 
       if (isCapacitor) {
-        // Include server ID in the callback URL for mobile
-        const baseUri = 'cawcaw://oauth-callback';
-        const redirectUri = serverId
-          ? `${baseUri}?server_id=${encodeURIComponent(serverId)}`
-          : baseUri;
+        // Use consistent base URI for both registration and authorization
+        // ServerId will be tracked via state parameter instead
+        const redirectUri = 'cawcaw://oauth-callback';
 
         debugLogger.info('oauth', '📱 Using Capacitor redirect URI', { redirectUri, serverId });
         return redirectUri;
@@ -545,10 +572,8 @@ export class MCPOAuthManager {
       return webRedirectUri;
     }
 
-    // Fallback for server-side or no window
-    const fallbackUri = serverId
-      ? `cawcaw://oauth-callback?server_id=${encodeURIComponent(serverId)}`
-      : 'cawcaw://oauth-callback';
+    // Fallback for server-side or no window (use consistent base URI)
+    const fallbackUri = 'cawcaw://oauth-callback';
 
     debugLogger.info('oauth', '🔄 Using fallback redirect URI', { fallbackUri, serverId });
     return fallbackUri;
