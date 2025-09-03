@@ -152,7 +152,7 @@ export class MCPOAuthManager {
       client_name: 'cawcaw - AI chat with tools',
       client_uri: 'https://cawcaw.app',
       logo_uri: 'https://raw.githubusercontent.com/dbirks/capacitor-ai-app/main/ios-icon.png', // Standard OAuth logo field
-      redirect_uris: [this.getRedirectUri(serverId)], // Include serverId for consistency
+      redirect_uris: [this.getRedirectUri()], // Base redirect URI for registration
       grant_types: ['authorization_code'],
       response_types: ['code'],
       token_endpoint_auth_method: 'none', // PKCE public client
