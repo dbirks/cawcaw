@@ -77,8 +77,14 @@ function extractResourceIdentifier(serverUrl: string): string {
   }
 }
 
-// Generate MCP-compliant scope format
+// Generate MCP-compliant scope format (provider-specific)
 function generateMCPScope(resourceIdentifier: string): string {
+  // Hugging Face uses predefined scopes, not the generic MCP format
+  if (resourceIdentifier === 'huggingface.co') {
+    return 'read-mcp';
+  }
+  
+  // Default MCP 2025-03-26 format for other providers
   return `${resourceIdentifier}/mcp:access`;
 }
 
@@ -129,8 +135,8 @@ export class MCPOAuthManagerCompliant {
         return undefined;
       }
 
-      // Fallback: Try common external IdP endpoints for MCP servers
-      return await this.tryExternalIdPDiscovery(serverUrl);
+      // Fallback: Try well-known OAuth discovery endpoints
+      return await this.tryWellKnownDiscovery(serverUrl);
     } catch (error) {
       debugLogger.error('oauth', '❌ OAuth capability discovery failed', {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -140,47 +146,55 @@ export class MCPOAuthManagerCompliant {
     }
   }
 
-  // Fallback: Try discovery with common external Identity Providers
-  private async tryExternalIdPDiscovery(serverUrl: string): Promise<MCPOAuthDiscovery | undefined> {
-    debugLogger.info('oauth', '🔄 Trying external IdP discovery fallback');
+  // Fallback: Try dynamic discovery from well-known endpoints
+  private async tryWellKnownDiscovery(serverUrl: string): Promise<MCPOAuthDiscovery | undefined> {
+    debugLogger.info('oauth', '🔄 Trying well-known OAuth discovery');
     
     const resourceIdentifier = extractResourceIdentifier(serverUrl);
+    const url = new URL(serverUrl);
     
-    // Common external IdPs that might be used with MCP servers
-    const commonIdPs = [
-      {
-        name: 'GitHub',
-        authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-        tokenEndpoint: 'https://github.com/login/oauth/access_token',
-        registrationEndpoint: 'https://github.com/settings/applications/new',
-      },
-      {
-        name: 'Google',
-        authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-        tokenEndpoint: 'https://oauth2.googleapis.com/token',
-      },
+    // Try common well-known OAuth discovery endpoints
+    const wellKnownEndpoints = [
+      `${url.protocol}//${url.host}/.well-known/oauth-authorization-server`,
+      `${url.protocol}//${url.host}/.well-known/openid_configuration`,
     ];
 
-    // For demo/development, assume GitHub OAuth for now
-    // In production, this would be configured or discovered differently
-    debugLogger.info('oauth', '🔄 Using GitHub as external IdP for MCP Resource Provider');
+    for (const endpoint of wellKnownEndpoints) {
+      try {
+        debugLogger.info('oauth', `🔍 Checking well-known endpoint: ${endpoint}`);
+        const response = await fetch(endpoint);
+        
+        if (response.ok) {
+          const config = await response.json();
+          
+          if (config.authorization_endpoint && config.token_endpoint) {
+            debugLogger.info('oauth', '✅ Found OAuth configuration via well-known discovery');
+            return {
+              authorizationEndpoint: config.authorization_endpoint,
+              tokenEndpoint: config.token_endpoint,
+              registrationEndpoint: config.registration_endpoint,
+              supportedGrantTypes: config.grant_types_supported || ['authorization_code'],
+              supportedScopes: [generateMCPScope(resourceIdentifier)],
+            };
+          }
+        }
+      } catch (error) {
+        debugLogger.debug('oauth', `Well-known endpoint ${endpoint} not available:`, error);
+        continue;
+      }
+    }
     
-    return {
-      authorizationEndpoint: commonIdPs[0].authorizationEndpoint,
-      tokenEndpoint: commonIdPs[0].tokenEndpoint,
-      registrationEndpoint: commonIdPs[0].registrationEndpoint,
-      supportedGrantTypes: ['authorization_code'],
-      supportedScopes: [generateMCPScope(resourceIdentifier)],
-    };
+    debugLogger.warn('oauth', 'No well-known OAuth discovery endpoints found');
+    return undefined;
   }
 
-  // Start OAuth flow with MCP 2025-03-26 compliance
+  // Start OAuth flow with MCP 2025-03-26 compliance and dynamic client registration
   async startOAuthFlow(
     serverId: string,
     serverUrl: string,
     existingDiscovery?: MCPOAuthDiscovery
   ): Promise<string> {
-    debugLogger.info('oauth', '🔍 Starting MCP OAuth 2.1 compliant flow', {
+    debugLogger.info('oauth', '🔍 Starting MCP OAuth 2.1 compliant flow with dynamic registration', {
       serverId,
       serverUrl,
       hasExistingDiscovery: !!existingDiscovery,
@@ -205,19 +219,15 @@ export class MCPOAuthManagerCompliant {
       }
     }
 
-    // Step 2: For external IdPs, we need client credentials
-    // In production, this would use dynamic client registration or pre-configured clients
-    const clientId = process.env.GITHUB_CLIENT_ID || 'your-github-client-id';
-    
-    if (!clientId || clientId.includes('your-github')) {
-      throw new Error('GitHub OAuth client ID not configured for MCP Resource Provider');
-    }
+    // Step 2: Perform dynamic client registration
+    const clientCredentials = await this.registerClient(discovery, serverUrl);
+    const clientId = clientCredentials.clientId;
 
     // Step 3: Generate PKCE parameters (mandatory in OAuth 2.1)
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-    // Store PKCE verifier and discovery info
+    // Store PKCE verifier, discovery info, and client credentials
     await Promise.all([
       SecureStoragePlugin.set({
         key: `${OAUTH_STORAGE_PREFIX}verifier_${serverId}`,
@@ -231,6 +241,10 @@ export class MCPOAuthManagerCompliant {
         key: `${OAUTH_STORAGE_PREFIX}resource_${serverId}`,
         value: JSON.stringify({ resourceIdentifier, serverUrl, mcpScope }),
       }),
+      SecureStoragePlugin.set({
+        key: `${OAUTH_STORAGE_PREFIX}client_${serverId}`,
+        value: JSON.stringify(clientCredentials),
+      }),
     ]);
 
     // Step 4: Build OAuth authorization URL with MCP-specific parameters
@@ -239,7 +253,7 @@ export class MCPOAuthManagerCompliant {
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
-    authUrl.searchParams.set('redirect_uri', this.getRedirectUri(serverId));
+    authUrl.searchParams.set('redirect_uri', this.getRedirectUri());
     
     // Use MCP-compliant scope format
     authUrl.searchParams.set('scope', mcpScope);
@@ -258,13 +272,80 @@ export class MCPOAuthManagerCompliant {
       value: csrfState,
     });
 
-    debugLogger.info('oauth', '✅ MCP OAuth 2.1 URL generated', {
+    debugLogger.info('oauth', '✅ MCP OAuth 2.1 URL generated with dynamic client', {
       authUrl: authUrl.toString(),
       resourceIdentifier,
       mcpScope,
+      clientId,
     });
 
     return authUrl.toString();
+  }
+
+  // Dynamic client registration (RFC 7591 compliant)
+  async registerClient(
+    discovery: MCPOAuthDiscovery,
+    serverUrl: string
+  ): Promise<{
+    clientId: string;
+    clientSecret?: string;
+  }> {
+    debugLogger.info('oauth', '🏗️ Performing dynamic client registration (RFC 7591)');
+    
+    if (!discovery.registrationEndpoint) {
+      throw new Error('OAuth server does not support dynamic client registration');
+    }
+
+    // Extract server information for client metadata
+    const url = new URL(serverUrl);
+    const appName = `cawcaw MCP Client for ${url.hostname}`;
+    
+    // Build client registration request (RFC 7591)
+    const registrationRequest = {
+      client_name: appName,
+      client_uri: typeof window !== 'undefined' ? window.location.origin : 'cawcaw://app',
+      redirect_uris: [this.getRedirectUri()],
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+      token_endpoint_auth_method: 'none', // PKCE - no client secret needed
+      application_type: 'native',
+      logo_uri: 'https://raw.githubusercontent.com/dbirks/capacitor-ai-app/main/ios-icon.png',
+    };
+
+    debugLogger.info('oauth', '📋 Client registration request:', registrationRequest);
+
+    try {
+      const response = await fetch(discovery.registrationEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(registrationRequest),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Client registration failed: ${response.status} ${errorText}`);
+      }
+
+      const clientInfo = await response.json();
+      debugLogger.info('oauth', '✅ Dynamic client registration successful:', {
+        clientId: clientInfo.client_id,
+        hasSecret: !!clientInfo.client_secret,
+      });
+
+      const credentials = {
+        clientId: clientInfo.client_id,
+        clientSecret: clientInfo.client_secret,
+        registeredAt: Date.now(),
+      };
+
+      return credentials;
+    } catch (error) {
+      debugLogger.error('oauth', '❌ Dynamic client registration failed:', error);
+      throw new Error(`Failed to register OAuth client: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   // Exchange authorization code for access token (MCP 2025-03-26 compliant)
@@ -286,26 +367,28 @@ export class MCPOAuthManagerCompliant {
     }
 
     // Get stored flow data
-    const [verifierResult, discoveryResult, resourceResult] = await Promise.all([
+    const [verifierResult, discoveryResult, resourceResult, clientResult] = await Promise.all([
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}verifier_${serverId}` }),
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}resource_${serverId}` }),
+      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
     ]);
 
-    if (!verifierResult?.value || !discoveryResult?.value || !resourceResult?.value) {
+    if (!verifierResult?.value || !discoveryResult?.value || !resourceResult?.value || !clientResult?.value) {
       throw new Error('OAuth flow data not found - restart authentication');
     }
 
     const discovery: MCPOAuthDiscovery = JSON.parse(discoveryResult.value);
     const resourceInfo = JSON.parse(resourceResult.value);
-    const clientId = process.env.GITHUB_CLIENT_ID || 'your-github-client-id';
+    const clientCredentials = JSON.parse(clientResult.value);
+    const clientId = clientCredentials.clientId;
 
     // Exchange authorization code for access token
     const tokenRequestBody = new URLSearchParams({
       grant_type: 'authorization_code',
       client_id: clientId,
       code,
-      redirect_uri: this.getRedirectUri(serverId),
+      redirect_uri: this.getRedirectUri(),
       code_verifier: verifierResult.value,
     });
 
@@ -374,7 +457,7 @@ export class MCPOAuthManagerCompliant {
   }
 
   // Get redirect URI for OAuth flow
-  private getRedirectUri(_serverId?: string): string {
+  private getRedirectUri(): string {
     if (typeof window !== 'undefined') {
       const isCapacitor = 'capacitor' in window || window.location?.protocol === 'capacitor:';
       
@@ -393,6 +476,7 @@ export class MCPOAuthManagerCompliant {
     await Promise.all([
       SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}tokens_${serverId}` }),
       SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
+      SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
     ]);
   }
 
@@ -404,16 +488,18 @@ export class MCPOAuthManagerCompliant {
 
     debugLogger.info('oauth', '🔄 Refreshing expired MCP OAuth 2.1 token');
 
-    const discoveryResult = await SecureStoragePlugin.get({
-      key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}`,
-    });
+    const [discoveryResult, clientResult] = await Promise.all([
+      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
+      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
+    ]);
 
-    if (!discoveryResult?.value) {
-      throw new Error('OAuth discovery data not found');
+    if (!discoveryResult?.value || !clientResult?.value) {
+      throw new Error('OAuth flow data not found');
     }
 
     const discovery: MCPOAuthDiscovery = JSON.parse(discoveryResult.value);
-    const clientId = process.env.GITHUB_CLIENT_ID || 'your-github-client-id';
+    const clientCredentials = JSON.parse(clientResult.value);
+    const clientId = clientCredentials.clientId;
 
     const refreshBody = new URLSearchParams({
       grant_type: 'refresh_token',
@@ -453,30 +539,6 @@ export class MCPOAuthManagerCompliant {
     if (!tokens.tokenExpiresAt) return false;
     // Consider token expired if it expires within the next 5 minutes
     return Date.now() > tokens.tokenExpiresAt - 300000;
-  }
-
-  // Dynamic client registration compatibility (not used in MCP 2025-03-26 Resource Provider model)
-  async registerClient(
-    _discovery: MCPOAuthDiscovery,
-    _serverUrl: string
-  ): Promise<{
-    clientId: string;
-    clientSecret?: string;
-  }> {
-    debugLogger.warn('oauth', '⚠️ Dynamic client registration not used in MCP OAuth 2.1 Resource Provider model');
-    
-    // In the Resource Provider model, we use pre-configured external IdP clients
-    const clientId = process.env.GITHUB_CLIENT_ID || 'your-github-client-id';
-    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-    
-    if (!clientId || clientId.includes('your-github')) {
-      throw new Error('External Identity Provider client credentials not configured. Please set GITHUB_CLIENT_ID in .env file.');
-    }
-
-    return {
-      clientId,
-      clientSecret,
-    };
   }
 
   // Test if server supports MCP OAuth 2.1
