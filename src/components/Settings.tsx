@@ -1461,7 +1461,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                 <div className="text-foreground whitespace-pre-wrap break-all">
                                   {log.message}
                                 </div>
-                                {log.data && (
+                                {log.data != null && (
                                   <details className="mt-2">
                                     <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
                                       Show data
