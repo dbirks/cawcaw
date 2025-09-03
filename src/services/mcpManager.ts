@@ -1,6 +1,49 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { debugLogger } from '@/services/debugLogger';
 import { mcpOAuthManager } from '@/services/mcpOAuth';
+
+// MCP Protocol Version Support
+const MCP_SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26'] as const;
+type MCPVersion = typeof MCP_SUPPORTED_VERSIONS[number];
+
+// Helper function for version-negotiated HTTP requests
+async function makeVersionedMCPRequest(
+  endpoint: string,
+  payload: object,
+  oauthConfig?: MCPOAuthTokens,
+  supportedVersions = MCP_SUPPORTED_VERSIONS
+): Promise<{ response: any; version: MCPVersion }> {
+  for (const version of supportedVersions) {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'MCP-Protocol-Version': version,
+    };
+
+    if (oauthConfig?.accessToken) {
+      headers.Authorization = `Bearer ${oauthConfig.accessToken}`;
+    }
+
+    try {
+      const response = await httpClient.post(endpoint, payload, headers);
+      return { response, version };
+    } catch (error: any) {
+      // If 406 error and not the last version to try, continue with next version
+      if (error?.message?.includes('406') && version !== supportedVersions[supportedVersions.length - 1]) {
+        debugLogger.info('mcp', `🔄 Version ${version} failed with 406, trying next version`, {
+          endpoint,
+          currentVersion: version,
+          error: error.message,
+        });
+        continue;
+      }
+      // Re-throw error if it's not a version issue or we've exhausted versions
+      throw error;
+    }
+  }
+  
+  throw new Error(`All supported MCP versions failed: ${supportedVersions.join(', ')}`);
+}
 import type {
   MCPManagerConfig,
   MCPOAuthDiscovery,
@@ -95,30 +138,19 @@ class HTTPMCPClient implements MCPClient {
       // Use the exact endpoint URL provided by the user
       const endpoint = this.baseUrl;
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'MCP-Protocol-Version': '2025-03-26',
-      };
-
-      // Add OAuth authorization header if available
-      if (this.oauthConfig?.accessToken) {
-        headers.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
-      }
-
-      // Step 1: Initialize the MCP session (required by MCP protocol)
+      // Step 1: Initialize the MCP session (required by MCP protocol) with version negotiation
       console.log(
         `[MCPClient] Initializing session for ${endpoint}${httpClient.isNativePlatform() ? ' (native)' : ' (web)'}`
       );
 
-      const initResponse = await httpClient.post(
+      const { response: initResponse, version } = await makeVersionedMCPRequest(
         endpoint,
         {
           jsonrpc: '2.0',
           id: Date.now(),
           method: 'initialize',
           params: {
-            protocolVersion: '2025-06-18',
+            protocolVersion: version,
             capabilities: {
               tools: {},
             },
@@ -128,8 +160,13 @@ class HTTPMCPClient implements MCPClient {
             },
           },
         },
-        headers
+        this.oauthConfig
       );
+
+      debugLogger.info('mcp', `✅ Successfully negotiated MCP version ${version}`, {
+        endpoint,
+        version,
+      });
 
       if (!initResponse.ok) {
         throw new Error(`HTTP ${initResponse.status}: ${initResponse.statusText}`);
@@ -154,8 +191,17 @@ class HTTPMCPClient implements MCPClient {
         console.log(`[MCPClient] Session established with ID: ${sessionId}`);
       }
 
-      // Step 2: Now list available tools with session ID
-      const toolsHeaders = { ...headers };
+      // Step 2: Now list available tools with session ID using negotiated version
+      const toolsHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'MCP-Protocol-Version': version,
+      };
+
+      if (this.oauthConfig?.accessToken) {
+        toolsHeaders.Authorization = `Bearer ${this.oauthConfig.accessToken}`;
+      }
+
       if (this.sessionId) {
         toolsHeaders['Mcp-Session-Id'] = this.sessionId;
       }
@@ -206,7 +252,7 @@ class HTTPMCPClient implements MCPClient {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'MCP-Protocol-Version': '2025-03-26',
+        'MCP-Protocol-Version': '2025-06-18',
       };
 
       // Add OAuth authorization header if available
@@ -865,7 +911,7 @@ class MCPManager {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'MCP-Protocol-Version': '2025-03-26',
+        'MCP-Protocol-Version': '2025-06-18',
       };
 
       // Step 1: Initialize the MCP session (required by MCP protocol)
@@ -995,7 +1041,7 @@ class MCPManager {
         {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'MCP-Protocol-Version': '2025-03-26',
+          'MCP-Protocol-Version': '2025-06-18',
         }
       );
 

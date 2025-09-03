@@ -3,7 +3,7 @@ import { debugLogger } from '@/services/debugLogger';
 import type { MCPOAuthDiscovery, MCPOAuthTokens } from '@/types/mcp';
 
 const OAUTH_STORAGE_PREFIX = 'mcp_oauth_';
-const MCP_PROTOCOL_VERSION = '2025-03-26';
+const MCP_PROTOCOL_VERSION = '2025-06-18';
 
 // PKCE code verifier and challenge generation
 function generateCodeVerifier(): string {
@@ -385,6 +385,21 @@ export class MCPOAuthManager {
     const clientData = JSON.parse(clientResult.value);
     const discovery: MCPOAuthDiscovery = JSON.parse(discoveryResult.value);
 
+    // Get server configuration to use as resource indicator (RFC 8707)
+    let serverUrl = '';
+    try {
+      const serverConfigResult = await SecureStoragePlugin.get({ key: `mcp_server_${serverId}` });
+      if (serverConfigResult?.value) {
+        const serverConfig = JSON.parse(serverConfigResult.value);
+        serverUrl = serverConfig.url || '';
+      }
+    } catch (configError) {
+      debugLogger.error('oauth', '⚠️ Could not retrieve server config for resource indicator', {
+        serverId,
+        error: configError instanceof Error ? configError.message : 'Unknown error',
+      });
+    }
+
     // Exchange authorization code for access token
     const tokenRequestBody = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -393,6 +408,15 @@ export class MCPOAuthManager {
       redirect_uri: this.getRedirectUri(serverId),
       code_verifier: verifierResult.value,
     });
+
+    // Add resource indicator (RFC 8707) for MCP 2025-06-18 compliance
+    if (serverUrl) {
+      tokenRequestBody.set('resource', serverUrl);
+      debugLogger.info('oauth', '🎯 Added resource indicator for MCP server', {
+        serverUrl,
+        serverId,
+      });
+    }
 
     // Add client secret if available (confidential client)
     if (clientData.clientSecret) {
