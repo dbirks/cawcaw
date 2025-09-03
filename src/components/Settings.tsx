@@ -41,7 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/hooks/useTheme';
 import { mcpManager } from '@/services/mcpManager';
-import type { MCPServerConfig, MCPServerStatus, MCPOAuthDiscovery } from '@/types/mcp';
+import type { MCPOAuthDiscovery, MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 
 interface SettingsProps {
   onClose: () => void;
