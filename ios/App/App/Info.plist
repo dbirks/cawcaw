@@ -53,5 +53,16 @@
 	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app uses the microphone to convert your voice to text for AI chat conversations.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.cawcaw</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>cawcaw</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

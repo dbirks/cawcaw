@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'app.cawcaw',
   appName: 'caw caw',
   webDir: 'dist',
+  server: {
+    iosScheme: 'cawcaw', // Configure iOS custom scheme for OAuth redirects
+  },
   assets: {
     iconPath: 'ios-icon.png'
   },

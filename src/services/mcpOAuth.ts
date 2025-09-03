@@ -450,14 +450,14 @@ export class MCPOAuthManager {
       const isCapacitor = 'capacitor' in window;
       if (isCapacitor) {
         // Include server ID in the callback URL for mobile
-        const baseUri = 'cawcaw://oauth/callback';
+        const baseUri = 'cawcaw://oauth-callback';
         return serverId ? `${baseUri}?server_id=${encodeURIComponent(serverId)}` : baseUri;
       }
       return `${window.location.origin}/oauth/callback`;
     }
     return serverId
-      ? `cawcaw://oauth/callback?server_id=${encodeURIComponent(serverId)}`
-      : 'cawcaw://oauth/callback';
+      ? `cawcaw://oauth-callback?server_id=${encodeURIComponent(serverId)}`
+      : 'cawcaw://oauth-callback';
   }
 
   // Test if server supports OAuth and get discovery info
