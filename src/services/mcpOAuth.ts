@@ -1,4 +1,5 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+import { debugLogger } from '@/services/debugLogger';
 import type { MCPOAuthDiscovery, MCPOAuthTokens } from '@/types/mcp';
 
 const OAUTH_STORAGE_PREFIX = 'mcp_oauth_';
@@ -25,12 +26,14 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 export class MCPOAuthManager {
   // Discover if server requires OAuth and get endpoints
   async discoverOAuthCapabilities(serverUrl: string): Promise<MCPOAuthDiscovery | undefined> {
-    console.log('🔍 Starting OAuth capability discovery for:', serverUrl);
+    debugLogger.info('oauth', '🔍 Starting OAuth capability discovery', { serverUrl });
 
     try {
       // Step 1: Check for OAuth Protected Resource metadata (RFC8414)
       const resourceMetadataUrl = new URL('/.well-known/oauth-protected-resource', serverUrl);
-      console.log('🌐 Fetching protected resource metadata from:', resourceMetadataUrl.toString());
+      debugLogger.info('oauth', '🌐 Fetching protected resource metadata', {
+        url: resourceMetadataUrl.toString(),
+      });
 
       const resourceResponse = await fetch(resourceMetadataUrl.toString(), {
         headers: {
@@ -39,26 +42,31 @@ export class MCPOAuthManager {
         },
       });
 
-      console.log('📡 Protected resource response:', {
+      debugLogger.info('oauth', '📡 Protected resource response', {
         ok: resourceResponse.ok,
         status: resourceResponse.status,
         statusText: resourceResponse.statusText,
       });
 
       if (!resourceResponse.ok) {
-        console.log("ℹ️  Server doesn't require OAuth (no protected resource metadata)");
+        debugLogger.info(
+          'oauth',
+          "ℹ️  Server doesn't require OAuth (no protected resource metadata)"
+        );
         return undefined;
       }
 
       const resourceMetadata = await resourceResponse.json();
-      console.log('📋 Protected resource metadata:', resourceMetadata);
+      debugLogger.info('oauth', '📋 Protected resource metadata', resourceMetadata);
 
       const authServerUrl = resourceMetadata.authorization_server || serverUrl;
-      console.log('🔗 Authorization server URL:', authServerUrl);
+      debugLogger.info('oauth', '🔗 Authorization server URL', { authServerUrl });
 
       // Step 2: Get Authorization Server Metadata
       const authMetadataUrl = new URL('/.well-known/oauth-authorization-server', authServerUrl);
-      console.log('🌐 Fetching authorization server metadata from:', authMetadataUrl.toString());
+      debugLogger.info('oauth', '🌐 Fetching authorization server metadata', {
+        url: authMetadataUrl.toString(),
+      });
 
       const authResponse = await fetch(authMetadataUrl.toString(), {
         headers: {
@@ -67,7 +75,7 @@ export class MCPOAuthManager {
         },
       });
 
-      console.log('📡 Authorization server response:', {
+      debugLogger.info('oauth', '📡 Authorization server response', {
         ok: authResponse.ok,
         status: authResponse.status,
         statusText: authResponse.statusText,
@@ -75,14 +83,17 @@ export class MCPOAuthManager {
 
       if (!authResponse.ok) {
         const errorText = await authResponse.text();
-        console.error('❌ Authorization server metadata fetch failed:', errorText);
+        debugLogger.error('oauth', '❌ Authorization server metadata fetch failed', {
+          errorText,
+          status: authResponse.status,
+        });
         throw new Error(
           `OAuth authorization server metadata not found: ${authResponse.status} ${errorText}`
         );
       }
 
       const authMetadata = await authResponse.json();
-      console.log('📋 Authorization server metadata:', authMetadata);
+      debugLogger.info('oauth', '📋 Authorization server metadata', authMetadata);
 
       return {
         authorizationEndpoint: authMetadata.authorization_endpoint,
@@ -92,8 +103,7 @@ export class MCPOAuthManager {
         supportedScopes: authMetadata.scopes_supported,
       };
     } catch (error) {
-      console.error('❌ OAuth capability discovery failed:', error);
-      console.error('❌ Error details:', {
+      debugLogger.error('oauth', '❌ OAuth capability discovery failed', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         name: error instanceof Error ? error.name : undefined,
@@ -153,24 +163,24 @@ export class MCPOAuthManager {
     serverUrl: string,
     existingDiscovery?: MCPOAuthDiscovery
   ): Promise<string> {
-    console.log('🔍 mcpOAuthManager.startOAuthFlow called with:', {
+    debugLogger.info('oauth', '🔍 mcpOAuthManager.startOAuthFlow called', {
       serverId,
       serverUrl,
-      existingDiscovery: !!existingDiscovery,
+      hasExistingDiscovery: !!existingDiscovery,
     });
 
     // Step 1: Use existing discovery data or discover OAuth capabilities
     let discovery = existingDiscovery;
     if (!discovery) {
-      console.log('🔍 No existing discovery data, discovering OAuth capabilities...');
+      debugLogger.info('oauth', '🔍 No existing discovery data, discovering OAuth capabilities...');
       discovery = await this.discoverOAuthCapabilities(serverUrl);
-      console.log('📋 Discovery result:', discovery);
+      debugLogger.info('oauth', '📋 Discovery result', discovery);
       if (!discovery) {
-        console.error('❌ Server does not support OAuth authentication');
+        debugLogger.error('oauth', '❌ Server does not support OAuth authentication');
         throw new Error('Server does not support OAuth authentication');
       }
     } else {
-      console.log('✅ Using existing discovery data:', discovery);
+      debugLogger.info('oauth', '✅ Using existing discovery data', discovery);
     }
 
     // Step 2: Register client dynamically if supported

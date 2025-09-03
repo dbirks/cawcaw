@@ -1,4 +1,5 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+import { debugLogger } from '@/services/debugLogger';
 import { mcpOAuthManager } from '@/services/mcpOAuth';
 import type {
   MCPManagerConfig,
@@ -796,25 +797,25 @@ class MCPManager {
 
   // Start OAuth flow for a server
   async startOAuthFlow(serverId: string): Promise<string> {
-    console.log('🔍 mcpManager.startOAuthFlow called for:', serverId);
+    debugLogger.info('oauth', '🔍 mcpManager.startOAuthFlow called', { serverId });
 
     const config = this.serverConfigs.find((s) => s.id === serverId);
-    console.log('📋 Found server config:', config);
+    debugLogger.info('oauth', '📋 Found server config', config);
 
     if (!config) {
-      console.error('❌ Server config not found for ID:', serverId);
+      debugLogger.error('oauth', '❌ Server config not found for ID', { serverId });
       throw new Error(`Server configuration not found for ID: ${serverId}`);
     }
 
     if (!config.requiresAuth && !config.oauthDiscovery) {
-      console.error('❌ Server does not support OAuth:', {
+      debugLogger.error('oauth', '❌ Server does not support OAuth', {
         requiresAuth: config.requiresAuth,
         oauthDiscovery: config.oauthDiscovery,
       });
       throw new Error('Server does not support OAuth authentication');
     }
 
-    console.log('🚀 Calling mcpOAuthManager.startOAuthFlow with:', {
+    debugLogger.info('oauth', '🚀 Calling mcpOAuthManager.startOAuthFlow', {
       serverId,
       serverUrl: config.url,
       oauthDiscovery: config.oauthDiscovery,

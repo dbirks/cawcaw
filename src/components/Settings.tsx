@@ -1,9 +1,11 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
   Brain,
+  Bug,
   ChevronDown,
   ChevronRight,
   Clock,
+  Copy,
   Edit,
   Info,
   Lock,
@@ -41,6 +43,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/hooks/useTheme';
 import { mcpManager } from '@/services/mcpManager';
+import { debugLogger, type DebugLogEntry } from '@/services/debugLogger';
 import type { MCPOAuthDiscovery, MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 
 interface SettingsProps {
@@ -56,6 +59,10 @@ export default function Settings({ onClose }: SettingsProps) {
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('llm');
+
+  // Debug logs state
+  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
+  const [debugFilter, setDebugFilter] = useState<'all' | 'oauth' | 'mcp' | 'general'>('all');
 
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
@@ -162,6 +169,14 @@ export default function Settings({ onClose }: SettingsProps) {
     loadSettings();
   }, [loadSettings]);
 
+  // Subscribe to debug logs
+  useEffect(() => {
+    const unsubscribe = debugLogger.subscribe((logs) => {
+      setDebugLogs(logs);
+    });
+    return unsubscribe;
+  }, []);
+
   const handleApiKeyChange = async (newValue: string) => {
     setApiKey(newValue);
 
@@ -193,30 +208,65 @@ export default function Settings({ onClose }: SettingsProps) {
     }
   };
 
+  // Debug Functions
+  const getFilteredLogs = () => {
+    if (debugFilter === 'all') return debugLogs;
+    return debugLogs.filter((log) => log.category === debugFilter);
+  };
+
+  const handleCopyLogs = async () => {
+    const filteredLogs = getFilteredLogs();
+    const logText = filteredLogs.map((log) => debugLogger.formatLogEntry(log)).join('\n\n');
+
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(logText);
+        alert('Debug logs copied to clipboard!');
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = logText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Debug logs copied to clipboard!');
+      }
+    } catch (error) {
+      console.error('Failed to copy logs:', error);
+      alert('Failed to copy logs to clipboard');
+    }
+  };
+
+  const handleClearLogs = () => {
+    debugLogger.clearLogs();
+  };
+
   // OAuth Functions
   const handleOAuthAuthenticate = async (serverId: string) => {
     try {
-      console.log('🚀 Starting OAuth authentication for server:', serverId);
+      debugLogger.info('oauth', '🚀 Starting OAuth authentication for server', { serverId });
 
       // Find server config for debugging
       const serverConfig = servers.find((s) => s.id === serverId);
-      console.log('📋 Server config:', serverConfig);
+      debugLogger.info('oauth', '📋 Server config found', serverConfig);
 
       if (!serverConfig) {
+        debugLogger.error('oauth', `❌ Server configuration not found for ID: ${serverId}`);
         throw new Error(`Server configuration not found for ID: ${serverId}`);
       }
 
-      console.log('🔍 Calling mcpManager.startOAuthFlow...');
+      debugLogger.info('oauth', '🔍 Calling mcpManager.startOAuthFlow...');
       const authUrl = await mcpManager.startOAuthFlow(serverId);
-      console.log('✅ OAuth URL generated:', authUrl);
+      debugLogger.info('oauth', '✅ OAuth URL generated', { authUrl });
 
       // Open OAuth URL in system browser
       if (typeof window !== 'undefined' && 'open' in window) {
-        console.log('🌐 Opening OAuth URL in browser...');
+        debugLogger.info('oauth', '🌐 Opening OAuth URL in browser...');
         window.open(authUrl, '_blank', 'noopener,noreferrer');
       } else {
         // Fallback - copy URL to clipboard
-        console.log('📋 Fallback: copying OAuth URL to clipboard...');
+        debugLogger.info('oauth', '📋 Fallback: copying OAuth URL to clipboard...');
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(authUrl);
           alert('OAuth URL copied to clipboard. Please open it in your browser.');
@@ -225,9 +275,8 @@ export default function Settings({ onClose }: SettingsProps) {
         }
       }
     } catch (error) {
-      console.error('❌ Failed to start OAuth flow:', error);
-      console.error('❌ Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
+      debugLogger.error('oauth', '❌ Failed to start OAuth flow', {
+        error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         serverId,
       });
@@ -429,7 +478,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger
               value="llm"
               className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
@@ -453,6 +502,14 @@ export default function Settings({ onClose }: SettingsProps) {
               <Palette className="h-4 w-4" />
               <span className="hidden sm:inline">Appearance</span>
               <span className="sm:hidden">Theme</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="debug"
+              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
+              <Bug className="h-4 w-4" />
+              <span className="hidden sm:inline">Debug</span>
+              <span className="sm:hidden">Debug</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1291,6 +1348,144 @@ export default function Settings({ onClose }: SettingsProps) {
                       )}
                     </div>
                   </div>
+                </div>
+              </ScrollArea>
+            </div>
+          </TabsContent>
+
+          {/* Debug Tab */}
+          <TabsContent value="debug" className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full">
+                <div className="pr-4 safe-x safe-bottom">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Bug className="h-5 w-5" />
+                        Debug Logs
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        View OAuth authentication and MCP server connection logs for troubleshooting
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Debug Controls */}
+                      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="debug-filter" className="text-sm font-medium">
+                            Filter:
+                          </label>
+                          <select
+                            id="debug-filter"
+                            value={debugFilter}
+                            onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
+                            className="px-2 py-1 text-sm border rounded bg-background"
+                          >
+                            <option value="all">All Logs</option>
+                            <option value="oauth">OAuth Only</option>
+                            <option value="mcp">MCP Only</option>
+                            <option value="general">General Only</option>
+                          </select>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCopyLogs}
+                            className="flex items-center gap-1"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleClearLogs}
+                            className="flex items-center gap-1"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Debug Log Display */}
+                      <div className="bg-muted/30 rounded-md p-3 min-h-[300px] max-h-[500px] overflow-y-auto font-mono text-xs">
+                        {getFilteredLogs().length === 0 ? (
+                          <div className="text-muted-foreground text-center py-8">
+                            {debugFilter === 'all'
+                              ? 'No debug logs yet. Try OAuth authentication or MCP server operations to see logs here.'
+                              : `No ${debugFilter} logs found.`}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {getFilteredLogs().map((log, index) => (
+                              <div
+                                key={`${log.timestamp}-${index}`}
+                                className={`p-2 rounded border-l-2 ${
+                                  log.level === 'error'
+                                    ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20'
+                                    : log.level === 'warn'
+                                      ? 'border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20'
+                                      : 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-muted-foreground">
+                                    {new Date(log.timestamp).toLocaleTimeString()}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 text-xs rounded font-medium ${
+                                      log.level === 'error'
+                                        ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                                        : log.level === 'warn'
+                                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                    }`}
+                                  >
+                                    {log.level.toUpperCase()}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 text-xs rounded font-medium ${
+                                      log.category === 'oauth'
+                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                                        : log.category === 'mcp'
+                                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
+                                    }`}
+                                  >
+                                    {log.category.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="text-foreground whitespace-pre-wrap break-all">
+                                  {log.message}
+                                </div>
+                                {log.data && (
+                                  <details className="mt-2">
+                                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                      Show data
+                                    </summary>
+                                    <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                                      {JSON.stringify(log.data, null, 2)}
+                                    </pre>
+                                  </details>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Debug Info */}
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <div>Total logs: {debugLogs.length}</div>
+                        <div>Filtered logs: {getFilteredLogs().length}</div>
+                        <div>
+                          Categories: OAuth authentication, MCP server connections, general app logs
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </ScrollArea>
             </div>
