@@ -26,40 +26,40 @@ export class MCPOAuthManager {
   // Discover if server requires OAuth and get endpoints
   async discoverOAuthCapabilities(serverUrl: string): Promise<MCPOAuthDiscovery | undefined> {
     console.log('🔍 Starting OAuth capability discovery for:', serverUrl);
-    
+
     try {
       // Step 1: Check for OAuth Protected Resource metadata (RFC8414)
       const resourceMetadataUrl = new URL('/.well-known/oauth-protected-resource', serverUrl);
       console.log('🌐 Fetching protected resource metadata from:', resourceMetadataUrl.toString());
-      
+
       const resourceResponse = await fetch(resourceMetadataUrl.toString(), {
         headers: {
           Accept: 'application/json',
           'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
         },
       });
-      
+
       console.log('📡 Protected resource response:', {
         ok: resourceResponse.ok,
         status: resourceResponse.status,
-        statusText: resourceResponse.statusText
+        statusText: resourceResponse.statusText,
       });
 
       if (!resourceResponse.ok) {
-        console.log('ℹ️  Server doesn\'t require OAuth (no protected resource metadata)');
+        console.log("ℹ️  Server doesn't require OAuth (no protected resource metadata)");
         return undefined;
       }
 
       const resourceMetadata = await resourceResponse.json();
       console.log('📋 Protected resource metadata:', resourceMetadata);
-      
+
       const authServerUrl = resourceMetadata.authorization_server || serverUrl;
       console.log('🔗 Authorization server URL:', authServerUrl);
 
       // Step 2: Get Authorization Server Metadata
       const authMetadataUrl = new URL('/.well-known/oauth-authorization-server', authServerUrl);
       console.log('🌐 Fetching authorization server metadata from:', authMetadataUrl.toString());
-      
+
       const authResponse = await fetch(authMetadataUrl.toString(), {
         headers: {
           Accept: 'application/json',
@@ -70,13 +70,15 @@ export class MCPOAuthManager {
       console.log('📡 Authorization server response:', {
         ok: authResponse.ok,
         status: authResponse.status,
-        statusText: authResponse.statusText
+        statusText: authResponse.statusText,
       });
 
       if (!authResponse.ok) {
         const errorText = await authResponse.text();
         console.error('❌ Authorization server metadata fetch failed:', errorText);
-        throw new Error(`OAuth authorization server metadata not found: ${authResponse.status} ${errorText}`);
+        throw new Error(
+          `OAuth authorization server metadata not found: ${authResponse.status} ${errorText}`
+        );
       }
 
       const authMetadata = await authResponse.json();
@@ -94,7 +96,7 @@ export class MCPOAuthManager {
       console.error('❌ Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : undefined
+        name: error instanceof Error ? error.name : undefined,
       });
       return undefined;
     }
@@ -154,7 +156,7 @@ export class MCPOAuthManager {
     console.log('🔍 mcpOAuthManager.startOAuthFlow called with:', {
       serverId,
       serverUrl,
-      existingDiscovery: !!existingDiscovery
+      existingDiscovery: !!existingDiscovery,
     });
 
     // Step 1: Use existing discovery data or discover OAuth capabilities

@@ -197,15 +197,15 @@ export default function Settings({ onClose }: SettingsProps) {
   const handleOAuthAuthenticate = async (serverId: string) => {
     try {
       console.log('🚀 Starting OAuth authentication for server:', serverId);
-      
+
       // Find server config for debugging
-      const serverConfig = servers.find(s => s.id === serverId);
+      const serverConfig = servers.find((s) => s.id === serverId);
       console.log('📋 Server config:', serverConfig);
-      
+
       if (!serverConfig) {
         throw new Error(`Server configuration not found for ID: ${serverId}`);
       }
-      
+
       console.log('🔍 Calling mcpManager.startOAuthFlow...');
       const authUrl = await mcpManager.startOAuthFlow(serverId);
       console.log('✅ OAuth URL generated:', authUrl);
@@ -229,9 +229,11 @@ export default function Settings({ onClose }: SettingsProps) {
       console.error('❌ Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-        serverId
+        serverId,
       });
-      alert(`Failed to start OAuth authentication: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to start OAuth authentication: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   };
 

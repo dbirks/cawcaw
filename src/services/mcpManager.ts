@@ -797,19 +797,19 @@ class MCPManager {
   // Start OAuth flow for a server
   async startOAuthFlow(serverId: string): Promise<string> {
     console.log('🔍 mcpManager.startOAuthFlow called for:', serverId);
-    
+
     const config = this.serverConfigs.find((s) => s.id === serverId);
     console.log('📋 Found server config:', config);
-    
+
     if (!config) {
       console.error('❌ Server config not found for ID:', serverId);
       throw new Error(`Server configuration not found for ID: ${serverId}`);
     }
-    
+
     if (!config.requiresAuth && !config.oauthDiscovery) {
       console.error('❌ Server does not support OAuth:', {
         requiresAuth: config.requiresAuth,
-        oauthDiscovery: config.oauthDiscovery
+        oauthDiscovery: config.oauthDiscovery,
       });
       throw new Error('Server does not support OAuth authentication');
     }
@@ -817,7 +817,7 @@ class MCPManager {
     console.log('🚀 Calling mcpOAuthManager.startOAuthFlow with:', {
       serverId,
       serverUrl: config.url,
-      oauthDiscovery: config.oauthDiscovery
+      oauthDiscovery: config.oauthDiscovery,
     });
 
     return await mcpOAuthManager.startOAuthFlow(serverId, config.url, config.oauthDiscovery);
