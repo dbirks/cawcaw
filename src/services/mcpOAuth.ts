@@ -165,7 +165,7 @@ export class MCPOAuthManager {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
+        // Remove MCP-Protocol-Version header - OAuth registration endpoints don't expect it
       },
       body: JSON.stringify(registrationData),
     });
@@ -533,7 +533,7 @@ export class MCPOAuthManager {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
-        'MCP-Protocol-Version': MCP_PROTOCOL_VERSION,
+        // Remove MCP-Protocol-Version header - OAuth endpoints don't expect it
       },
       body: refreshBody,
     });
