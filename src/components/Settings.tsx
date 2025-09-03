@@ -178,6 +178,17 @@ export default function Settings({ onClose }: SettingsProps) {
     return unsubscribe;
   }, []);
 
+  // Listen for OAuth completion events to refresh UI
+  useEffect(() => {
+    const handleOAuthCompletion = () => {
+      debugLogger.info('general', '🔄 OAuth completion detected, refreshing settings UI');
+      loadSettings();
+    };
+
+    window.addEventListener('oauth-completed', handleOAuthCompletion);
+    return () => window.removeEventListener('oauth-completed', handleOAuthCompletion);
+  }, [loadSettings]);
+
   const handleApiKeyChange = async (newValue: string) => {
     setApiKey(newValue);
 

@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import App from './App.tsx';
 import { debugLogger } from './services/debugLogger';
-import { mcpOAuthManager } from './services/mcpOAuth';
+import { mcpManager } from './services/mcpManager';
 
 // Initialize StatusBar on mobile platforms
 if (Capacitor.isNativePlatform()) {
@@ -45,10 +45,22 @@ CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
       }
 
       if (code && state && serverId) {
-        debugLogger.info('oauth', '✅ Valid OAuth callback, exchanging code for token');
-        await mcpOAuthManager.exchangeCodeForToken(serverId, code, state);
-        debugLogger.info('oauth', '🎉 OAuth authentication completed successfully');
-        alert('✅ OAuth authentication successful!');
+        debugLogger.info(
+          'oauth',
+          '✅ Valid OAuth callback, exchanging code for token and connecting to server'
+        );
+        await mcpManager.completeOAuthFlow(serverId, code, state);
+        debugLogger.info(
+          'oauth',
+          '🎉 OAuth authentication completed successfully - server should now be connected'
+        );
+
+        // Dispatch custom event to refresh Settings UI
+        window.dispatchEvent(new CustomEvent('oauth-completed', { detail: { serverId } }));
+
+        alert(
+          '✅ OAuth authentication successful! The connection status should update automatically.'
+        );
       } else {
         debugLogger.error('oauth', '❌ Missing required OAuth callback parameters', {
           code: !!code,
