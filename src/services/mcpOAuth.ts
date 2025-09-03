@@ -152,7 +152,7 @@ export class MCPOAuthManager {
       client_name: 'cawcaw - AI chat with tools',
       client_uri: 'https://cawcaw.app',
       logo_uri: 'https://raw.githubusercontent.com/dbirks/capacitor-ai-app/main/ios-icon.png', // Standard OAuth logo field
-      redirect_uris: [this.getRedirectUri()], // Don't include serverId in registration
+      redirect_uris: [this.getRedirectUri(serverId)], // Include serverId for consistency
       grant_types: ['authorization_code'],
       response_types: ['code'],
       token_endpoint_auth_method: 'none', // PKCE public client
@@ -505,20 +505,48 @@ export class MCPOAuthManager {
 
   // Get redirect URI for OAuth flow
   private getRedirectUri(serverId?: string): string {
+    debugLogger.info('oauth', '🔗 getRedirectUri called', {
+      serverId,
+      hasWindow: typeof window !== 'undefined',
+      windowLocation: typeof window !== 'undefined' ? window.location?.href : undefined,
+    });
+
     // For mobile apps, use a custom scheme
     // For web apps, use the current origin
     if (typeof window !== 'undefined') {
-      const isCapacitor = 'capacitor' in window;
+      // More reliable Capacitor detection using multiple methods
+      const isCapacitor = 'capacitor' in window || window.location?.protocol === 'capacitor:';
+
+      debugLogger.info('oauth', '🔍 Capacitor detection', {
+        capacitorInWindow: 'capacitor' in window,
+        protocolCheck: window.location?.protocol === 'capacitor:',
+        isCapacitor,
+        windowLocationOrigin: window.location?.origin,
+      });
+
       if (isCapacitor) {
         // Include server ID in the callback URL for mobile
         const baseUri = 'cawcaw://oauth-callback';
-        return serverId ? `${baseUri}?server_id=${encodeURIComponent(serverId)}` : baseUri;
+        const redirectUri = serverId
+          ? `${baseUri}?server_id=${encodeURIComponent(serverId)}`
+          : baseUri;
+
+        debugLogger.info('oauth', '📱 Using Capacitor redirect URI', { redirectUri, serverId });
+        return redirectUri;
       }
-      return `${window.location.origin}/oauth/callback`;
+
+      const webRedirectUri = `${window.location.origin}/oauth/callback`;
+      debugLogger.info('oauth', '🌐 Using web redirect URI', { webRedirectUri });
+      return webRedirectUri;
     }
-    return serverId
+
+    // Fallback for server-side or no window
+    const fallbackUri = serverId
       ? `cawcaw://oauth-callback?server_id=${encodeURIComponent(serverId)}`
       : 'cawcaw://oauth-callback';
+
+    debugLogger.info('oauth', '🔄 Using fallback redirect URI', { fallbackUri, serverId });
+    return fallbackUri;
   }
 
   // Test if server supports OAuth and get discovery info
