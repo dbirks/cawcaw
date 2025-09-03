@@ -149,7 +149,7 @@ export class MCPOAuthManager {
     });
 
     const registrationData = {
-      client_name: 'caw caw - AI Chat App',
+      client_name: 'cawcaw - AI chat with tools',
       client_uri: 'https://cawcaw.app',
       redirect_uris: [this.getRedirectUri()], // Don't include serverId in registration
       grant_types: ['authorization_code'],
