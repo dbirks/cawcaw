@@ -26,7 +26,12 @@ async function makeVersionedMCPRequest(
 
     // Update the payload with the current version being tried
     const payload = { ...payloadTemplate };
-    if (payload.params && typeof payload.params === 'object' && payload.params !== null && 'protocolVersion' in payload.params) {
+    if (
+      payload.params &&
+      typeof payload.params === 'object' &&
+      payload.params !== null &&
+      'protocolVersion' in payload.params
+    ) {
       (payload.params as { protocolVersion: string }).protocolVersion = version;
     }
 
