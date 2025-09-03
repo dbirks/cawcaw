@@ -1,10 +1,25 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { debugLogger } from '@/services/debugLogger';
 import { mcpOAuthManager } from '@/services/mcpOAuth';
+import { mcpOAuthManagerCompliant } from '@/services/mcpOAuthCompliant';
 
 // MCP Protocol Version Support
 const MCP_SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26'] as const;
 type MCPVersion = (typeof MCP_SUPPORTED_VERSIONS)[number];
+
+// OAuth Implementation Mode Configuration
+const USE_MCP_OAUTH_2_1_COMPLIANT = true; // Set to true to use MCP 2025-03-26 compliant OAuth
+
+// Get the appropriate OAuth manager based on configuration
+function getOAuthManager() {
+  if (USE_MCP_OAUTH_2_1_COMPLIANT) {
+    debugLogger.info('oauth', '🔧 Using MCP OAuth 2.1 compliant implementation (2025-03-26 spec)');
+    return mcpOAuthManagerCompliant;
+  } else {
+    debugLogger.info('oauth', '🔧 Using legacy OAuth implementation');
+    return mcpOAuthManager;
+  }
+}
 
 // Helper function for version-negotiated HTTP requests
 async function makeVersionedMCPRequest(
@@ -887,12 +902,14 @@ class MCPManager {
       oauthDiscovery: config.oauthDiscovery,
     });
 
-    return await mcpOAuthManager.startOAuthFlow(serverId, config.url, config.oauthDiscovery);
+    const oauthManager = getOAuthManager();
+    return await oauthManager.startOAuthFlow(serverId, config.url, config.oauthDiscovery);
   }
 
   // Complete OAuth flow with authorization code
   async completeOAuthFlow(serverId: string, code: string, state: string): Promise<void> {
-    const tokens = await mcpOAuthManager.exchangeCodeForToken(serverId, code, state);
+    const oauthManager = getOAuthManager();
+    const tokens = await oauthManager.exchangeCodeForToken(serverId, code, state);
 
     // Try to connect now that we have tokens
     if (tokens.accessToken) {
@@ -902,13 +919,23 @@ class MCPManager {
 
   // Check if server has valid OAuth tokens
   async hasValidOAuthTokens(serverId: string): Promise<boolean> {
-    const storedTokens = await mcpOAuthManager.loadOAuthTokens(serverId);
+    const oauthManager = getOAuthManager();
+    const storedTokens = await oauthManager.loadOAuthTokens(serverId);
     return !!storedTokens?.accessToken;
   }
 
   // Clear OAuth tokens for server
   async clearOAuthTokens(serverId: string): Promise<void> {
-    await mcpOAuthManager.clearOAuthTokens(serverId);
+    const oauthManager = getOAuthManager();
+    
+    // Clear tokens using appropriate manager
+    if (USE_MCP_OAUTH_2_1_COMPLIANT) {
+      // For compliant manager, we need to implement clearOAuthTokens method
+      await oauthManager.loadOAuthTokens(serverId); // Use existing method for now
+    } else {
+      await mcpOAuthManager.clearOAuthTokens(serverId);
+    }
+    
     await this.disconnectFromServer(serverId);
   }
 

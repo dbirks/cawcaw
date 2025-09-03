@@ -8,6 +8,24 @@ export interface MCPOAuthDiscovery {
   supportedScopes?: string[];
 }
 
+// MCP OAuth 2.1 Resource Provider information (2025-03-26 spec compliant)
+export interface MCPResourceProviderInfo {
+  resourceIdentifier: string; // Usually the hostname of the MCP server
+  serverUrl: string; // Full MCP server URL
+  mcpScope: string; // Format: <resource-identifier>/mcp:access
+  externalIdP?: string; // External Identity Provider (github.com, accounts.google.com, etc.)
+}
+
+// External Identity Provider configuration
+export interface ExternalIdPConfig {
+  name: string;
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+  clientId?: string;
+  clientSecret?: string;
+  scopes: string[];
+}
+
 export interface MCPOAuthTokens {
   accessToken: string;
   refreshToken?: string;
@@ -27,6 +45,9 @@ export interface MCPServerConfig {
   readonly?: boolean; // For hardcoded servers
   requiresAuth?: boolean; // Discovered automatically
   oauthDiscovery?: MCPOAuthDiscovery; // Discovered endpoints
+  // MCP OAuth 2.1 Resource Provider information (2025-03-26 spec)
+  resourceProviderInfo?: MCPResourceProviderInfo;
+  externalIdP?: ExternalIdPConfig; // External Identity Provider config
 }
 
 export interface MCPToolCall {
