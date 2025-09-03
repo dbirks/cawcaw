@@ -515,13 +515,18 @@ export class MCPOAuthManager {
     // For web apps, use the current origin
     if (typeof window !== 'undefined') {
       // More reliable Capacitor detection using multiple methods
-      const isCapacitor = 'capacitor' in window || window.location?.protocol === 'capacitor:';
+      const capacitorInWindow = 'capacitor' in window;
+      const protocolCheck = window.location?.protocol === 'capacitor:';
+      const customSchemeCheck = window.location?.origin?.startsWith('cawcaw://') || false;
+      const isCapacitor = capacitorInWindow || protocolCheck || customSchemeCheck;
 
       debugLogger.info('oauth', '🔍 Capacitor detection', {
-        capacitorInWindow: 'capacitor' in window,
-        protocolCheck: window.location?.protocol === 'capacitor:',
+        capacitorInWindow,
+        protocolCheck,
+        customSchemeCheck,
         isCapacitor,
         windowLocationOrigin: window.location?.origin,
+        windowLocationProtocol: window.location?.protocol,
       });
 
       if (isCapacitor) {
