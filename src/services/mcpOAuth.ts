@@ -124,6 +124,15 @@ export class MCPOAuthManager {
       throw new Error('Server does not support dynamic client registration');
     }
 
+    // Filter scopes to only include commonly supported ones
+    const commonValidScopes = ['openid', 'profile', 'email', 'read-repos', 'write-repos', 'manage-repos', 'read-mcp', 'write-discussions', 'read-billing', 'inference-api', 'jobs', 'webhooks'];
+    const requestedScopes = discovery.supportedScopes?.filter(scope => commonValidScopes.includes(scope)) || ['openid'];
+    
+    debugLogger.info('oauth', '📋 Filtering OAuth scopes for registration', {
+      supportedScopes: discovery.supportedScopes,
+      filteredScopes: requestedScopes
+    });
+
     const registrationData = {
       client_name: 'caw caw - AI Chat App',
       client_uri: 'https://cawcaw.app',
@@ -132,7 +141,7 @@ export class MCPOAuthManager {
       response_types: ['code'],
       token_endpoint_auth_method: 'none', // PKCE public client
       application_type: 'native',
-      scope: discovery.supportedScopes?.join(' ') || '',
+      scope: requestedScopes.join(' '),
     };
 
     const response = await fetch(discovery.registrationEndpoint, {
