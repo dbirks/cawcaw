@@ -98,6 +98,7 @@ class HTTPMCPClient implements MCPClient {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        'MCP-Protocol-Version': '2025-03-26',
       };
 
       // Add OAuth authorization header if available
@@ -205,6 +206,7 @@ class HTTPMCPClient implements MCPClient {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        'MCP-Protocol-Version': '2025-03-26',
       };
 
       // Add OAuth authorization header if available
@@ -863,6 +865,7 @@ class MCPManager {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        'MCP-Protocol-Version': '2025-03-26',
       };
 
       // Step 1: Initialize the MCP session (required by MCP protocol)
@@ -992,6 +995,7 @@ class MCPManager {
         {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          'MCP-Protocol-Version': '2025-03-26',
         }
       );
 
