@@ -14,9 +14,9 @@ The MCP OAuth flow tests require HuggingFace credentials to complete successfull
 2. **Add your test credentials** to `.env`:
    ```env
    # For MCP OAuth tests
-   HF_USERNAME=your_actual_huggingface_username
-   HF_PASSWORD=your_actual_huggingface_password
-   
+   TEST_HF_USERNAME=your_actual_huggingface_username
+   TEST_HF_PASSWORD=your_actual_huggingface_password
+
    # For conversation flow tests (optional)
    TEST_OPENAI_API_KEY=sk-your-actual-openai-api-key
    ```
@@ -49,7 +49,7 @@ The conversation flow tests can run with or without a real OpenAI API key.
 - Verifies actual AI responses
 - Tests end-to-end functionality
 
-### Without API Key (UI Testing Only)  
+### Without API Key (UI Testing Only)
 - Tests all UI interactions and elements
 - Verifies error handling for invalid API keys
 - Confirms interface works correctly
@@ -61,7 +61,7 @@ The conversation flow tests can run with or without a real OpenAI API key.
 - **Without credentials**: Skip OAuth login, show helpful messages
 - **OAuth errors**: Include error handling scenarios
 
-### Conversation Flow Tests  
+### Conversation Flow Tests
 - **With API key**: Full conversation testing with real AI responses
 - **Without API key**: UI flow testing with expected API errors
 
