@@ -218,8 +218,11 @@ export class MCPOAuthManager {
       clientSecret = registration.clientSecret;
 
       // Store client credentials
+      const clientKey = `${OAUTH_STORAGE_PREFIX}client_${serverId}`;
+      debugLogger.info('oauth', '💾 Storing client credentials', { clientKey, serverId });
+
       await SecureStoragePlugin.set({
-        key: `${OAUTH_STORAGE_PREFIX}client_${serverId}`,
+        key: clientKey,
         value: JSON.stringify({ clientId, clientSecret }),
       });
     } else {
@@ -233,14 +236,20 @@ export class MCPOAuthManager {
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 
     // Store code verifier for later use
+    const verifierKey = `${OAUTH_STORAGE_PREFIX}verifier_${serverId}`;
+    debugLogger.info('oauth', '💾 Storing code verifier', { verifierKey, serverId });
+
     await SecureStoragePlugin.set({
-      key: `${OAUTH_STORAGE_PREFIX}verifier_${serverId}`,
+      key: verifierKey,
       value: codeVerifier,
     });
 
     // Store discovery info for later use
+    const discoveryKey = `${OAUTH_STORAGE_PREFIX}discovery_${serverId}`;
+    debugLogger.info('oauth', '💾 Storing discovery info', { discoveryKey, serverId });
+
     await SecureStoragePlugin.set({
-      key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}`,
+      key: discoveryKey,
       value: JSON.stringify(discovery),
     });
 
@@ -259,8 +268,16 @@ export class MCPOAuthManager {
     // Add state parameter for CSRF protection
     const state = generateCodeVerifier();
     authUrl.searchParams.set('state', state);
+
+    const stateKey = `${OAUTH_STORAGE_PREFIX}state_${serverId}`;
+    debugLogger.info('oauth', '💾 Storing state parameter', {
+      stateKey,
+      serverId,
+      stateLength: state.length,
+    });
+
     await SecureStoragePlugin.set({
-      key: `${OAUTH_STORAGE_PREFIX}state_${serverId}`,
+      key: stateKey,
       value: state,
     });
 
@@ -273,9 +290,27 @@ export class MCPOAuthManager {
     code: string,
     receivedState: string
   ): Promise<MCPOAuthTokens> {
+    debugLogger.info('oauth', '🔐 Starting token exchange', {
+      serverId,
+      hasCode: !!code,
+      hasState: !!receivedState,
+      codeLength: code?.length,
+      stateLength: receivedState?.length,
+    });
+
     // Verify state parameter
+    const stateKey = `${OAUTH_STORAGE_PREFIX}state_${serverId}`;
+    debugLogger.info('oauth', '🔑 Retrieving stored state', { stateKey });
+
     const storedState = await SecureStoragePlugin.get({
-      key: `${OAUTH_STORAGE_PREFIX}state_${serverId}`,
+      key: stateKey,
+    });
+
+    debugLogger.info('oauth', '🔍 State comparison', {
+      hasStoredState: !!storedState?.value,
+      storedStateLength: storedState?.value?.length,
+      receivedStateLength: receivedState?.length,
+      statesMatch: storedState?.value === receivedState,
     });
 
     if (storedState?.value !== receivedState) {
@@ -283,13 +318,38 @@ export class MCPOAuthManager {
     }
 
     // Get stored client credentials and discovery info
+    const verifierKey = `${OAUTH_STORAGE_PREFIX}verifier_${serverId}`;
+    const clientKey = `${OAUTH_STORAGE_PREFIX}client_${serverId}`;
+    const discoveryKey = `${OAUTH_STORAGE_PREFIX}discovery_${serverId}`;
+
+    debugLogger.info('oauth', '🔑 Retrieving OAuth flow data', {
+      verifierKey,
+      clientKey,
+      discoveryKey,
+    });
+
     const [verifierResult, clientResult, discoveryResult] = await Promise.all([
-      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}verifier_${serverId}` }),
-      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
-      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
+      SecureStoragePlugin.get({ key: verifierKey }),
+      SecureStoragePlugin.get({ key: clientKey }),
+      SecureStoragePlugin.get({ key: discoveryKey }),
     ]);
 
+    debugLogger.info('oauth', '📦 OAuth flow data retrieval results', {
+      hasVerifier: !!verifierResult?.value,
+      hasClient: !!clientResult?.value,
+      hasDiscovery: !!discoveryResult?.value,
+      verifierLength: verifierResult?.value?.length,
+      clientLength: clientResult?.value?.length,
+      discoveryLength: discoveryResult?.value?.length,
+    });
+
     if (!verifierResult?.value || !clientResult?.value || !discoveryResult?.value) {
+      debugLogger.error('oauth', '❌ Missing OAuth flow data in secure storage', {
+        missingVerifier: !verifierResult?.value,
+        missingClient: !clientResult?.value,
+        missingDiscovery: !discoveryResult?.value,
+        serverId,
+      });
       throw new Error('OAuth flow data not found - restart authentication');
     }
 
