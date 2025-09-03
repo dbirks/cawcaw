@@ -117,7 +117,11 @@ export class MCPOAuthManager {
   }
 
   // Start OAuth flow with dynamic discovery and registration
-  async startOAuthFlow(serverId: string, serverUrl: string, existingDiscovery?: MCPOAuthDiscovery): Promise<string> {
+  async startOAuthFlow(
+    serverId: string,
+    serverUrl: string,
+    existingDiscovery?: MCPOAuthDiscovery
+  ): Promise<string> {
     // Step 1: Use existing discovery data or discover OAuth capabilities
     let discovery = existingDiscovery;
     if (!discovery) {
@@ -375,7 +379,9 @@ export class MCPOAuthManager {
       }
       return `${window.location.origin}/oauth/callback`;
     }
-    return serverId ? `cawcaw://oauth/callback?server_id=${encodeURIComponent(serverId)}` : 'cawcaw://oauth/callback';
+    return serverId
+      ? `cawcaw://oauth/callback?server_id=${encodeURIComponent(serverId)}`
+      : 'cawcaw://oauth/callback';
   }
 
   // Test if server supports OAuth and get discovery info

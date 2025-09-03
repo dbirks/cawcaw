@@ -131,7 +131,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
       // Load MCP servers
       const configs = await mcpManager.loadConfigurations();
-      
+
       setServers(configs);
       setServerStatuses(mcpManager.getServerStatuses());
 
@@ -639,7 +639,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             Add Server
                           </Button>
                         </DialogTrigger>
-                        <DialogContent 
+                        <DialogContent
                           className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border"
                           showCloseButton={false}
                         >
@@ -998,7 +998,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
                       {/* Edit Server Dialog */}
                       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-                        <DialogContent 
+                        <DialogContent
                           className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border"
                           showCloseButton={false}
                         >
@@ -1232,7 +1232,11 @@ export default function Settings({ onClose }: SettingsProps) {
                                             size="sm"
                                             onClick={() => handleOAuthAuthenticate(server.id)}
                                             className="px-3 py-2"
-                                            title={server.requiresAuth ? "OAuth Authentication Required" : "Connect with OAuth (Optional)"}
+                                            title={
+                                              server.requiresAuth
+                                                ? 'OAuth Authentication Required'
+                                                : 'Connect with OAuth (Optional)'
+                                            }
                                           >
                                             <Unlock className="h-4 w-4" />
                                           </Button>
