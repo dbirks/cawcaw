@@ -64,7 +64,9 @@ class OAuthRedirectHandler {
           this.showSuccess('OAuth authentication successful! You can now use this MCP server.');
         } catch (error) {
           console.error('Failed to complete OAuth flow:', error);
-          this.showError(`OAuth authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          this.showError(
+            `OAuth authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
         }
       }
     } catch (error) {
@@ -120,12 +122,12 @@ class OAuthRedirectHandler {
   buildOAuthUrl(baseAuthUrl: string, serverId: string): string {
     try {
       const url = new URL(baseAuthUrl);
-      
+
       // Add server_id to the state parameter or as a separate parameter
       // We'll embed it in the redirect_uri as a query parameter
       const redirectUri = `${this.getRedirectUri()}?server_id=${encodeURIComponent(serverId)}`;
       url.searchParams.set('redirect_uri', redirectUri);
-      
+
       return url.toString();
     } catch (error) {
       console.error('Failed to build OAuth URL:', error);
