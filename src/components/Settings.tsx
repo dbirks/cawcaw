@@ -131,6 +131,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
       // Load MCP servers
       const configs = await mcpManager.loadConfigurations();
+      
       setServers(configs);
       setServerStatuses(mcpManager.getServerStatuses());
 
@@ -140,10 +141,10 @@ export default function Settings({ onClose }: SettingsProps) {
         setApiKey(result.value);
       }
 
-      // Load OAuth statuses for servers that require OAuth
+      // Load OAuth statuses for servers that require or support OAuth
       const oauthStatusMap = new Map<string, boolean>();
       for (const server of configs) {
-        if (server.requiresAuth) {
+        if (server.requiresAuth || server.oauthDiscovery) {
           const hasValidTokens = await mcpManager.hasValidOAuthTokens(server.id);
           oauthStatusMap.set(server.id, hasValidTokens);
         }
@@ -234,10 +235,11 @@ export default function Settings({ onClose }: SettingsProps) {
     }
 
     try {
-      // Use test result to determine if OAuth is required
+      // Use test result to determine if OAuth is required and include discovery info
       const serverConfig = {
         ...newServer,
         requiresAuth: connectionTestResult?.requiresAuth || false,
+        oauthDiscovery: connectionTestResult?.oauthDiscovery,
       };
 
       await mcpManager.addServer(serverConfig);
@@ -1161,7 +1163,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                             ? 'HTTP-STREAMABLE'
                                             : server.transportType.toUpperCase()}
                                         </Badge>
-                                        {server.requiresAuth &&
+                                        {(server.requiresAuth || server.oauthDiscovery) &&
                                           (oauthStatuses.get(server.id) ? (
                                             <Badge
                                               variant="default"
@@ -1170,10 +1172,15 @@ export default function Settings({ onClose }: SettingsProps) {
                                               <Unlock className="h-3 w-3 mr-1" />
                                               OAuth Connected
                                             </Badge>
-                                          ) : (
+                                          ) : server.requiresAuth ? (
                                             <Badge variant="destructive" className="text-xs">
                                               <Lock className="h-3 w-3 mr-1" />
                                               OAuth Required
+                                            </Badge>
+                                          ) : (
+                                            <Badge variant="outline" className="text-xs">
+                                              <Unlock className="h-3 w-3 mr-1" />
+                                              OAuth Available
                                             </Badge>
                                           ))}
                                       </div>
@@ -1208,13 +1215,14 @@ export default function Settings({ onClose }: SettingsProps) {
                                       />
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      {server.requiresAuth &&
+                                      {(server.requiresAuth || server.oauthDiscovery) &&
                                         (oauthStatuses.get(server.id) ? (
                                           <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleOAuthDisconnect(server.id)}
                                             className="px-3 py-2"
+                                            title="Disconnect OAuth Authentication"
                                           >
                                             <Lock className="h-4 w-4" />
                                           </Button>
@@ -1224,6 +1232,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                             size="sm"
                                             onClick={() => handleOAuthAuthenticate(server.id)}
                                             className="px-3 py-2"
+                                            title={server.requiresAuth ? "OAuth Authentication Required" : "Connect with OAuth (Optional)"}
                                           >
                                             <Unlock className="h-4 w-4" />
                                           </Button>

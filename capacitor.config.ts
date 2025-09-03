@@ -9,7 +9,11 @@ const config: CapacitorConfig = {
   },
   ios: {
     preferredContentMode: 'mobile',
-    contentInset: 'never' // Let CSS handle safe areas to avoid double padding
+    contentInset: 'never', // Let CSS handle safe areas to avoid double padding
+    scheme: 'cawcaw' // Register custom URL scheme for OAuth redirects
+  },
+  android: {
+    scheme: 'cawcaw' // Register custom URL scheme for OAuth redirects
   },
   plugins: {
     SplashScreen: {
@@ -24,6 +28,9 @@ const config: CapacitorConfig = {
     },
     CapacitorHttp: {
       enabled: true // Enable native HTTP to bypass CORS on mobile
+    },
+    App: {
+      handleContentUrlSchemes: ['cawcaw'] // Handle custom URL scheme redirects
     }
   }
 };

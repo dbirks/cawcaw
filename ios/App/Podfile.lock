@@ -1,6 +1,8 @@
 PODS:
   - Capacitor (7.4.2):
     - CapacitorCordova
+  - CapacitorApp (7.0.2):
+    - Capacitor
   - CapacitorCommunitySafeArea (7.0.0-alpha.1):
     - Capacitor
   - CapacitorCordova (7.4.2)
@@ -15,6 +17,7 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/app`)"
   - "CapacitorCommunitySafeArea (from `../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.4.2/node_modules/@capacitor-community/safe-area`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/keyboard`)"
@@ -28,6 +31,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.2_@capacitor+core@7.4.2/node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/.pnpm/@capacitor+app@7.0.2_@capacitor+core@7.4.2/node_modules/@capacitor/app"
   CapacitorCommunitySafeArea:
     :path: "../../node_modules/.pnpm/@capacitor-community+safe-area@7.0.0-alpha.1_@capacitor+core@7.4.2/node_modules/@capacitor-community/safe-area"
   CapacitorCordova:
@@ -41,6 +46,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: 9d9e481b79ffaeacaf7a85d6a11adec32bd33b59
+  CapacitorApp: 1f6922c9c5c8b1c538d7fbe92ebe44a81b34bed3
   CapacitorCommunitySafeArea: 3f049619072ab5d0da2529bcb05b358ff6c13dc1
   CapacitorCordova: 5e58d04631bc5094894ac106e2bf1da18a9e6151
   CapacitorKeyboard: a86aa9e4741b6444a802df26440a92ae041b34a6
@@ -48,6 +54,6 @@ SPEC CHECKSUMS:
   CapacitorStatusBar: e04d05e121d5a5979c29eb4249186a4e4a84cacb
   SwiftKeychainWrapper: 807ba1d63c33a7d0613288512399cd1eda1e470c
 
-PODFILE CHECKSUM: 9115e1c3325c485bbe626d2ca364c5dfe1943605
+PODFILE CHECKSUM: 982e592754ca8e510c907276d09cc8a3b997958a
 
 COCOAPODS: 1.16.2

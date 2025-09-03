@@ -86,7 +86,7 @@ export class MCPOAuthManager {
     const registrationData = {
       client_name: 'caw caw - AI Chat App',
       client_uri: 'https://cawcaw.app',
-      redirect_uris: [this.getRedirectUri()],
+      redirect_uris: [this.getRedirectUri()], // Don't include serverId in registration
       grant_types: ['authorization_code'],
       response_types: ['code'],
       token_endpoint_auth_method: 'none', // PKCE public client
@@ -117,11 +117,14 @@ export class MCPOAuthManager {
   }
 
   // Start OAuth flow with dynamic discovery and registration
-  async startOAuthFlow(serverId: string, serverUrl: string): Promise<string> {
-    // Step 1: Discover OAuth capabilities
-    const discovery = await this.discoverOAuthCapabilities(serverUrl);
+  async startOAuthFlow(serverId: string, serverUrl: string, existingDiscovery?: MCPOAuthDiscovery): Promise<string> {
+    // Step 1: Use existing discovery data or discover OAuth capabilities
+    let discovery = existingDiscovery;
     if (!discovery) {
-      throw new Error('Server does not support OAuth authentication');
+      discovery = await this.discoverOAuthCapabilities(serverUrl);
+      if (!discovery) {
+        throw new Error('Server does not support OAuth authentication');
+      }
     }
 
     // Step 2: Register client dynamically if supported
@@ -166,7 +169,7 @@ export class MCPOAuthManager {
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
-    authUrl.searchParams.set('redirect_uri', this.getRedirectUri());
+    authUrl.searchParams.set('redirect_uri', this.getRedirectUri(serverId));
 
     if (discovery.supportedScopes && discovery.supportedScopes.length > 0) {
       authUrl.searchParams.set('scope', discovery.supportedScopes.join(' '));
@@ -217,7 +220,7 @@ export class MCPOAuthManager {
       grant_type: 'authorization_code',
       client_id: clientData.clientId,
       code,
-      redirect_uri: this.getRedirectUri(),
+      redirect_uri: this.getRedirectUri(serverId),
       code_verifier: verifierResult.value,
     });
 
@@ -360,17 +363,19 @@ export class MCPOAuthManager {
   }
 
   // Get redirect URI for OAuth flow
-  private getRedirectUri(): string {
+  private getRedirectUri(serverId?: string): string {
     // For mobile apps, use a custom scheme
     // For web apps, use the current origin
     if (typeof window !== 'undefined') {
       const isCapacitor = 'capacitor' in window;
       if (isCapacitor) {
-        return 'cawcaw://oauth/callback';
+        // Include server ID in the callback URL for mobile
+        const baseUri = 'cawcaw://oauth/callback';
+        return serverId ? `${baseUri}?server_id=${encodeURIComponent(serverId)}` : baseUri;
       }
       return `${window.location.origin}/oauth/callback`;
     }
-    return 'cawcaw://oauth/callback';
+    return serverId ? `cawcaw://oauth/callback?server_id=${encodeURIComponent(serverId)}` : 'cawcaw://oauth/callback';
   }
 
   // Test if server supports OAuth and get discovery info

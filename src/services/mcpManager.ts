@@ -459,9 +459,16 @@ class MCPManager {
     this.serverConfigs.push(newConfig);
     await this.saveConfigurations();
 
-    // Test connection if enabled
+    // Test connection if enabled (but don't fail if connection fails)
     if (newConfig.enabled) {
-      await this.connectToServer(newConfig.id);
+      try {
+        await this.connectToServer(newConfig.id);
+      } catch (error) {
+        console.warn(`Failed to connect to new server ${newConfig.name} (${newConfig.id}):`, error);
+        // Server is still added to configuration even if initial connection fails
+        // This allows users to add servers that might have temporary connectivity issues
+        // or require OAuth authentication
+      }
     }
 
     return newConfig;
@@ -790,11 +797,11 @@ class MCPManager {
   // Start OAuth flow for a server
   async startOAuthFlow(serverId: string): Promise<string> {
     const config = this.serverConfigs.find((s) => s.id === serverId);
-    if (!config?.requiresAuth) {
-      throw new Error('Server does not require OAuth authentication');
+    if (!config?.requiresAuth && !config?.oauthDiscovery) {
+      throw new Error('Server does not support OAuth authentication');
     }
 
-    return await mcpOAuthManager.startOAuthFlow(serverId, config.url);
+    return await mcpOAuthManager.startOAuthFlow(serverId, config.url, config.oauthDiscovery);
   }
 
   // Complete OAuth flow with authorization code
