@@ -4,7 +4,7 @@ import { mcpOAuthManager } from '@/services/mcpOAuth';
 
 // MCP Protocol Version Support
 const MCP_SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26'] as const;
-type MCPVersion = typeof MCP_SUPPORTED_VERSIONS[number];
+type MCPVersion = (typeof MCP_SUPPORTED_VERSIONS)[number];
 
 // Helper function for version-negotiated HTTP requests
 async function makeVersionedMCPRequest(
@@ -12,7 +12,7 @@ async function makeVersionedMCPRequest(
   payload: object,
   oauthConfig?: MCPOAuthTokens,
   supportedVersions = MCP_SUPPORTED_VERSIONS
-): Promise<{ response: any; version: MCPVersion }> {
+): Promise<{ response: Response; version: MCPVersion }> {
   for (const version of supportedVersions) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -27,13 +27,17 @@ async function makeVersionedMCPRequest(
     try {
       const response = await httpClient.post(endpoint, payload, headers);
       return { response, version };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If 406 error and not the last version to try, continue with next version
-      if (error?.message?.includes('406') && version !== supportedVersions[supportedVersions.length - 1]) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (
+        errorMessage.includes('406') &&
+        version !== supportedVersions[supportedVersions.length - 1]
+      ) {
         debugLogger.info('mcp', `🔄 Version ${version} failed with 406, trying next version`, {
           endpoint,
           currentVersion: version,
-          error: error.message,
+          error: errorMessage,
         });
         continue;
       }
@@ -41,9 +45,10 @@ async function makeVersionedMCPRequest(
       throw error;
     }
   }
-  
+
   throw new Error(`All supported MCP versions failed: ${supportedVersions.join(', ')}`);
 }
+
 import type {
   MCPManagerConfig,
   MCPOAuthDiscovery,
