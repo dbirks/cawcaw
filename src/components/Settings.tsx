@@ -42,8 +42,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/hooks/useTheme';
+import { type DebugLogEntry, debugLogger } from '@/services/debugLogger';
 import { mcpManager } from '@/services/mcpManager';
-import { debugLogger, type DebugLogEntry } from '@/services/debugLogger';
 import type { MCPOAuthDiscovery, MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 
 interface SettingsProps {
@@ -63,6 +63,7 @@ export default function Settings({ onClose }: SettingsProps) {
   // Debug logs state
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
   const [debugFilter, setDebugFilter] = useState<'all' | 'oauth' | 'mcp' | 'general'>('all');
+  const debugFilterId = useId();
 
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
@@ -1372,11 +1373,11 @@ export default function Settings({ onClose }: SettingsProps) {
                       {/* Debug Controls */}
                       <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <label htmlFor="debug-filter" className="text-sm font-medium">
+                          <label htmlFor={debugFilterId} className="text-sm font-medium">
                             Filter:
                           </label>
                           <select
-                            id="debug-filter"
+                            id={debugFilterId}
                             value={debugFilter}
                             onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
                             className="px-2 py-1 text-sm border rounded bg-background"

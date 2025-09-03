@@ -4,7 +4,7 @@ export interface DebugLogEntry {
   level: 'info' | 'warn' | 'error';
   category: 'oauth' | 'mcp' | 'general';
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 class DebugLogger {
@@ -16,7 +16,7 @@ class DebugLogger {
     level: 'info' | 'warn' | 'error',
     category: 'oauth' | 'mcp' | 'general',
     message: string,
-    data?: any
+    data?: unknown
   ) {
     const entry: DebugLogEntry = {
       timestamp: Date.now(),
@@ -43,18 +43,20 @@ class DebugLogger {
     }
 
     // Notify listeners
-    this.listeners.forEach((listener) => listener([...this.logs]));
+    this.listeners.forEach((listener) => {
+      listener([...this.logs]);
+    });
   }
 
-  info(category: 'oauth' | 'mcp' | 'general', message: string, data?: any) {
+  info(category: 'oauth' | 'mcp' | 'general', message: string, data?: unknown) {
     this.log('info', category, message, data);
   }
 
-  warn(category: 'oauth' | 'mcp' | 'general', message: string, data?: any) {
+  warn(category: 'oauth' | 'mcp' | 'general', message: string, data?: unknown) {
     this.log('warn', category, message, data);
   }
 
-  error(category: 'oauth' | 'mcp' | 'general', message: string, data?: any) {
+  error(category: 'oauth' | 'mcp' | 'general', message: string, data?: unknown) {
     this.log('error', category, message, data);
   }
 
@@ -68,7 +70,9 @@ class DebugLogger {
 
   clearLogs() {
     this.logs = [];
-    this.listeners.forEach((listener) => listener([]));
+    this.listeners.forEach((listener) => {
+      listener([]);
+    });
   }
 
   subscribe(listener: (logs: DebugLogEntry[]) => void) {
@@ -93,7 +97,7 @@ class DebugLogger {
     let formatted = `[${timestamp}] ${level} ${category} ${entry.message}`;
 
     if (entry.data) {
-      formatted += '\n' + JSON.stringify(entry.data, null, 2);
+      formatted += `\n${JSON.stringify(entry.data, null, 2)}`;
     }
 
     return formatted;
