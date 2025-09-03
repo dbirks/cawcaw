@@ -180,7 +180,6 @@ export class MCPOAuthManagerCompliant {
         }
       } catch (error) {
         debugLogger.debug('oauth', `Well-known endpoint ${endpoint} not available:`, error);
-        continue;
       }
     }
     
