@@ -196,13 +196,27 @@ export default function Settings({ onClose }: SettingsProps) {
   // OAuth Functions
   const handleOAuthAuthenticate = async (serverId: string) => {
     try {
+      console.log('🚀 Starting OAuth authentication for server:', serverId);
+      
+      // Find server config for debugging
+      const serverConfig = servers.find(s => s.id === serverId);
+      console.log('📋 Server config:', serverConfig);
+      
+      if (!serverConfig) {
+        throw new Error(`Server configuration not found for ID: ${serverId}`);
+      }
+      
+      console.log('🔍 Calling mcpManager.startOAuthFlow...');
       const authUrl = await mcpManager.startOAuthFlow(serverId);
+      console.log('✅ OAuth URL generated:', authUrl);
 
       // Open OAuth URL in system browser
       if (typeof window !== 'undefined' && 'open' in window) {
+        console.log('🌐 Opening OAuth URL in browser...');
         window.open(authUrl, '_blank', 'noopener,noreferrer');
       } else {
         // Fallback - copy URL to clipboard
+        console.log('📋 Fallback: copying OAuth URL to clipboard...');
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(authUrl);
           alert('OAuth URL copied to clipboard. Please open it in your browser.');
@@ -211,8 +225,13 @@ export default function Settings({ onClose }: SettingsProps) {
         }
       }
     } catch (error) {
-      console.error('Failed to start OAuth flow:', error);
-      alert('Failed to start OAuth authentication. Please check your configuration.');
+      console.error('❌ Failed to start OAuth flow:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        serverId
+      });
+      alert(`Failed to start OAuth authentication: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
