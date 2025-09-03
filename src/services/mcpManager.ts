@@ -1,24 +1,15 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { debugLogger } from '@/services/debugLogger';
-import { mcpOAuthManager } from '@/services/mcpOAuth';
 import { mcpOAuthManagerCompliant } from '@/services/mcpOAuthCompliant';
 
 // MCP Protocol Version Support
 const MCP_SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26'] as const;
 type MCPVersion = (typeof MCP_SUPPORTED_VERSIONS)[number];
 
-// OAuth Implementation Mode Configuration
-const USE_MCP_OAUTH_2_1_COMPLIANT = true; // Set to true to use MCP 2025-03-26 compliant OAuth
-
-// Get the appropriate OAuth manager based on configuration
+// OAuth Implementation - Using MCP OAuth 2.1 compliant implementation (2025-03-26 spec)
 function getOAuthManager() {
-  if (USE_MCP_OAUTH_2_1_COMPLIANT) {
-    debugLogger.info('oauth', '🔧 Using MCP OAuth 2.1 compliant implementation (2025-03-26 spec)');
-    return mcpOAuthManagerCompliant;
-  } else {
-    debugLogger.info('oauth', '🔧 Using legacy OAuth implementation');
-    return mcpOAuthManager;
-  }
+  debugLogger.info('oauth', '🔧 Using MCP OAuth 2.1 compliant implementation (2025-03-26 spec)');
+  return mcpOAuthManagerCompliant;
 }
 
 // Helper function for version-negotiated HTTP requests
@@ -607,12 +598,12 @@ class MCPManager {
       // Handle OAuth authentication if required
       if (config.requiresAuth) {
         // Load stored tokens
-        oauthTokens = (await mcpOAuthManager.loadOAuthTokens(serverId)) || undefined;
+        oauthTokens = (await getOAuthManager().loadOAuthTokens(serverId)) || undefined;
 
         if (oauthTokens) {
           // Refresh token if needed
           if (oauthTokens.accessToken) {
-            oauthTokens = await mcpOAuthManager.refreshTokenIfNeeded(serverId, oauthTokens);
+            oauthTokens = await getOAuthManager().refreshTokenIfNeeded(serverId, oauthTokens);
           }
 
           if (!oauthTokens.accessToken) {
@@ -807,7 +798,7 @@ class MCPManager {
 
         if (connectionResult.success) {
           // Basic connection works, now check if OAuth is available as an option
-          const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
+          const oauthTest = await getOAuthManager().testOAuthSupport(config.url);
 
           return {
             connectionSuccess: true,
@@ -828,7 +819,7 @@ class MCPManager {
         );
 
         // Basic connection failed, check if OAuth might be required
-        const oauthTest = await mcpOAuthManager.testOAuthSupport(config.url);
+        const oauthTest = await getOAuthManager().testOAuthSupport(config.url);
 
         if (oauthTest.supportsOAuth && oauthTest.discovery) {
           return {
@@ -928,13 +919,8 @@ class MCPManager {
   async clearOAuthTokens(serverId: string): Promise<void> {
     const oauthManager = getOAuthManager();
 
-    // Clear tokens using appropriate manager
-    if (USE_MCP_OAUTH_2_1_COMPLIANT) {
-      // For compliant manager, we need to implement clearOAuthTokens method
-      await oauthManager.loadOAuthTokens(serverId); // Use existing method for now
-    } else {
-      await mcpOAuthManager.clearOAuthTokens(serverId);
-    }
+    // Clear tokens using OAuth 2.1 compliant manager
+    await oauthManager.clearOAuthTokens(serverId);
 
     await this.disconnectFromServer(serverId);
   }
