@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:kill": "lsof -ti:5173 | xargs -r kill -9",
     "build": "tsc -b && vite build",
     "build:mobile": "pnpm build && pnpm cap:sync",
     "android": "pnpm build && pnpm cap:sync:android && pnpm cap:run:android",
@@ -26,6 +27,7 @@
     "cap:doctor": "cap doctor",
     "cap:ls": "cap ls",
     "test": "playwright test",
+    "test:dev": "PLAYWRIGHT_REUSE_SERVER=false playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui"
