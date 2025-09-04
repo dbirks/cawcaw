@@ -202,7 +202,7 @@ class HTTPMCPClient implements MCPClient {
       // Debug: Log the full initialize response
       console.log(
         '[MCPClient] Initialize response headers:',
-        initResponse.headers instanceof Headers 
+        initResponse.headers instanceof Headers
           ? Object.fromEntries(initResponse.headers.entries())
           : initResponse.headers
       );
