@@ -202,7 +202,9 @@ class HTTPMCPClient implements MCPClient {
       // Debug: Log the full initialize response
       console.log(
         '[MCPClient] Initialize response headers:',
-        Object.fromEntries(initResponse.headers.entries())
+        initResponse.headers instanceof Headers 
+          ? Object.fromEntries(initResponse.headers.entries())
+          : initResponse.headers
       );
       console.log('[MCPClient] Initialize response body:', JSON.stringify(initData, null, 2));
 
@@ -225,8 +227,9 @@ class HTTPMCPClient implements MCPClient {
 
       // Also check if session ID is in the response body
       if (!sessionId && initData.result && typeof initData.result === 'object') {
-        const result = initData.result as Record<string, unknown>;
-        sessionId = result.sessionId || result.session_id || result.id;
+        const result = initData.result as unknown as Record<string, unknown>;
+        const sessionIdValue = result.sessionId || result.session_id || result.id;
+        sessionId = typeof sessionIdValue === 'string' ? sessionIdValue : null;
       }
 
       // If HuggingFace doesn't provide session ID, try using the request ID directly
