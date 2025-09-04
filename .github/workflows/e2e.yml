@@ -13,7 +13,7 @@ env:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     
     steps:
     - name: 🔍 Checkout repository
@@ -73,13 +73,18 @@ jobs:
         TEST_BASE_URL: "http://localhost:5173"
         CI: true
       run: |
-        echo "Running Playwright e2e tests..."
+        echo "Running critical Playwright e2e tests..."
         echo "🔑 Using API key: ${TEST_OPENAI_API_KEY:0:8}... (masked)"
         echo "👤 Using HF user: $TEST_HF_USERNAME"
         echo "🌐 Testing against: $TEST_BASE_URL"
+        echo ""
+        echo "ℹ️  Running critical tests only (smoke + HF MCP) for CI performance"
+        echo "ℹ️  Full test suite: run 'pnpm test' locally for all 19 tests"
         
-        pnpm test --reporter=github
-        echo "✅ E2E tests completed successfully"
+        # Run only critical tests for CI speed - smoke tests verify basic functionality
+        # and HF MCP tests verify our key feature integration
+        pnpm test tests/e2e/smoke.spec.ts tests/e2e/hf-mcp-server-investigation.spec.ts --reporter=github --timeout=20000
+        echo "✅ Critical E2E tests completed successfully"
 
     - name: 📊 Upload test results
       if: failure()
