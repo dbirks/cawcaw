@@ -39,8 +39,11 @@ export default defineConfig({
     {
       name: "Mobile Chrome",
       use: {
-        ...devices["iPhone 15"],
-        channel: 'chrome',
+        viewport: { width: 393, height: 852 }, // iPhone 15 dimensions
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/116.0.0.0 Mobile/15E148 Safari/604.1',
+        deviceScaleFactor: 3,
+        isMobile: true,
+        hasTouch: true,
         launchOptions: {
           args: [
             "--disable-web-security",
