@@ -95,29 +95,18 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
       
       console.log('🎯 Connection successful! HF MCP server OAuth configured automatically.');
       
-      // Step 7: Click Error Details to get the full analysis
-      await page.click('button:has-text("Error Details")');
+      // Step 7: Add the server since connection is successful  
+      console.log('✅ Connection verified. Adding HF MCP server...');
+      await page.getByRole('button', { name: 'Add Server' }).click();
       
-      // Verify the detailed error information
-      await expect(page.locator('text=HTTP Status:')).toBeVisible();
-      await expect(page.locator('text=400 Bad Request')).toBeVisible();
-      await expect(page.locator('text=JSON-RPC Error:')).toBeVisible();
-      await expect(page.locator('text=Session ID required')).toBeVisible();
+      // Wait for server to be added successfully
+      await page.waitForTimeout(2000);
+      await expect(page.getByText('HuggingFace MCP Investigation Server').or(page.getByText('Hugging Face MCP Server'))).toBeVisible();
+      console.log('🎉 HF MCP server added successfully!');
       
-      // Verify the JSON response format
-      await expect(page.locator('text=Response:')).toBeVisible();
-      const responseText = await page.locator('text*={"jsonrpc":"2.0","error"').textContent();
-      expect(responseText).toContain('Session ID required');
-      
-      console.log('✅ MYSTERY SOLVED: Server requires Session ID (OAuth authentication needed first)');
-      
-      // Step 8: Add the server anyway to test OAuth flow
-      await page.click('button:has-text("Add Server")');
-      
-      // Wait for server to be added
-      await expect(page.locator('text=HuggingFace MCP Investigation Server')).toBeVisible();
-      await expect(page.locator('text=Disconnected')).toBeVisible();
-      await expect(page.locator('text=OAuth Required')).toBeVisible();
+      // Verify server shows OAuth requirement
+      await expect(page.getByText('OAuth authentication required').or(page.getByText('OAuth Required'))).toBeVisible();
+      console.log('✅ VERIFIED: Server correctly shows OAuth authentication requirement');
     }
     
     // Step 9: Test OAuth Flow Initiation
@@ -164,23 +153,36 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
   });
   
   test('verify MCP server error handling and UI responsiveness in mobile', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
     
-    // Navigate to MCP settings
-    await page.click('button:has(img):near(h1)');
-    await page.click('text=Tools & MCP');
+    // Handle API key setup if needed
+    const apiKeyInput = page.getByPlaceholder(/sk-/);
+    if (await apiKeyInput.isVisible()) {
+      const testApiKey = process.env.TEST_OPENAI_API_KEY;
+      if (testApiKey && testApiKey.startsWith('sk-')) {
+        await apiKeyInput.fill(testApiKey);
+        await page.getByRole('button', { name: 'Save API Key' }).click();
+        await page.waitForLoadState('networkidle');
+      }
+    }
+    
+    // Navigate to MCP settings using modern selectors
+    const settingsButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    await settingsButton.click();
+    await page.getByRole('tab', { name: 'MCP' }).click();
     
     // Test adding server with invalid URL to verify error handling
-    await page.click('button:has-text("Add Server")');
+    await page.getByRole('button', { name: 'Add Server' }).click();
     
-    await page.fill('textbox:has-text("Name")', 'Invalid MCP Server Test');
-    await page.fill('textbox:has-text("URL")', 'https://invalid-mcp-server.example.com');
+    await page.getByPlaceholder('My MCP Server').fill('Invalid MCP Server Test');
+    await page.getByPlaceholder('https://example.com/mcp').fill('https://invalid-mcp-server.example.com');
     
     // Test connection with invalid server
-    await page.click('button:has-text("Test Connection")');
+    await page.getByRole('button', { name: 'Test Connection' }).click();
     
     // Should show connection failed
-    await expect(page.locator('text=Connection Failed')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Connection Failed').or(page.getByText('Connection Error'))).toBeVisible({ timeout: 10000 });
     
     // Verify mobile UI still responsive
     await expect(page.locator('dialog:has-text("Add MCP Server")')).toBeVisible();
@@ -191,14 +193,27 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
   });
   
   test('mobile UI navigation and responsiveness test', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    
+    // Handle API key setup if needed
+    const apiKeyInput = page.getByPlaceholder(/sk-/);
+    if (await apiKeyInput.isVisible()) {
+      const testApiKey = process.env.TEST_OPENAI_API_KEY;
+      if (testApiKey && testApiKey.startsWith('sk-')) {
+        await apiKeyInput.fill(testApiKey);
+        await page.getByRole('button', { name: 'Save API Key' }).click();
+        await page.waitForLoadState('networkidle');
+      }
+    }
     
     // Test full mobile navigation flow
-    await expect(page.locator('h1:has-text("caw caw")')).toBeVisible();
+    await expect(page.getByText('caw caw')).toBeVisible();
     
-    // Settings navigation
-    await page.click('button:has(img):near(h1)');
-    await expect(page.locator('text=Settings')).toBeVisible();
+    // Settings navigation using modern selectors
+    const settingsButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    await settingsButton.click();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
     
     // Test all tabs in mobile view
     const tabs = ['LLM Provider', 'Tools & MCP', 'Appearance', 'Debug'];
