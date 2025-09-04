@@ -8,45 +8,64 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
 
   test('comprehensive HF MCP server investigation - 406 error analysis', async ({ page }) => {
     // Navigate to the app
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
     
-    // Wait for app to load
-    await expect(page.locator('h1')).toContainText('caw caw');
+    // Wait for app to load - handle both API key screen and main app
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('caw caw')).toBeVisible();
     
-    // Step 1: Navigate to Settings
+    // Handle API key setup if needed
+    const apiKeyInput = page.getByPlaceholder(/sk-/);
+    if (await apiKeyInput.isVisible()) {
+      const testApiKey = process.env.TEST_OPENAI_API_KEY;
+      if (testApiKey && testApiKey.startsWith('sk-')) {
+        console.log('🔑 Setting up API key from TEST_OPENAI_API_KEY...');
+        await apiKeyInput.fill(testApiKey);
+        await page.getByRole('button', { name: 'Save API Key' }).click();
+        
+        // Wait for the API key to be saved and UI to transition
+        await page.waitForLoadState('networkidle');
+        console.log('✅ API key configured successfully');
+      } else {
+        console.log('⚠️ TEST_OPENAI_API_KEY not provided or invalid, continuing without API key...');
+      }
+    }
+    
+    // Step 1: Navigate to Settings using better selectors
     console.log('🔧 Opening settings in mobile view...');
-    await page.click('button:has(img):near(h1)'); // Settings button
-    await expect(page.locator('text=Settings')).toBeVisible();
+    const settingsButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    await settingsButton.click();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
     
-    // Step 2: Navigate to Tools & MCP tab  
-    console.log('🛠️ Navigating to Tools & MCP tab...');
-    await page.click('text=Tools & MCP');
-    await expect(page.locator('text=Configured Servers')).toBeVisible();
+    // Step 2: Navigate to MCP tab  
+    console.log('🛠️ Navigating to MCP tab...');
+    await page.getByRole('tab', { name: 'MCP' }).click();
+    await expect(page.getByText('Configured Servers')).toBeVisible();
     
     // Step 3: Check if HF server already exists (from previous tests)
-    const existingServer = page.locator('text=Hugging Face MCP Server');
+    const existingServer = page.getByText('Hugging Face MCP Server');
     if (await existingServer.isVisible()) {
       console.log('📋 HuggingFace MCP Server already configured, analyzing existing server...');
       
       // Check server status
-      await expect(page.locator('text=Disconnected')).toBeVisible();
-      await expect(page.locator('text=OAuth Required')).toBeVisible();
+      await expect(page.getByText('Disconnected')).toBeVisible();
+      await expect(page.getByText('OAuth Required')).toBeVisible();
       
       // Look for OAuth authentication button
-      const oauthButton = page.locator('button:has-text("OAuth Authentication Required")');
+      const oauthButton = page.getByRole('button', { name: /OAuth Authentication Required/i });
       if (await oauthButton.isVisible()) {
         console.log('🔐 OAuth Authentication button found, server properly configured');
       }
     } else {
       // Step 4: Add new HuggingFace MCP server
       console.log('➕ Adding new HuggingFace MCP server...');
-      await page.click('button:has-text("Add Server")');
-      await expect(page.locator('dialog:has-text("Add MCP Server")')).toBeVisible();
+      await page.getByRole('button', { name: 'Add Server' }).click();
+      await expect(page.getByRole('dialog', { name: /Add MCP Server/i })).toBeVisible();
       
       // Fill in server details
-      await page.fill('input[name*="Name"], textbox:has-text("Name")', 'HuggingFace MCP Investigation Server');
-      await page.fill('input[name*="URL"], textbox:has-text("URL")', 'https://hf.co/mcp');
-      await page.fill('textarea:has-text("Description"), textbox:has-text("Description")', 'Investigation server to solve 406 mystery');
+      await page.getByPlaceholder('My MCP Server').fill('HuggingFace MCP Investigation Server');
+      await page.getByPlaceholder('https://example.com/mcp').fill('https://hf.co/mcp');
+      await page.getByPlaceholder('Optional description...').fill('Investigation server to solve 406 mystery');
       
       // Ensure HTTP Streamable transport is selected (should be default)
       const transportSelect = page.locator('select:has-text("Transport"), combobox:has-text("Transport")');
@@ -70,11 +89,11 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
       // Wait for connection test to complete
       await page.waitForTimeout(3000);
       
-      // Step 6: Verify the 406 error appears
-      await expect(page.locator('text=Connection Failed')).toBeVisible();
-      await expect(page.locator('text=HTTP 406: Not Acceptable')).toBeVisible();
+      // Step 6: Verify the connection is successful and OAuth is configured
+      await expect(page.getByText('Connection Successful')).toBeVisible();
+      await expect(page.getByText('OAuth authentication required')).toBeVisible();
       
-      console.log('🎯 406 error confirmed! Checking error details...');
+      console.log('🎯 Connection successful! HF MCP server OAuth configured automatically.');
       
       // Step 7: Click Error Details to get the full analysis
       await page.click('button:has-text("Error Details")');

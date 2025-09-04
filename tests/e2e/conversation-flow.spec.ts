@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Conversation Flow', () => {
   test('complete conversation flow with OpenAI API', async ({ page }) => {
     // Navigate to the app
-    await page.goto('http://localhost:5174');
+    await page.goto('/');
     
     // Wait for app to load
     await expect(page.locator('h1')).toContainText('caw caw');
@@ -111,7 +111,7 @@ test.describe('Conversation Flow', () => {
   });
   
   test('conversation UI elements and interactions', async ({ page }) => {
-    await page.goto('http://localhost:5174');
+    await page.goto('/');
     
     // Test all UI elements are present
     await expect(page.locator('h1:has-text("caw caw")')).toBeVisible();
@@ -149,7 +149,7 @@ test.describe('Conversation Flow', () => {
   });
   
   test('settings integration', async ({ page }) => {
-    await page.goto('http://localhost:5174');
+    await page.goto('/');
     
     // Open settings
     await page.click('button:has(img):near(h1)');

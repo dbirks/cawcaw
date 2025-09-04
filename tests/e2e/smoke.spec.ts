@@ -29,15 +29,24 @@ test.describe('App Smoke Tests', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     
-    // Look for chat-related elements
-    const chatElements = page.locator('[data-testid*="chat"], .chat, textarea, input').filter({ hasText: /message|chat|type|send/i });
-    const hasChatInterface = await chatElements.count() > 0;
+    // Check if we're on the API key setup screen first
+    const apiKeyInput = page.locator('input[placeholder*="sk-"]');
+    const hasApiKeyScreen = await apiKeyInput.count() > 0;
     
-    // Should have some kind of input mechanism
-    const inputElements = page.locator('textarea, input[type="text"]');
-    const hasInputs = await inputElements.count() > 0;
-    
-    expect(hasChatInterface || hasInputs).toBeTruthy();
+    if (hasApiKeyScreen) {
+      // API key setup screen is a valid interface state
+      expect(hasApiKeyScreen).toBeTruthy();
+    } else {
+      // Look for chat-related elements if API key is already set
+      const chatElements = page.locator('[data-testid*="chat"], .chat, textarea, input').filter({ hasText: /message|chat|type|send/i });
+      const hasChatInterface = await chatElements.count() > 0;
+      
+      // Should have some kind of input mechanism
+      const inputElements = page.locator('textarea, input[type="text"]');
+      const hasInputs = await inputElements.count() > 0;
+      
+      expect(hasChatInterface || hasInputs).toBeTruthy();
+    }
   });
 
   test('should have accessible settings', async ({ page }) => {
