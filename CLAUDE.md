@@ -279,8 +279,10 @@ Keep commit messages short and descriptive (under 50 characters for the subject 
    git commit -m "fix: resolve theme initialization on app startup"
    ```
 
-### Testing with Playwright MCP
-Use Playwright MCP server for automated UI testing and verification:
+### Testing with Playwright MCP Tools (Ad-Hoc Testing)
+**Note**: This section covers ad-hoc browser automation via Claude Code's MCP integration - different from the repository's E2E test suite.
+
+Use Playwright MCP server for manual UI testing and verification:
 - **Theme consistency**: Test light/dark mode across main chat and settings
 - **Viewport behavior**: Verify safe area handling and mobile responsiveness  
 - **User flows**: Test complete workflows (chat, settings, MCP configuration)
@@ -291,11 +293,120 @@ Use Playwright MCP server for automated UI testing and verification:
   - Test on both desktop and mobile viewport sizes
   - Verify console messages for errors during testing
 
-Example Playwright testing workflow:
+Example Playwright MCP testing workflow:
 ```bash
 pnpm dev &  # Start dev server in background
-# Use Playwright MCP tools to test
+# Use Claude Code's mcp__playwright__browser_* tools for manual testing
 # Kill dev server when done
 ```
 
 **Important**: Always test on port 5173 (`http://localhost:5173`) - this is where saved API keys and preferences are stored in local storage. Other ports will require re-entering API keys.
+
+## Playwright E2E Testing Best Practices (2025)
+
+### Core Testing Architecture
+- **Critical Test Suite**: Run `smoke.spec.ts` + `hf-mcp-server-investigation.spec.ts` for CI (fast, covers core functionality)
+- **Full Test Suite**: `pnpm test` locally runs all 19 tests for comprehensive coverage
+- **Mobile-First Testing**: iPhone 15 viewport (393x852) with Chrome browser for mobile compatibility
+- **API Key Automation**: Tests auto-configure using `TEST_OPENAI_API_KEY` environment variable
+
+### Playwright Selector Best Practices
+
+#### Priority Order (2025 Recommendations)
+1. **`getByRole()`** - Best choice, aligns with accessibility and user intent
+2. **`getByText()`** - Good for user-facing text that doesn't change
+3. **`getByPlaceholder()`** - Excellent for form inputs
+4. **CSS/data-testid** - Only when semantic selectors aren't sufficient
+
+#### Mobile-Specific Selector Issues
+- **Hidden Text Problem**: Mobile UIs often use `hidden sm:inline` patterns
+  - ❌ **Bad**: `text=LLM Provider` (text hidden on mobile)
+  - ✅ **Good**: `getByRole('tab', { name: /LLM/i })` (works on mobile)
+
+#### Strict Mode Violations
+- **Multiple Element Issues**: When selectors match multiple elements
+  - ❌ **Bad**: `getByText('OAuth Required')` (matches badge + error message)
+  - ✅ **Good**: `locator('[data-slot="badge"]').getByText('OAuth Required')` (specific element)
+
+### Common E2E Testing Patterns
+
+#### API Key Setup Pattern
+```javascript
+// Handle API key setup in every test
+const apiKeyInput = page.getByPlaceholder(/sk-/);
+if (await apiKeyInput.isVisible()) {
+  const testApiKey = process.env.TEST_OPENAI_API_KEY;
+  if (testApiKey && testApiKey.startsWith('sk-')) {
+    await apiKeyInput.fill(testApiKey);
+    await page.getByRole('button', { name: 'Save API Key' }).click();
+    await page.waitForLoadState('networkidle');
+  }
+}
+```
+
+#### Settings Dialog Navigation
+```javascript
+// Open settings using robust selector
+const settingsButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+await settingsButton.click();
+await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+
+// Navigate to specific tab
+await page.getByRole('tab', { name: 'MCP' }).click();
+```
+
+#### MCP Server Testing Pattern
+```javascript
+// Add MCP server with proper form handling
+await page.getByRole('button', { name: 'Add Server' }).click();
+await page.getByPlaceholder('My MCP Server').fill('Test Server');
+await page.getByPlaceholder('https://example.com/mcp').fill('https://hf.co/mcp');
+await page.getByRole('button', { name: 'Test Connection' }).click();
+```
+
+### OAuth Flow Testing
+- **Flexible URL Validation**: OAuth may redirect to HuggingFace OR return to callback
+- **Callback Pattern**: Expect `/oauth/callback` with `state=` parameter as success indicator
+- **Tab Handling**: Use `page.context().waitForEvent('page')` for OAuth popups
+
+### Mobile Testing Gotchas
+- **Tab Navigation**: Use `getByRole('tab')` instead of text selectors
+- **Button Accessibility**: Prefer `getByRole('button', { name: /pattern/i })` over text matching
+- **Viewport Verification**: Always verify mobile dimensions (393x852 for iPhone 15)
+- **Touch Interactions**: Mobile Chrome handles touch events properly in Playwright
+
+### Performance & Reliability
+- **Fast Test Execution**: Critical tests run in ~25 seconds (8 tests)
+- **Auto-Retry**: Playwright handles flaky elements with built-in retries
+- **Wait Strategies**: Use `waitForLoadState('networkidle')` after API key setup
+- **Timeout Management**: 20s timeout for individual assertions, 25min total workflow timeout
+
+### CI/CD Integration
+- **GitHub Actions**: Dedicated E2E workflow separate from iOS deployment
+- **Environment Variables**: `TEST_OPENAI_API_KEY`, `TEST_HF_USERNAME`, `TEST_HF_PASSWORD`
+- **Artifact Collection**: Screenshots, videos, traces uploaded on failure
+- **Reporter Integration**: Use `--reporter=github` for CI-friendly output
+
+### Common Failures & Solutions
+1. **"Hidden sm:inline" Text**: Use role-based selectors instead of text
+2. **Multiple Element Matches**: Add more specific parent selectors
+3. **OAuth URL Changes**: Expect callback URLs, not original OAuth URLs
+4. **Settings Dialog Close**: Mobile dialogs may need Escape key or specific selectors
+5. **API Key Required**: Always handle API key setup at start of each test
+
+### Example Workflow Commands
+```bash
+# Local development testing
+pnpm dev                    # Start dev server
+pnpm test                   # Run all tests (full suite)
+pnpm test:dev               # Run tests with fresh dev server
+
+# Critical test verification
+pnpm test tests/e2e/smoke.spec.ts tests/e2e/hf-mcp-server-investigation.spec.ts --timeout=20000
+
+# Individual test debugging
+pnpm test --debug           # Open test in debug mode
+pnpm test --headed          # Run with visible browser
+```
+
+These patterns ensure robust, fast, and reliable E2E testing that covers both desktop and mobile use cases while following 2025 accessibility-first testing best practices.
