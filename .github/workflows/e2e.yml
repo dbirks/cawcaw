@@ -1,0 +1,131 @@
+name: E2E Tests (Playwright)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: 🔍 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: 📦 Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: latest
+        
+    - name: 📥 Install dependencies
+      run: |
+        pnpm install --frozen-lockfile
+        echo "✅ Dependencies installed"
+
+    - name: 🔍 Run code quality checks
+      run: |
+        echo "Running Biome checks before e2e tests..."
+        pnpm exec biome ci src/
+        echo "✅ Code quality verified"
+
+    - name: 🏗️ Build application
+      run: |
+        echo "Building React app for e2e testing..."
+        pnpm build
+        echo "✅ Build complete"
+        
+    - name: 🎭 Install Playwright browsers
+      run: |
+        echo "Installing Playwright browsers..."
+        pnpm exec playwright install --with-deps chromium
+        echo "✅ Playwright browsers installed"
+
+    - name: 🚀 Start dev server
+      run: |
+        echo "Starting Vite dev server in background..."
+        pnpm dev &
+        echo "DEV_SERVER_PID=$!" >> $GITHUB_ENV
+        
+        # Wait for server to be ready
+        echo "Waiting for dev server on port 5173..."
+        timeout 60 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 1; done'
+        echo "✅ Dev server is ready"
+
+    - name: 🧪 Run Playwright tests
+      env:
+        # Map GitHub secrets to test environment variables
+        TEST_OPENAI_API_KEY: ${{ secrets.TEST_OPENAI_API_KEY }}
+        TEST_HF_USERNAME: ${{ secrets.TEST_HF_USERNAME }}
+        TEST_HF_PASSWORD: ${{ secrets.TEST_HF_PASSWORD }}
+        TEST_HF_MCP_URL: "https://hf.co/mcp"
+        TEST_BASE_URL: "http://localhost:5173"
+        CI: true
+      run: |
+        echo "Running Playwright e2e tests..."
+        echo "🔑 Using API key: ${TEST_OPENAI_API_KEY:0:8}... (masked)"
+        echo "👤 Using HF user: $TEST_HF_USERNAME"
+        echo "🌐 Testing against: $TEST_BASE_URL"
+        
+        pnpm test --reporter=github
+        echo "✅ E2E tests completed successfully"
+
+    - name: 📊 Upload test results
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-test-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 7
+
+    - name: 🎥 Upload test videos & screenshots
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-media-artifacts
+        path: |
+          test-results/**/*.png
+          test-results/**/*.webm
+        retention-days: 3
+
+    - name: 📋 Generate test summary
+      if: always()
+      run: |
+        echo "## 🧪 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "playwright-report/index.html" ]; then
+          echo "### Test Report Generated" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 Detailed HTML report available in artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎭 Playwright version: $(pnpm exec playwright --version)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Configuration" >> $GITHUB_STEP_SUMMARY
+        echo "- **Browser**: Chrome (iPhone 15 viewport: 393x852)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Base URL**: \`$TEST_BASE_URL\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **API Key**: ✅ Configured from secrets" >> $GITHUB_STEP_SUMMARY
+        echo "- **HF Credentials**: ✅ Configured from secrets" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "_Tests completed at $(date)_" >> $GITHUB_STEP_SUMMARY
+
+    - name: 🧹 Cleanup
+      if: always()
+      run: |
+        if [ ! -z "$DEV_SERVER_PID" ]; then
+          kill $DEV_SERVER_PID || true
+          echo "✅ Dev server stopped"
+        fi
