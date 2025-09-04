@@ -50,19 +50,46 @@ const getStatusBadge = (status: ToolUIPart['state']) => {
   );
 };
 
-export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps) => (
-  <CollapsibleTrigger
-    className={cn('flex w-full items-center justify-between gap-4 p-3', className)}
-    {...props}
-  >
-    <div className="flex items-center gap-2">
-      <WrenchIcon className="size-4 text-muted-foreground" />
-      <span className="font-medium text-sm">{type}</span>
-      {getStatusBadge(state)}
-    </div>
-    <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-  </CollapsibleTrigger>
-);
+export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps) => {
+  // Extract tool name and server name from the type
+  // Format: "tool-Server_Name_toolName" -> toolName: "toolName", serverName: "Server Name"
+  const extractToolInfo = (type: string) => {
+    if (!type.startsWith('tool-')) {
+      return { toolName: type, serverName: null };
+    }
+    
+    const withoutPrefix = type.slice(5); // Remove "tool-" prefix
+    
+    // Find the last underscore to separate server name from tool name
+    const lastUnderscoreIndex = withoutPrefix.lastIndexOf('_');
+    
+    if (lastUnderscoreIndex === -1) {
+      // No underscore found, treat entire string as tool name
+      return { toolName: withoutPrefix, serverName: null };
+    }
+    
+    const serverName = withoutPrefix.slice(0, lastUnderscoreIndex).replace(/_/g, ' ');
+    const toolName = withoutPrefix.slice(lastUnderscoreIndex + 1);
+    
+    return { toolName, serverName };
+  };
+  
+  const { toolName } = extractToolInfo(type);
+  
+  return (
+    <CollapsibleTrigger
+      className={cn('flex w-full items-center justify-between gap-4 p-3', className)}
+      {...props}
+    >
+      <div className="flex items-center gap-2">
+        <WrenchIcon className="size-4 text-muted-foreground" />
+        <span className="font-medium text-sm">{toolName}</span>
+        {getStatusBadge(state)}
+      </div>
+      <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+    </CollapsibleTrigger>
+  );
+};
 
 export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 
@@ -78,18 +105,47 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
 
 export type ToolInputProps = ComponentProps<'div'> & {
   input: ToolUIPart['input'];
+  toolType?: string;
 };
 
-export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
-  <div className={cn('space-y-2 overflow-hidden p-4', className)} {...props}>
-    <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-      Parameters
-    </h4>
-    <div className="rounded-md bg-muted/50">
-      <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
+export const ToolInput = ({ className, input, toolType, ...props }: ToolInputProps) => {
+  // Extract server name from tool type for display
+  const extractServerName = (type?: string) => {
+    if (!type || !type.startsWith('tool-')) {
+      return null;
+    }
+    
+    const withoutPrefix = type.slice(5); // Remove "tool-" prefix
+    const lastUnderscoreIndex = withoutPrefix.lastIndexOf('_');
+    
+    if (lastUnderscoreIndex === -1) {
+      return null;
+    }
+    
+    return withoutPrefix.slice(0, lastUnderscoreIndex).replace(/_/g, ' ');
+  };
+
+  const serverName = extractServerName(toolType);
+
+  return (
+    <div className={cn('space-y-2 overflow-hidden p-4', className)} {...props}>
+      {serverName && (
+        <div className="mb-2">
+          <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide mb-1">
+            MCP Server
+          </h4>
+          <span className="text-sm font-medium">{serverName}</span>
+        </div>
+      )}
+      <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+        Parameters
+      </h4>
+      <div className="rounded-md bg-muted/50">
+        <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export type ToolOutputProps = ComponentProps<'div'> & {
   output: ReactNode;

@@ -617,7 +617,7 @@ export default function ChatView() {
                               state={part.state || 'input-available'}
                             />
                             <ToolContent>
-                              <ToolInput input={part.input} />
+                              <ToolInput input={part.input} toolType={part.type} />
                               {part.state === 'output-available' && (
                                 <ToolOutput
                                   output={<Response>{String(part.output || '')}</Response>}
