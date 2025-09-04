@@ -660,7 +660,7 @@ export default function ChatView() {
       </Conversation>
 
       {/* Fixed Input Area with safe area */}
-      <div className="border-t py-4 safe-bottom safe-x flex-shrink-0">
+      <div className="border-t pt-4 pb-6 safe-bottom safe-x flex-shrink-0">
         <PromptInput
           onSubmit={handleFormSubmit}
           className={
