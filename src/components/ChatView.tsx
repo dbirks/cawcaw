@@ -9,7 +9,7 @@ import {
   Settings as SettingsIcon,
   User,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
 import {
@@ -43,6 +43,7 @@ import {
 import { McpIcon } from '@/components/icons/McpIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { LoadingMessage } from '@/components/ui/bouncing-dots';
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -91,6 +92,9 @@ export default function ChatView() {
     mediaRecorder: MediaRecorder;
     stream: MediaStream;
   } | null>(null);
+
+  // Ref for auto-scrolling to latest messages
+  const conversationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Check if we have a stored API key and initialize MCP
@@ -544,6 +548,22 @@ export default function ChatView() {
     }
   };
 
+  // Auto-scroll to bottom when new messages arrive or AI starts thinking
+  const scrollToBottom = () => {
+    if (conversationRef.current) {
+      conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+    }
+  };
+
+  // Scroll to bottom when messages change or status changes
+  useEffect(() => {
+    // Scroll when:
+    // 1. New messages are added
+    // 2. AI starts streaming (status becomes 'streaming')
+    // 3. AI finishes streaming (status becomes 'ready')
+    scrollToBottom();
+  }, [messages.length, status]);
+
   // Show Settings screen
   if (showSettings) {
     return <Settings onClose={() => setShowSettings(false)} />;
@@ -595,7 +615,8 @@ export default function ChatView() {
       </div>
 
       {/* Main Conversation - scrollable area */}
-      <Conversation className="flex-1 overflow-hidden px-4">
+      <div ref={conversationRef} className="flex-1 overflow-auto">
+        <Conversation className="px-4">
         <ConversationContent className="safe-x h-full">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
@@ -618,9 +639,20 @@ export default function ChatView() {
                             />
                             <ToolContent>
                               <ToolInput input={part.input} toolType={part.type} />
+                              {(part.state === 'input-streaming' || part.state === 'input-available') && (
+                                <div className="p-4">
+                                  <LoadingMessage message="Running tool" />
+                                </div>
+                              )}
                               {part.state === 'output-available' && (
                                 <ToolOutput
-                                  output={<Response>{String(part.output || '')}</Response>}
+                                  output={
+                                    <Response>
+                                      {typeof part.output === 'object' && part.output !== null
+                                        ? JSON.stringify(part.output, null, 2)
+                                        : String(part.output || '')}
+                                    </Response>
+                                  }
                                   errorText={part.errorText}
                                 />
                               )}
@@ -653,11 +685,28 @@ export default function ChatView() {
                   )}
                 </Message>
               ))}
+              
+              {/* AI thinking indicator when streaming */}
+              {status === 'streaming' && (
+                <Message from="assistant">
+                  <MessageContent>
+                    <div className="p-3">
+                      <LoadingMessage message="AI is thinking" />
+                    </div>
+                  </MessageContent>
+                  <Avatar className="size-8 ring ring-1 ring-border">
+                    <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
+                      <OpenAIIcon size={16} />
+                    </AvatarFallback>
+                  </Avatar>
+                </Message>
+              )}
             </div>
           )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
+      </div>
 
       {/* Fixed Input Area with safe area */}
       <div className="border-t pt-4 pb-6 safe-bottom safe-x flex-shrink-0">
