@@ -17,14 +17,12 @@ export const BouncingDots = ({ className }: BouncingDotsProps) => {
 };
 
 interface LoadingMessageProps {
-  message?: string;
   className?: string;
 }
 
-export const LoadingMessage = ({ message = 'Thinking', className }: LoadingMessageProps) => {
+export const LoadingMessage = ({ className }: LoadingMessageProps) => {
   return (
-    <div className={cn('flex items-center space-x-2 text-muted-foreground', className)}>
-      <span className="text-sm">{message}</span>
+    <div className={cn('flex items-center text-muted-foreground', className)}>
       <BouncingDots />
     </div>
   );
