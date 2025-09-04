@@ -1,23 +1,22 @@
 import { useEffect, useState } from 'react';
 import ChatView from './components/ChatView';
-import { oauthRedirectHandler } from './services/oauthRedirectHandler';
 import { mcpManager } from './services/mcpManager';
+import { oauthRedirectHandler } from './services/oauthRedirectHandler';
 
 function App() {
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
 
   useEffect(() => {
     // Check if this is an OAuth callback URL
-    const currentUrl = window.location.href;
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     if (window.location.pathname === '/oauth/callback') {
       const code = urlParams.get('code');
       const state = urlParams.get('state');
       const error = urlParams.get('error');
-      
+
       console.log('Web OAuth callback detected:', { code: !!code, state: !!state, error });
-      
+
       if (error) {
         const errorDescription = urlParams.get('error_description');
         console.error('OAuth error:', error, errorDescription);
@@ -26,19 +25,20 @@ function App() {
         window.location.href = '/';
         return;
       }
-      
+
       if (code && state) {
         setIsProcessingOAuth(true);
-        
+
         // Parse the state to get server ID
         try {
           const stateData = JSON.parse(atob(state));
           const serverId = stateData.serverId;
-          
+
           console.log('Processing OAuth callback for server:', serverId);
-          
+
           // Complete the OAuth flow
-          mcpManager.completeOAuthFlow(serverId, code, state)
+          mcpManager
+            .completeOAuthFlow(serverId, code, state)
             .then(() => {
               console.log('✅ OAuth flow completed successfully');
               alert('✅ OAuth authentication successful! MCP server is now connected.');
@@ -56,7 +56,7 @@ function App() {
           alert('❌ Invalid OAuth callback - state parameter invalid');
           window.location.href = '/';
         }
-        
+
         return;
       }
     }

@@ -57,25 +57,25 @@ export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps
     if (!type.startsWith('tool-')) {
       return { toolName: type, serverName: null };
     }
-    
+
     const withoutPrefix = type.slice(5); // Remove "tool-" prefix
-    
+
     // Find the last underscore to separate server name from tool name
     const lastUnderscoreIndex = withoutPrefix.lastIndexOf('_');
-    
+
     if (lastUnderscoreIndex === -1) {
       // No underscore found, treat entire string as tool name
       return { toolName: withoutPrefix, serverName: null };
     }
-    
+
     const serverName = withoutPrefix.slice(0, lastUnderscoreIndex).replace(/_/g, ' ');
     const toolName = withoutPrefix.slice(lastUnderscoreIndex + 1);
-    
+
     return { toolName, serverName };
   };
-  
+
   const { toolName } = extractToolInfo(type);
-  
+
   return (
     <CollapsibleTrigger
       className={cn('flex w-full items-center justify-between gap-4 p-3', className)}
@@ -114,14 +114,14 @@ export const ToolInput = ({ className, input, toolType, ...props }: ToolInputPro
     if (!type || !type.startsWith('tool-')) {
       return null;
     }
-    
+
     const withoutPrefix = type.slice(5); // Remove "tool-" prefix
     const lastUnderscoreIndex = withoutPrefix.lastIndexOf('_');
-    
+
     if (lastUnderscoreIndex === -1) {
       return null;
     }
-    
+
     return withoutPrefix.slice(0, lastUnderscoreIndex).replace(/_/g, ' ');
   };
 
