@@ -9,7 +9,7 @@ import {
   Settings as SettingsIcon,
   User,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
 import {
@@ -549,11 +549,11 @@ export default function ChatView() {
   };
 
   // Auto-scroll to bottom when new messages arrive or AI starts thinking
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (conversationRef.current) {
       conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
     }
-  };
+  }, []);
 
   // Scroll to bottom when messages change or status changes
   useEffect(() => {
@@ -562,7 +562,7 @@ export default function ChatView() {
     // 2. AI starts streaming (status becomes 'streaming')
     // 3. AI finishes streaming (status becomes 'ready')
     scrollToBottom();
-  }, [messages.length, status]);
+  }, [scrollToBottom]);
 
   // Show Settings screen
   if (showSettings) {
@@ -617,95 +617,96 @@ export default function ChatView() {
       {/* Main Conversation - scrollable area */}
       <div ref={conversationRef} className="flex-1 overflow-auto">
         <Conversation className="px-4">
-        <ConversationContent className="safe-x h-full">
-          {messages.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              <p>Start a conversation with AI</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <Message key={message.id} from={message.role}>
-                  <MessageContent>
-                    {message.parts.map((part, idx) => {
-                      if (part.type === 'text') {
-                        return <Response key={`text-${idx}`}>{part.text || ''}</Response>;
-                      } else if (part.type.startsWith('tool-')) {
-                        return (
-                          <Tool key={`tool-${idx}`} defaultOpen={false}>
-                            <ToolHeader
-                              type={part.type as `tool-${string}`}
-                              state={part.state || 'input-available'}
-                            />
-                            <ToolContent>
-                              <ToolInput input={part.input} toolType={part.type} />
-                              {(part.state === 'input-streaming' || part.state === 'input-available') && (
-                                <div className="p-4">
-                                  <LoadingMessage message="Running tool" />
-                                </div>
-                              )}
-                              {part.state === 'output-available' && (
-                                <ToolOutput
-                                  output={
-                                    <Response>
-                                      {typeof part.output === 'object' && part.output !== null
-                                        ? JSON.stringify(part.output, null, 2)
-                                        : String(part.output || '')}
-                                    </Response>
-                                  }
-                                  errorText={part.errorText}
-                                />
-                              )}
-                            </ToolContent>
-                          </Tool>
-                        );
-                      } else if (part.type === 'reasoning') {
-                        return (
-                          <Reasoning key={`reasoning-${idx}`} defaultOpen={false}>
-                            <ReasoningTrigger />
-                            <ReasoningContent>{part.text || ''}</ReasoningContent>
-                          </Reasoning>
-                        );
-                      }
-                      return null;
-                    })}
-                  </MessageContent>
-                  {message.role === 'assistant' ? (
+          <ConversationContent className="safe-x h-full">
+            {messages.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <p>Start a conversation with AI</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  <Message key={message.id} from={message.role}>
+                    <MessageContent>
+                      {message.parts.map((part, idx) => {
+                        if (part.type === 'text') {
+                          return <Response key={`text-${idx}`}>{part.text || ''}</Response>;
+                        } else if (part.type.startsWith('tool-')) {
+                          return (
+                            <Tool key={`tool-${idx}`} defaultOpen={false}>
+                              <ToolHeader
+                                type={part.type as `tool-${string}`}
+                                state={part.state || 'input-available'}
+                              />
+                              <ToolContent>
+                                <ToolInput input={part.input} toolType={part.type} />
+                                {(part.state === 'input-streaming' ||
+                                  part.state === 'input-available') && (
+                                  <div className="p-4">
+                                    <LoadingMessage message="Running tool" />
+                                  </div>
+                                )}
+                                {part.state === 'output-available' && (
+                                  <ToolOutput
+                                    output={
+                                      <Response>
+                                        {typeof part.output === 'object' && part.output !== null
+                                          ? JSON.stringify(part.output, null, 2)
+                                          : String(part.output || '')}
+                                      </Response>
+                                    }
+                                    errorText={part.errorText}
+                                  />
+                                )}
+                              </ToolContent>
+                            </Tool>
+                          );
+                        } else if (part.type === 'reasoning') {
+                          return (
+                            <Reasoning key={`reasoning-${idx}`} defaultOpen={false}>
+                              <ReasoningTrigger />
+                              <ReasoningContent>{part.text || ''}</ReasoningContent>
+                            </Reasoning>
+                          );
+                        }
+                        return null;
+                      })}
+                    </MessageContent>
+                    {message.role === 'assistant' ? (
+                      <Avatar className="size-8 ring ring-1 ring-border">
+                        <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
+                          <OpenAIIcon size={16} />
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <Avatar className="size-8 ring ring-1 ring-border">
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          <User size={16} />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </Message>
+                ))}
+
+                {/* AI thinking indicator when streaming */}
+                {status === 'streaming' && (
+                  <Message from="assistant">
+                    <MessageContent>
+                      <div className="p-3">
+                        <LoadingMessage message="AI is thinking" />
+                      </div>
+                    </MessageContent>
                     <Avatar className="size-8 ring ring-1 ring-border">
                       <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
                         <OpenAIIcon size={16} />
                       </AvatarFallback>
                     </Avatar>
-                  ) : (
-                    <Avatar className="size-8 ring ring-1 ring-border">
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        <User size={16} />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </Message>
-              ))}
-              
-              {/* AI thinking indicator when streaming */}
-              {status === 'streaming' && (
-                <Message from="assistant">
-                  <MessageContent>
-                    <div className="p-3">
-                      <LoadingMessage message="AI is thinking" />
-                    </div>
-                  </MessageContent>
-                  <Avatar className="size-8 ring ring-1 ring-border">
-                    <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
-                      <OpenAIIcon size={16} />
-                    </AvatarFallback>
-                  </Avatar>
-                </Message>
-              )}
-            </div>
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+                  </Message>
+                )}
+              </div>
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
       </div>
 
       {/* Fixed Input Area with safe area */}
