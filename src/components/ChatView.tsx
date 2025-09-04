@@ -642,7 +642,7 @@ export default function ChatView() {
                                 {(part.state === 'input-streaming' ||
                                   part.state === 'input-available') && (
                                   <div className="p-4">
-                                    <LoadingMessage message="Running tool" />
+                                    <LoadingMessage />
                                   </div>
                                 )}
                                 {part.state === 'output-available' && (
@@ -692,7 +692,7 @@ export default function ChatView() {
                   <Message from="assistant">
                     <MessageContent>
                       <div className="p-3">
-                        <LoadingMessage message="AI is thinking" />
+                        <LoadingMessage />
                       </div>
                     </MessageContent>
                     <Avatar className="size-8 ring ring-1 ring-border">
