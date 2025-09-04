@@ -80,7 +80,7 @@ function extractResourceIdentifier(serverUrl: string): string {
 // Generate MCP-compliant scope format (provider-specific)
 function generateMCPScope(resourceIdentifier: string): string {
   // Hugging Face uses predefined scopes, not the generic MCP format
-  if (resourceIdentifier === 'huggingface.co') {
+  if (resourceIdentifier === 'huggingface.co' || resourceIdentifier === 'hf.co') {
     return 'read-mcp';
   }
 
