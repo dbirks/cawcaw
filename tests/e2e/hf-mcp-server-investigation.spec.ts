@@ -86,10 +86,12 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
       
       await page.getByRole('button', { name: 'Test Connection' }).click();
       
-      // Wait for connection test to complete
-      await page.waitForTimeout(3000);
+      // Wait for connection test to complete - OAuth discovery can take longer
+      await page.waitForTimeout(5000);
       
       // Step 6: Verify the connection is successful and OAuth is configured
+      // Wait for either success or failure result with increased timeout
+      await expect(page.getByText('Connection Successful').or(page.getByText('Connection Failed'))).toBeVisible({ timeout: 10000 });
       await expect(page.getByText('Connection Successful')).toBeVisible();
       await expect(page.getByText('OAuth authentication required')).toBeVisible();
       
