@@ -501,23 +501,34 @@ export class MCPOAuthManagerCompliant {
 
     debugLogger.info('oauth', '🔄 Refreshing expired MCP OAuth 2.1 token');
 
-    const [discoveryResult, clientResult] = await Promise.all([
+    const [discoveryResult, clientResult, resourceResult] = await Promise.all([
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
+      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}resource_${serverId}` }),
     ]);
 
-    if (!discoveryResult?.value || !clientResult?.value) {
+    if (!discoveryResult?.value || !clientResult?.value || !resourceResult?.value) {
       throw new Error('OAuth flow data not found');
     }
 
     const discovery: MCPOAuthDiscovery = JSON.parse(discoveryResult.value);
     const clientCredentials = JSON.parse(clientResult.value);
+    const resourceInfo = JSON.parse(resourceResult.value);
     const clientId = clientCredentials.clientId;
 
     const refreshBody = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: tokens.refreshToken,
       client_id: clientId,
+      scope: resourceInfo.mcpScope, // Include original scope for providers that require it
+    });
+
+    debugLogger.info('oauth', '📋 Token refresh request details', {
+      endpoint: discovery.tokenEndpoint,
+      clientId,
+      refreshTokenLength: tokens.refreshToken?.length,
+      refreshTokenPrefix: `${tokens.refreshToken?.substring(0, 10)}...`,
+      requestBody: refreshBody.toString(),
     });
 
     const refreshResponse = await fetch(discovery.tokenEndpoint, {
@@ -530,7 +541,29 @@ export class MCPOAuthManagerCompliant {
     });
 
     if (!refreshResponse.ok) {
-      throw new Error(`Token refresh failed: ${refreshResponse.status}`);
+      let errorDetails = '';
+      try {
+        const errorBody = await refreshResponse.text();
+        errorDetails = errorBody ? ` - ${errorBody}` : '';
+      } catch {
+        // Ignore error parsing response body
+      }
+      debugLogger.error('oauth', '❌ Token refresh failed', {
+        status: refreshResponse.status,
+        statusText: refreshResponse.statusText,
+        headers: Object.fromEntries(refreshResponse.headers.entries()),
+        body: errorDetails,
+        refreshBody: refreshBody.toString(),
+      });
+      // If refresh token is invalid (400/401), clear stored tokens and suggest re-authentication
+      if (refreshResponse.status === 400 || refreshResponse.status === 401) {
+        debugLogger.warn('oauth', '⚠️ Refresh token appears invalid, clearing stored tokens');
+        await this.clearOAuthTokens(serverId);
+        throw new Error(
+          `Token refresh failed - please re-authenticate: ${refreshResponse.status}${errorDetails}`
+        );
+      }
+      throw new Error(`Token refresh failed: ${refreshResponse.status}${errorDetails}`);
     }
 
     const tokenData = await refreshResponse.json();
