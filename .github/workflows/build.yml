@@ -86,27 +86,43 @@ jobs:
       run: |
         echo "🔍 Checking for iTMSTransporter certificate expiration fix..."
         
-        # Clear old iTMSTransporter installations and cache (certificate expiration fix)
-        sudo rm -rf /usr/local/itms 2>/dev/null || true
+        # Clear old iTMSTransporter cache but keep installation
         rm -rf ~/Library/Caches/com.apple.amp.itmstransporter 2>/dev/null || true
         
-        # Download and install updated Transporter (3.3.0.16+) to fix certificate expiration
-        echo "📥 Installing updated Transporter to fix certificate expiration..."
+        # Check for existing Transporter installations
+        echo "📍 Checking for available Transporter installations..."
         
-        # Use Xcode's bundled transporter or download latest
-        if [ -d "/Applications/Transporter.app" ]; then
-          echo "✅ Using existing Transporter.app"
-        else
-          echo "⬇️ Downloading updated Transporter from Apple..."
-          # Use xcrun to get latest transporter tools
-          xcrun --find iTMSTransporter >/dev/null 2>&1 || echo "⚠️ iTMSTransporter not found in xcrun"
+        # Check multiple possible locations for Transporter
+        TRANSPORTER_PATHS=(
+          "/Applications/Transporter.app/Contents/itms/bin/iTMSTransporter"
+          "/usr/local/itms/bin/iTMSTransporter"
+        )
+        
+        TRANSPORTER_FOUND=""
+        for path in "${TRANSPORTER_PATHS[@]}"; do
+          if [ -f "$path" ]; then
+            echo "✅ Found iTMSTransporter at: $path"
+            TRANSPORTER_FOUND="$path"
+            break
+          fi
+        done
+        
+        if [ -z "$TRANSPORTER_FOUND" ]; then
+          echo "⚠️ No iTMSTransporter found, using xcrun fallback"
+          # Try to find via xcrun (bundled with Xcode)
+          if xcrun --find iTMSTransporter >/dev/null 2>&1; then
+            TRANSPORTER_FOUND=$(xcrun --find iTMSTransporter)
+            echo "✅ Found iTMSTransporter via xcrun: $TRANSPORTER_FOUND"
+          fi
         fi
         
-        # Set environment variable to use updated transporter
-        echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=1" >> $GITHUB_ENV
-        echo "FASTLANE_ITUNES_TRANSPORTER_PATH=" >> $GITHUB_ENV
+        # Set Fastlane to use automatic transport discovery (recommended by Apple)
+        echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=0" >> $GITHUB_ENV
+        if [ -n "$TRANSPORTER_FOUND" ]; then
+          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_FOUND" >> $GITHUB_ENV
+        fi
         
-        echo "✅ iTMSTransporter certificate fix applied"
+        echo "✅ iTMSTransporter configuration complete"
         
     - name: 📱 Sync Capacitor iOS
       run: |
