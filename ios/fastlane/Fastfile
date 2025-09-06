@@ -92,11 +92,9 @@ platform :ios do
   lane :upload_testflight do
     load_asc_api_key
     
-    # Force use of altool to bypass iTMSTransporter certificate expiration
-    ENV['FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT'] = '1'
-    ENV['DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS'] = '-t altool'
+    # Use environment variables set by GitHub Actions for iTMSTransporter configuration
+    # This allows the GitHub Actions workflow to control the transporter method
     
-    # Use pilot with altool fallback (altool works with certificate expiration)
     pilot(
       ipa: "./App.ipa",
       skip_waiting_for_build_processing: true,
