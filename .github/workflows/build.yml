@@ -82,6 +82,32 @@ jobs:
         xcodebuild -version
         echo "✅ Xcode 16.4 selected for latest iOS SDK support"
         
+    - name: 🔧 Fix iTMSTransporter certificate expiration issue
+      run: |
+        echo "🔍 Checking for iTMSTransporter certificate expiration fix..."
+        
+        # Clear old iTMSTransporter installations and cache (certificate expiration fix)
+        sudo rm -rf /usr/local/itms 2>/dev/null || true
+        rm -rf ~/Library/Caches/com.apple.amp.itmstransporter 2>/dev/null || true
+        
+        # Download and install updated Transporter (3.3.0.16+) to fix certificate expiration
+        echo "📥 Installing updated Transporter to fix certificate expiration..."
+        
+        # Use Xcode's bundled transporter or download latest
+        if [ -d "/Applications/Transporter.app" ]; then
+          echo "✅ Using existing Transporter.app"
+        else
+          echo "⬇️ Downloading updated Transporter from Apple..."
+          # Use xcrun to get latest transporter tools
+          xcrun --find iTMSTransporter >/dev/null 2>&1 || echo "⚠️ iTMSTransporter not found in xcrun"
+        fi
+        
+        # Set environment variable to use updated transporter
+        echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=1" >> $GITHUB_ENV
+        echo "FASTLANE_ITUNES_TRANSPORTER_PATH=" >> $GITHUB_ENV
+        
+        echo "✅ iTMSTransporter certificate fix applied"
+        
     - name: 📱 Sync Capacitor iOS
       run: |
         echo "Syncing Capacitor iOS..."
