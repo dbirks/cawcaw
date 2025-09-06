@@ -92,16 +92,16 @@ platform :ios do
   lane :upload_testflight do
     load_asc_api_key
     
-    # Use pilot for more reliable uploads (replacement for deprecated altool)
-    upload_to_testflight(
+    # Use App Store Connect API directly (altool is deprecated)
+    pilot(
+      ipa: "./App.ipa",
       skip_waiting_for_build_processing: true,
       skip_submission: true,
       distribute_external: false,
       notify_external_testers: false,
       changelog: "Built with GitHub Actions",
       reject_build_waiting_for_review: true,
-      uses_non_exempt_encryption: false, # Explicitly set encryption status
-      ipa: "App.ipa" # Explicitly specify IPA path
+      uses_non_exempt_encryption: false
     )
   end
 
