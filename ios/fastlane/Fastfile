@@ -116,6 +116,46 @@ platform :ios do
     )
   end
 
+  desc "Generate iOS app icons from source"
+  lane :generate_icons do
+    # Source icon path (relative to ios directory)
+    source_icon = "../ios-icon.png"
+    app_icon_path = "App/App/Assets.xcassets/AppIcon.appiconset"
+    
+    # Generate all required iOS icon sizes using ImageMagick
+    UI.message "🎨 Generating iOS app icons from #{source_icon}..."
+    
+    # iPhone notification icons (20pt)
+    sh("magick #{source_icon} -resize 40x40 #{app_icon_path}/AppIcon-20@2x.png")
+    sh("magick #{source_icon} -resize 60x60 #{app_icon_path}/AppIcon-20@3x.png")
+    
+    # Settings icons (29pt)
+    sh("magick #{source_icon} -resize 58x58 #{app_icon_path}/AppIcon-29@2x.png")
+    sh("magick #{source_icon} -resize 87x87 #{app_icon_path}/AppIcon-29@3x.png")
+    
+    # Spotlight icons (40pt)
+    sh("magick #{source_icon} -resize 80x80 #{app_icon_path}/AppIcon-40@2x.png")
+    sh("magick #{source_icon} -resize 120x120 #{app_icon_path}/AppIcon-40@3x.png")
+    
+    # App icons (60pt)
+    sh("magick #{source_icon} -resize 120x120 #{app_icon_path}/AppIcon-60@2x.png")
+    sh("magick #{source_icon} -resize 180x180 #{app_icon_path}/AppIcon-60@3x.png")
+    
+    # iPad icons
+    sh("magick #{source_icon} -resize 20x20 #{app_icon_path}/AppIcon-20@1x.png")
+    sh("magick #{source_icon} -resize 29x29 #{app_icon_path}/AppIcon-29@1x.png")
+    sh("magick #{source_icon} -resize 40x40 #{app_icon_path}/AppIcon-40@1x.png")
+    
+    # Marketing icon (1024x1024) - only if doesn't exist
+    marketing_icon = "#{app_icon_path}/AppIcon-1024.png"
+    unless File.exist?(marketing_icon)
+      sh("magick #{source_icon} -resize 1024x1024 #{marketing_icon}")
+    end
+    
+    UI.success "✅ iOS app icons generated successfully!"
+    UI.message "📁 Icons saved to: #{app_icon_path}/"
+  end
+
   desc "Download certificates for development"
   lane :certificates_development do
     load_asc_api_key

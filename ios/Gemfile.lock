@@ -5,6 +5,7 @@ GEM
       base64
       nkf
       rexml
+    abbrev (0.1.2)
     activesupport (7.2.2.2)
       base64
       benchmark (>= 0.3)
@@ -173,6 +174,9 @@ GEM
       xcodeproj (>= 1.13.0, < 2.0.0)
       xcpretty (~> 0.4.1)
       xcpretty-travis-formatter (>= 0.0.3, < 2.0.0)
+    fastlane-plugin-appicon (0.16.0)
+      json
+      mini_magick (>= 4.9.4, < 5.0.0)
     fastlane-sirp (1.0.0)
       sysrandom (~> 1.0)
     ffi (1.17.2)
@@ -316,8 +320,10 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  abbrev
   cocoapods
   fastlane (~> 2.228.0)
+  fastlane-plugin-appicon
 
 BUNDLED WITH
    2.6.7
