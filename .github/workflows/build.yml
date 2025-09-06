@@ -116,8 +116,8 @@ jobs:
           fi
         fi
         
-        # Set Fastlane to use automatic transport discovery (recommended by Apple)
-        echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=0" >> $GITHUB_ENV
+        # Set Fastlane to use shell script mode to avoid Java dependency issues
+        echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=1" >> $GITHUB_ENV
         if [ -n "$TRANSPORTER_FOUND" ]; then
           # Fastlane expects the directory containing iTMSTransporter, not the executable path
           TRANSPORTER_DIR=$(dirname "$TRANSPORTER_FOUND")
