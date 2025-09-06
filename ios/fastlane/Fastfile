@@ -62,20 +62,28 @@ platform :ios do
       xcodeproj: "App/App.xcodeproj"
     )
     
-    # Build the app
+    # Build the app with Xcode 16 compatibility fixes
     build_app(
       scheme: "App",
       workspace: "App/App.xcworkspace",
+      configuration: "Release",
       export_method: "app-store",
       codesigning_identity: "Apple Distribution",
-      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AppStore app.cawcaw' OTHER_CODE_SIGN_FLAGS='--keychain build.keychain'",
+      clean: true, # Clean build for Xcode 16 compatibility
+      include_bitcode: false, # Bitcode deprecated in Xcode 16
+      include_symbols: true,
+      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AppStore app.cawcaw' OTHER_CODE_SIGN_FLAGS='--keychain build.keychain' -allowProvisioningUpdates",
       export_options: {
         method: "app-store",
         signingStyle: "manual",
         provisioningProfiles: {
           "app.cawcaw" => "match AppStore app.cawcaw"
         },
-        signingCertificate: "Apple Distribution"
+        signingCertificate: "Apple Distribution",
+        compileBitcode: false, # Explicitly disable bitcode for Xcode 16
+        uploadBitcode: false,
+        uploadSymbols: true,
+        thinning: "<none>"
       }
     )
   end
@@ -214,24 +222,30 @@ platform :ios do
       xcodeproj: "App/App.xcodeproj"
     )
     
-    # Build the app for Ad Hoc distribution
+    # Build the app for Ad Hoc distribution with Xcode 16 compatibility
     build_app(
       scheme: "App",
       workspace: "App/App.xcworkspace",
+      configuration: "Release",
       export_method: "ad-hoc",
       codesigning_identity: "Apple Distribution",
-      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AdHoc app.cawcaw' OTHER_CODE_SIGN_FLAGS='--keychain build.keychain'",
+      clean: true,
+      include_bitcode: false, # Bitcode deprecated in Xcode 16
+      include_symbols: true,
+      xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AdHoc app.cawcaw' OTHER_CODE_SIGN_FLAGS='--keychain build.keychain' -allowProvisioningUpdates",
       export_options: {
         method: "ad-hoc",
         signingStyle: "manual",
         provisioningProfiles: {
           "app.cawcaw" => "match AdHoc app.cawcaw"
         },
-        signingCertificate: "Apple Distribution"
+        signingCertificate: "Apple Distribution",
+        compileBitcode: false,
+        uploadBitcode: false,
+        uploadSymbols: true,
+        thinning: "<none>"
       },
-      output_name: "caw_caw",
-      include_bitcode: false,
-      include_symbols: true
+      output_name: "caw_caw"
     )
     
     # Success notification
