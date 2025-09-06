@@ -93,15 +93,22 @@ jobs:
         
         # Find and configure iTMSTransporter path correctly
         if xcrun --find iTMSTransporter >/dev/null 2>&1; then
-          TRANSPORTER_PATH=$(xcrun --find iTMSTransporter)
-          echo "✅ Found iTMSTransporter via xcrun: $TRANSPORTER_PATH"
+          TRANSPORTER_EXECUTABLE=$(xcrun --find iTMSTransporter)
+          echo "✅ Found iTMSTransporter executable: $TRANSPORTER_EXECUTABLE"
           
-          # Set the correct path for Fastlane - it needs the full path to the executable
-          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PATH" >> $GITHUB_ENV
-          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PATH"
+          # Fastlane needs the directory containing iTMSTransporter, not the executable itself
+          # It will append the executable name, so we need the parent directory
+          TRANSPORTER_DIR=$(dirname "$TRANSPORTER_EXECUTABLE")
+          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_DIR" >> $GITHUB_ENV
+          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_DIR"
+          echo "🔧 Fastlane will use: $TRANSPORTER_DIR/iTMSTransporter"
           
-          # Try to get version info for debugging
-          "$TRANSPORTER_PATH" -version 2>/dev/null || echo "Version check failed (expected for security reasons)"
+          # Verify the path exists
+          if [ -f "$TRANSPORTER_DIR/iTMSTransporter" ]; then
+            echo "✅ Verified iTMSTransporter exists at expected location"
+          else
+            echo "❌ Warning: iTMSTransporter not found at $TRANSPORTER_DIR/iTMSTransporter"
+          fi
         else
           echo "❌ Could not find iTMSTransporter via xcrun"
           exit 1
