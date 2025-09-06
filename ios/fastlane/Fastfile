@@ -92,50 +92,13 @@ platform :ios do
   lane :upload_testflight do
     load_asc_api_key
     
-    # Configure iTMSTransporter for OSStatus -10814 error prevention
-    ENV["ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD"] = "true"
-    ENV["FASTLANE_SKIP_2FA_UPGRADE"] = "1"
-    
-    # Log current iTMSTransporter configuration for debugging
-    if ENV["FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT"]
-      UI.message "🔧 Using iTMSTransporter shell script mode (avoids v3.0.0 issues)"
-    end
-    
-    # Display environment info for troubleshooting
-    UI.message "🔍 iTMSTransporter configuration:"
-    UI.message "  - Transporter path: #{ENV["FASTLANE_ITUNES_TRANSPORTER_PATH"]}"
-    UI.message "  - Force package upload: #{ENV["ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD"]}"
-    UI.message "  - Shell script mode: #{ENV["FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT"]}"
-    UI.message "  - Skip 2FA upgrade: #{ENV["FASTLANE_SKIP_2FA_UPGRADE"]}"
-    
-    # Upload with enhanced retry mechanism
-    retry_count = 2  # Reduced retries since we fixed the root cause
-    begin
-      UI.message "🚀 Starting TestFlight upload..."
-      pilot(
-        ipa: "./App.ipa",
-        skip_waiting_for_build_processing: true,
-        skip_submission: true,
-        distribute_external: false,
-        notify_external_testers: false,
-        changelog: "Built with GitHub Actions",
-        reject_build_waiting_for_review: true,
-        uses_non_exempt_encryption: false
-      )
-      UI.success "✅ TestFlight upload completed successfully!"
-    rescue => e
-      if retry_count > 0 && (e.message.include?("OSStatus error -10814") || e.message.include?("iTMSTransporter"))
-        UI.important "🔄 Upload error detected. Retrying upload... (#{retry_count} attempts remaining)"
-        UI.important "Error details: #{e.message}"
-        retry_count -= 1
-        sleep(30) # Wait before retry
-        retry
-      else
-        UI.error "❌ TestFlight upload failed after all retries"
-        UI.error "Final error: #{e.message}"
-        raise e
-      end
-    end
+    # Modern minimal TestFlight upload - let Fastlane handle the complexity
+    upload_to_testflight(
+      ipa: "./App.ipa",
+      skip_waiting_for_build_processing: true,
+      skip_submission: true,
+      changelog: "Built with GitHub Actions"
+    )
   end
 
   desc "Build and upload to TestFlight"

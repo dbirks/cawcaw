@@ -82,49 +82,10 @@ jobs:
         xcodebuild -version
         echo "✅ Xcode 16.4 selected for latest iOS SDK support"
         
-    - name: 🔧 Fix iTMSTransporter OSStatus -10814 issue  
+    - name: 🚀 Prepare for TestFlight upload
       run: |
-        echo "🔍 Fixing iTMSTransporter OSStatus -10814 error..."
-        
-        # Clear iTMSTransporter cache completely to force version 2.3.0 (fixes v3.0.0 issues)
-        echo "🧹 Clearing iTMSTransporter cache to revert to stable version 2.3.0..."
-        rm -rf ~/Library/Caches/com.apple.amp.itmstransporter 2>/dev/null || true
-        rm -rf /tmp/itmstransporter* 2>/dev/null || true
-        
-        # Find and configure iTMSTransporter path correctly
-        if xcrun --find iTMSTransporter >/dev/null 2>&1; then
-          TRANSPORTER_EXECUTABLE=$(xcrun --find iTMSTransporter)
-          echo "✅ Found iTMSTransporter executable: $TRANSPORTER_EXECUTABLE"
-          
-          # CRITICAL: Fastlane appends "/bin/iTMSTransporter" to the path we provide
-          # xcrun gives us: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/iTMSTransporter
-          # We need to give Fastlane: /Applications/Xcode_16.4.app/Contents/Developer/usr
-          # So final path becomes: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/iTMSTransporter
-          TRANSPORTER_USR_DIR=$(dirname "$(dirname "$TRANSPORTER_EXECUTABLE")")
-          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_USR_DIR" >> $GITHUB_ENV
-          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_USR_DIR"
-          echo "🔧 Fastlane will create final path: $TRANSPORTER_USR_DIR/bin/iTMSTransporter"
-          
-          # Verify the final path Fastlane will construct is correct
-          FINAL_TRANSPORTER_PATH="$TRANSPORTER_USR_DIR/bin/iTMSTransporter"
-          if [ -f "$FINAL_TRANSPORTER_PATH" ]; then
-            echo "✅ SUCCESS: Final iTMSTransporter path verified: $FINAL_TRANSPORTER_PATH"
-          else
-            echo "❌ CRITICAL ERROR: Final iTMSTransporter path incorrect: $FINAL_TRANSPORTER_PATH"
-            echo "❌ This will cause upload to fail. Actual executable: $TRANSPORTER_EXECUTABLE"
-            exit 1
-          fi
-        else
-          echo "❌ Could not find iTMSTransporter via xcrun"
-          exit 1
-        fi
-        
-        # Configure environment variables for optimal compatibility
-        echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=1" >> $GITHUB_ENV
-        echo "ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD=true" >> $GITHUB_ENV
-        echo "FASTLANE_SKIP_2FA_UPGRADE=1" >> $GITHUB_ENV
-        
-        echo "✅ iTMSTransporter OSStatus -10814 fix complete"
+        echo "🚀 Using modern Fastlane with App Store Connect API - no iTMSTransporter tweaks needed"
+        echo "✅ Ready for clean TestFlight upload"
         
     - name: 📱 Sync Capacitor iOS
       run: |
