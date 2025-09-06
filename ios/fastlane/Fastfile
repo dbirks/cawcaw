@@ -92,9 +92,9 @@ platform :ios do
   lane :upload_testflight do
     load_asc_api_key
     
-    # Explicitly configure iTMSTransporter environment variables for upload reliability
-    # Use DAV transport to avoid OSStatus -10814 errors
-    ENV["DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS"] = "-t DAV"
+    # Configure iTMSTransporter for maximum reliability
+    # Apple recommends NOT forcing transport mode - let iTMSTransporter auto-detect
+    # Only set force package upload to ensure reliability
     ENV["ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD"] = "true"
     
     # Use shell script mode if specified by CI (avoids Java dependency issues)
@@ -106,7 +106,7 @@ platform :ios do
       UI.message "🔧 Using iTMSTransporter path: #{ENV["FASTLANE_ITUNES_TRANSPORTER_PATH"]}"
     end
     
-    # Upload with retry mechanism for network issues
+    # Upload with retry mechanism for transient issues
     retry_count = 3
     begin
       pilot(
@@ -120,8 +120,9 @@ platform :ios do
         uses_non_exempt_encryption: false
       )
     rescue => e
-      if retry_count > 0 && e.message.include?("OSStatus error -10814")
-        UI.important "🔄 OSStatus -10814 error detected. Retrying upload... (#{retry_count} attempts remaining)"
+      if retry_count > 0 && (e.message.include?("OSStatus error -10814") || e.message.include?("iTMSTransporter"))
+        UI.important "🔄 Upload error detected. Retrying upload... (#{retry_count} attempts remaining)"
+        UI.important "Error: #{e.message}"
         retry_count -= 1
         sleep(30) # Wait 30 seconds before retry
         retry

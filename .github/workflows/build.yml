@@ -125,8 +125,8 @@ jobs:
           echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_DIR" >> $GITHUB_ENV
         fi
         
-        # Fix for OSStatus error -10814 (network/transport issues)
-        echo "DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS=-t DAV" >> $GITHUB_ENV
+        # Apple recommends using automatic transport discovery instead of forcing DAV
+        # Only force package upload for reliability - let iTMSTransporter choose transport
         echo "ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD=true" >> $GITHUB_ENV
         
         echo "✅ iTMSTransporter configuration complete"
