@@ -96,18 +96,19 @@ jobs:
           TRANSPORTER_EXECUTABLE=$(xcrun --find iTMSTransporter)
           echo "✅ Found iTMSTransporter executable: $TRANSPORTER_EXECUTABLE"
           
-          # Fastlane needs the directory containing iTMSTransporter, not the executable itself
-          # It will append the executable name, so we need the parent directory
-          TRANSPORTER_DIR=$(dirname "$TRANSPORTER_EXECUTABLE")
-          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_DIR" >> $GITHUB_ENV
-          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_DIR"
-          echo "🔧 Fastlane will use: $TRANSPORTER_DIR/iTMSTransporter"
+          # Fastlane automatically appends "/bin" to whatever directory we provide
+          # So we need the parent of the bin directory, not the bin directory itself
+          TRANSPORTER_BIN_DIR=$(dirname "$TRANSPORTER_EXECUTABLE")
+          TRANSPORTER_PARENT_DIR=$(dirname "$TRANSPORTER_BIN_DIR")
+          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PARENT_DIR" >> $GITHUB_ENV
+          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PARENT_DIR"
+          echo "🔧 Fastlane will append /bin/iTMSTransporter to create: $TRANSPORTER_PARENT_DIR/bin/iTMSTransporter"
           
-          # Verify the path exists
-          if [ -f "$TRANSPORTER_DIR/iTMSTransporter" ]; then
-            echo "✅ Verified iTMSTransporter exists at expected location"
+          # Verify the path exists (check the actual final path Fastlane will use)
+          if [ -f "$TRANSPORTER_PARENT_DIR/bin/iTMSTransporter" ]; then
+            echo "✅ Verified iTMSTransporter exists at expected location: $TRANSPORTER_PARENT_DIR/bin/iTMSTransporter"
           else
-            echo "❌ Warning: iTMSTransporter not found at $TRANSPORTER_DIR/iTMSTransporter"
+            echo "❌ Warning: iTMSTransporter not found at $TRANSPORTER_PARENT_DIR/bin/iTMSTransporter"
           fi
         else
           echo "❌ Could not find iTMSTransporter via xcrun"
