@@ -119,8 +119,9 @@ jobs:
         # Set Fastlane to use shell script mode to avoid Java dependency issues
         echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=1" >> $GITHUB_ENV
         if [ -n "$TRANSPORTER_FOUND" ]; then
-          # Fastlane expects the directory containing iTMSTransporter, not the executable path
-          TRANSPORTER_DIR=$(dirname "$TRANSPORTER_FOUND")
+          # In shell script mode, Fastlane appends "bin/iTMSTransporter" to the provided path
+          # So we need the parent directory of bin/ (e.g., /usr/ not /usr/bin/)
+          TRANSPORTER_DIR=$(dirname "$(dirname "$TRANSPORTER_FOUND")")
           echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_DIR" >> $GITHUB_ENV
         fi
         
