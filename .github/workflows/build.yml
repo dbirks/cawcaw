@@ -96,19 +96,23 @@ jobs:
           TRANSPORTER_EXECUTABLE=$(xcrun --find iTMSTransporter)
           echo "✅ Found iTMSTransporter executable: $TRANSPORTER_EXECUTABLE"
           
-          # Fastlane automatically appends "/bin" to whatever directory we provide
-          # So we need the parent of the bin directory, not the bin directory itself
-          TRANSPORTER_BIN_DIR=$(dirname "$TRANSPORTER_EXECUTABLE")
-          TRANSPORTER_PARENT_DIR=$(dirname "$TRANSPORTER_BIN_DIR")
-          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PARENT_DIR" >> $GITHUB_ENV
-          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PARENT_DIR"
-          echo "🔧 Fastlane will append /bin/iTMSTransporter to create: $TRANSPORTER_PARENT_DIR/bin/iTMSTransporter"
+          # CRITICAL: Fastlane appends "/bin/iTMSTransporter" to the path we provide
+          # xcrun gives us: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/iTMSTransporter
+          # We need to give Fastlane: /Applications/Xcode_16.4.app/Contents/Developer/usr
+          # So final path becomes: /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/iTMSTransporter
+          TRANSPORTER_USR_DIR=$(dirname "$(dirname "$TRANSPORTER_EXECUTABLE")")
+          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_USR_DIR" >> $GITHUB_ENV
+          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_USR_DIR"
+          echo "🔧 Fastlane will create final path: $TRANSPORTER_USR_DIR/bin/iTMSTransporter"
           
-          # Verify the path exists (check the actual final path Fastlane will use)
-          if [ -f "$TRANSPORTER_PARENT_DIR/bin/iTMSTransporter" ]; then
-            echo "✅ Verified iTMSTransporter exists at expected location: $TRANSPORTER_PARENT_DIR/bin/iTMSTransporter"
+          # Verify the final path Fastlane will construct is correct
+          FINAL_TRANSPORTER_PATH="$TRANSPORTER_USR_DIR/bin/iTMSTransporter"
+          if [ -f "$FINAL_TRANSPORTER_PATH" ]; then
+            echo "✅ SUCCESS: Final iTMSTransporter path verified: $FINAL_TRANSPORTER_PATH"
           else
-            echo "❌ Warning: iTMSTransporter not found at $TRANSPORTER_PARENT_DIR/bin/iTMSTransporter"
+            echo "❌ CRITICAL ERROR: Final iTMSTransporter path incorrect: $FINAL_TRANSPORTER_PATH"
+            echo "❌ This will cause upload to fail. Actual executable: $TRANSPORTER_EXECUTABLE"
+            exit 1
           fi
         else
           echo "❌ Could not find iTMSTransporter via xcrun"
