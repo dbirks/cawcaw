@@ -103,6 +103,7 @@ platform :ios do
     
     # Display environment info for troubleshooting
     UI.message "🔍 iTMSTransporter configuration:"
+    UI.message "  - Transporter path: #{ENV["FASTLANE_ITUNES_TRANSPORTER_PATH"]}"
     UI.message "  - Force package upload: #{ENV["ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD"]}"
     UI.message "  - Shell script mode: #{ENV["FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT"]}"
     UI.message "  - Skip 2FA upgrade: #{ENV["FASTLANE_SKIP_2FA_UPGRADE"]}"

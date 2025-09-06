@@ -91,23 +91,25 @@ jobs:
         rm -rf ~/Library/Caches/com.apple.amp.itmstransporter 2>/dev/null || true
         rm -rf /tmp/itmstransporter* 2>/dev/null || true
         
-        # Check current iTMSTransporter version after cache clear
+        # Find and configure iTMSTransporter path correctly
         if xcrun --find iTMSTransporter >/dev/null 2>&1; then
           TRANSPORTER_PATH=$(xcrun --find iTMSTransporter)
           echo "✅ Found iTMSTransporter via xcrun: $TRANSPORTER_PATH"
           
-          # Try to get version info (may not work but helpful for debugging)
-          "$TRANSPORTER_PATH" -version 2>/dev/null || echo "Could not get version info"
+          # Set the correct path for Fastlane - it needs the full path to the executable
+          echo "FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PATH" >> $GITHUB_ENV
+          echo "🔧 Set FASTLANE_ITUNES_TRANSPORTER_PATH=$TRANSPORTER_PATH"
+          
+          # Try to get version info for debugging
+          "$TRANSPORTER_PATH" -version 2>/dev/null || echo "Version check failed (expected for security reasons)"
+        else
+          echo "❌ Could not find iTMSTransporter via xcrun"
+          exit 1
         fi
         
-        # Configure Fastlane environment variables for optimal compatibility
-        # Use shell script mode to avoid Java dependency issues with iTMSTransporter 3.0.0
+        # Configure environment variables for optimal compatibility
         echo "FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT=1" >> $GITHUB_ENV
-        
-        # Force package upload for reliability - let iTMSTransporter auto-discover transport
         echo "ITMSTRANSPORTER_FORCE_ITMS_PACKAGE_UPLOAD=true" >> $GITHUB_ENV
-        
-        # Additional environment variables to ensure API key authentication works
         echo "FASTLANE_SKIP_2FA_UPGRADE=1" >> $GITHUB_ENV
         
         echo "✅ iTMSTransporter OSStatus -10814 fix complete"
