@@ -749,7 +749,7 @@ export default function Settings({ onClose }: SettingsProps) {
                               </Button>
                             </div>
                           </DialogHeader>
-                          <ScrollArea className="flex-1 px-4 sm:px-6 safe-x">
+                          <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
                             <div className="space-y-4 py-4 pb-6">
                               <div>
                                 <label htmlFor={serverNameId} className="text-sm font-medium">
@@ -1108,7 +1108,7 @@ export default function Settings({ onClose }: SettingsProps) {
                               </Button>
                             </div>
                           </DialogHeader>
-                          <ScrollArea className="flex-1 px-4 sm:px-6 safe-x">
+                          <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
                             <div className="space-y-4 py-4 pb-6">
                               <div>
                                 <label htmlFor={editServerNameId} className="text-sm font-medium">
