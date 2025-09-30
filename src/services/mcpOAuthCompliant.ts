@@ -3,7 +3,7 @@ import { debugLogger } from '@/services/debugLogger';
 import type { MCPOAuthDiscovery, MCPOAuthTokens } from '@/types/mcp';
 
 const OAUTH_STORAGE_PREFIX = 'mcp_oauth_';
-const MCP_PROTOCOL_VERSION = '2025-03-26'; // Use 2025-03-26 which has official OAuth support
+const MCP_PROTOCOL_VERSION = '2025-06-18'; // Use 2025-06-18 with RFC 9728 OAuth support
 
 // PKCE code verifier and challenge generation (OAuth 2.1 compliant)
 function generateCodeVerifier(): string {
@@ -23,11 +23,13 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
   return base64String.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-// Parse WWW-Authenticate header for OAuth discovery (MCP 2025-03-26 spec compliant)
-function parseWWWAuthenticateHeader(authHeader: string): MCPOAuthDiscovery | undefined {
+// Parse WWW-Authenticate header for OAuth discovery (MCP 2025-06-18 RFC 9728 compliant)
+async function parseWWWAuthenticateHeader(authHeader: string): Promise<MCPOAuthDiscovery | undefined> {
   debugLogger.info('oauth', '🔍 Parsing WWW-Authenticate header', { authHeader });
 
-  // Expected format: Bearer realm="mcp", authorization_uri="...", token_uri="...", scope="<resource>/mcp:access"
+  // Expected formats:
+  // 1. RFC 9728 (2025-06-18): Bearer resource_metadata="https://..."
+  // 2. Legacy (2025-03-26): Bearer realm="mcp", authorization_uri="...", token_uri="..."
   const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!bearerMatch) {
     debugLogger.warn('oauth', '⚠️ WWW-Authenticate header is not Bearer type');
@@ -46,24 +48,73 @@ function parseWWWAuthenticateHeader(authHeader: string): MCPOAuthDiscovery | und
 
   debugLogger.info('oauth', '📋 Parsed WWW-Authenticate parameters', parsedParams);
 
-  // Validate required MCP OAuth parameters
-  if (parsedParams.realm !== 'mcp') {
-    debugLogger.warn('oauth', '⚠️ WWW-Authenticate realm is not "mcp"');
-    return undefined;
+  // RFC 9728: Check for resource_metadata parameter (2025-06-18 spec)
+  if (parsedParams.resource_metadata) {
+    debugLogger.info('oauth', '✅ Found RFC 9728 resource_metadata, fetching OAuth metadata');
+    try {
+      const metadataResponse = await fetch(parsedParams.resource_metadata);
+      if (!metadataResponse.ok) {
+        debugLogger.warn('oauth', '⚠️ Failed to fetch resource metadata', {
+          status: metadataResponse.status,
+        });
+        return undefined;
+      }
+
+      const metadata = await metadataResponse.json();
+      debugLogger.info('oauth', '📋 Resource metadata received', metadata);
+
+      if (!metadata.authorization_servers || metadata.authorization_servers.length === 0) {
+        debugLogger.warn('oauth', '⚠️ No authorization servers in resource metadata');
+        return undefined;
+      }
+
+      // Fetch authorization server metadata
+      const authServerUrl = metadata.authorization_servers[0];
+      debugLogger.info('oauth', '🔍 Fetching authorization server metadata', { authServerUrl });
+
+      const authServerResponse = await fetch(authServerUrl);
+      if (!authServerResponse.ok) {
+        debugLogger.warn('oauth', '⚠️ Failed to fetch authorization server metadata', {
+          status: authServerResponse.status,
+        });
+        return undefined;
+      }
+
+      const authServerMetadata = await authServerResponse.json();
+      debugLogger.info('oauth', '✅ Authorization server metadata received', authServerMetadata);
+
+      return {
+        authorizationEndpoint: authServerMetadata.authorization_endpoint,
+        tokenEndpoint: authServerMetadata.token_endpoint,
+        registrationEndpoint: authServerMetadata.registration_endpoint,
+        supportedGrantTypes: authServerMetadata.grant_types_supported || ['authorization_code'],
+        supportedScopes: metadata.scopes_supported || authServerMetadata.scopes_supported,
+      };
+    } catch (error) {
+      debugLogger.error('oauth', '❌ Failed to fetch RFC 9728 metadata', { error });
+      return undefined;
+    }
   }
 
-  if (!parsedParams.authorization_uri || !parsedParams.token_uri) {
-    debugLogger.warn('oauth', '⚠️ Missing required OAuth endpoints in WWW-Authenticate header');
-    return undefined;
+  // Legacy format: Check for realm="mcp" (2025-03-26 spec)
+  if (parsedParams.realm === 'mcp') {
+    debugLogger.info('oauth', '✅ Found legacy realm="mcp" format');
+    if (!parsedParams.authorization_uri || !parsedParams.token_uri) {
+      debugLogger.warn('oauth', '⚠️ Missing required OAuth endpoints in WWW-Authenticate header');
+      return undefined;
+    }
+
+    return {
+      authorizationEndpoint: parsedParams.authorization_uri,
+      tokenEndpoint: parsedParams.token_uri,
+      registrationEndpoint: parsedParams.registration_endpoint,
+      supportedGrantTypes: ['authorization_code'],
+      supportedScopes: parsedParams.scope ? [parsedParams.scope] : undefined,
+    };
   }
 
-  return {
-    authorizationEndpoint: parsedParams.authorization_uri,
-    tokenEndpoint: parsedParams.token_uri,
-    registrationEndpoint: parsedParams.registration_endpoint,
-    supportedGrantTypes: ['authorization_code'],
-    supportedScopes: parsedParams.scope ? [parsedParams.scope] : undefined,
-  };
+  debugLogger.warn('oauth', '⚠️ No recognized OAuth discovery format in WWW-Authenticate header');
+  return undefined;
 }
 
 // Extract resource identifier from MCP server URL
@@ -91,6 +142,7 @@ function generateMCPScope(resourceIdentifier: string): string {
 export class MCPOAuthManagerCompliant {
   // Discover OAuth capabilities using MCP 2025-03-26 WWW-Authenticate method
   async discoverOAuthCapabilities(serverUrl: string): Promise<MCPOAuthDiscovery | undefined> {
+    debugLogger.info('oauth', '🔧 Using MCP OAuth 2.1 with RFC 9728 (2025-06-18 spec)');
     debugLogger.info('oauth', '🔍 Starting MCP OAuth 2.1 capability discovery', { serverUrl });
 
     try {
@@ -129,10 +181,9 @@ export class MCPOAuthManagerCompliant {
         const authHeader = response.headers.get('WWW-Authenticate');
         if (authHeader) {
           debugLogger.info('oauth', '✅ Found WWW-Authenticate header', { authHeader });
-          return parseWWWAuthenticateHeader(authHeader);
-        } else {
-          debugLogger.warn('oauth', '⚠️ 401 response but no WWW-Authenticate header');
+          return await parseWWWAuthenticateHeader(authHeader);
         }
+        debugLogger.warn('oauth', '⚠️ 401 response but no WWW-Authenticate header');
       } else if (response.status === 200) {
         debugLogger.info('oauth', 'ℹ️ MCP server does not require authentication');
         return undefined;
