@@ -24,7 +24,9 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 // Parse WWW-Authenticate header for OAuth discovery (MCP 2025-06-18 RFC 9728 compliant)
-async function parseWWWAuthenticateHeader(authHeader: string): Promise<MCPOAuthDiscovery | undefined> {
+async function parseWWWAuthenticateHeader(
+  authHeader: string
+): Promise<MCPOAuthDiscovery | undefined> {
   debugLogger.info('oauth', '🔍 Parsing WWW-Authenticate header', { authHeader });
 
   // Expected formats:
