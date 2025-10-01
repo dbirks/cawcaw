@@ -319,8 +319,9 @@ export class MCPOAuthManagerCompliant {
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('redirect_uri', this.getRedirectUri());
 
-    // Use MCP-compliant scope format
-    authUrl.searchParams.set('scope', mcpScope);
+    // Use server's advertised scopes, fallback to MCP-compliant format
+    const scopeToUse = discovery.supportedScopes?.[0] || mcpScope;
+    authUrl.searchParams.set('scope', scopeToUse);
 
     // Add resource identifier (RFC 8707)
     authUrl.searchParams.set('resource', serverUrl);
