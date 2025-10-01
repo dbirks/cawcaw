@@ -79,7 +79,24 @@ class HybridHttpClient {
         headers: response.headers || {},
         ok: response.status >= 200 && response.status < 300,
         async json() {
-          return typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+          const data = response.data;
+
+          // Check if response is SSE format (text/event-stream)
+          const contentType =
+            response.headers?.['content-type'] || response.headers?.['Content-Type'] || '';
+          if (contentType.includes('text/event-stream') && typeof data === 'string') {
+            // Parse SSE format: extract JSON from "data: {...}" lines
+            const lines = data.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                return JSON.parse(line.substring(6)); // Remove "data: " prefix
+              }
+            }
+            throw new Error('No data line found in SSE response');
+          }
+
+          // Regular JSON response
+          return typeof data === 'string' ? JSON.parse(data) : data;
         },
         async text() {
           return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
@@ -109,6 +126,11 @@ class HybridHttpClient {
     try {
       const response = await fetch(options.url, fetchOptions);
 
+      // Check content type once and read body
+      const contentType = response.headers.get('content-type') || '';
+      const isSSE = contentType.includes('text/event-stream');
+      const responseText = isSSE ? await response.text() : null;
+
       // Convert fetch Response to HttpResponse interface
       return {
         status: response.status,
@@ -116,10 +138,22 @@ class HybridHttpClient {
         headers: response.headers,
         ok: response.ok,
         async json() {
+          // Parse SSE format: extract JSON from "data: {...}" lines
+          if (isSSE && responseText) {
+            const lines = responseText.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                return JSON.parse(line.substring(6)); // Remove "data: " prefix
+              }
+            }
+            throw new Error('No data line found in SSE response');
+          }
+
+          // Regular JSON response (body not yet consumed)
           return response.json();
         },
         async text() {
-          return response.text();
+          return responseText || response.text();
         },
       };
     } catch (error) {
