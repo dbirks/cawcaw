@@ -367,7 +367,7 @@ export class MCPOAuthManagerCompliant {
     // Build client registration request (RFC 7591)
     const registrationRequest = {
       client_name: appName,
-      client_uri: typeof window !== 'undefined' ? window.location.origin : 'cawcaw://app',
+      client_uri: 'https://cawcaw.app', // RFC 7591: client_uri MUST be http/https
       redirect_uris: [this.getRedirectUri()],
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
