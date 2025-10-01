@@ -86,13 +86,20 @@ class HybridHttpClient {
             response.headers?.['content-type'] || response.headers?.['Content-Type'] || '';
           if (contentType.includes('text/event-stream') && typeof data === 'string') {
             // Parse SSE format: extract JSON from "data: {...}" lines
-            const lines = data.split('\n');
+            // SSE format can have multiple events, we want the last complete data payload
+            const lines = data.trim().split('\n');
+            let lastDataLine: string | null = null;
+
             for (const line of lines) {
               if (line.startsWith('data: ')) {
-                return JSON.parse(line.substring(6)); // Remove "data: " prefix
+                lastDataLine = line.substring(6); // Remove "data: " prefix
               }
             }
-            throw new Error('No data line found in SSE response');
+
+            if (lastDataLine) {
+              return JSON.parse(lastDataLine);
+            }
+            throw new Error(`No data line found in SSE response: ${data.substring(0, 200)}`);
           }
 
           // Regular JSON response
@@ -140,13 +147,22 @@ class HybridHttpClient {
         async json() {
           // Parse SSE format: extract JSON from "data: {...}" lines
           if (isSSE && responseText) {
-            const lines = responseText.split('\n');
+            // SSE format can have multiple events, we want the last complete data payload
+            const lines = responseText.trim().split('\n');
+            let lastDataLine: string | null = null;
+
             for (const line of lines) {
               if (line.startsWith('data: ')) {
-                return JSON.parse(line.substring(6)); // Remove "data: " prefix
+                lastDataLine = line.substring(6); // Remove "data: " prefix
               }
             }
-            throw new Error('No data line found in SSE response');
+
+            if (lastDataLine) {
+              return JSON.parse(lastDataLine);
+            }
+            throw new Error(
+              `No data line found in SSE response: ${responseText.substring(0, 200)}`
+            );
           }
 
           // Regular JSON response (body not yet consumed)
