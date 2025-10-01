@@ -74,7 +74,9 @@ async function parseWWWAuthenticateHeader(
       const authServerUrl = metadata.authorization_servers[0];
       debugLogger.info('oauth', '🔍 Fetching authorization server metadata', { authServerUrl });
 
-      const authServerResponse = await fetch(authServerUrl);
+      // RFC 8414: Authorization server metadata is at /.well-known/oauth-authorization-server
+      const authServerMetadataUrl = new URL('/.well-known/oauth-authorization-server', authServerUrl);
+      const authServerResponse = await fetch(authServerMetadataUrl.toString());
       if (!authServerResponse.ok) {
         debugLogger.warn('oauth', '⚠️ Failed to fetch authorization server metadata', {
           status: authServerResponse.status,
