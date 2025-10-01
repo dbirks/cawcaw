@@ -278,7 +278,7 @@ class HTTPMCPClient implements MCPClient {
           jsonrpc: '2.0',
           id: toolsRequestId,
           method: 'tools/list',
-          params: {},
+          // Omit params entirely per JSON-RPC 2.0 spec when no parameters are needed
         },
         toolsHeaders
       );
