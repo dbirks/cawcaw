@@ -272,16 +272,17 @@ class HTTPMCPClient implements MCPClient {
       const toolsRequestId =
         this.baseUrl.includes('huggingface.co') && this.sessionId ? this.sessionId : Date.now();
 
-      const response = await httpClient.post(
-        endpoint,
-        {
-          jsonrpc: '2.0',
-          id: toolsRequestId,
-          method: 'tools/list',
-          // Omit params entirely per JSON-RPC 2.0 spec when no parameters are needed
-        },
-        toolsHeaders
-      );
+      const toolsRequest = {
+        jsonrpc: '2.0',
+        id: toolsRequestId,
+        method: 'tools/list',
+        // Omit params entirely per JSON-RPC 2.0 spec when no parameters are needed
+      };
+
+      console.log('[MCPClient] Sending tools/list request:', JSON.stringify(toolsRequest, null, 2));
+      console.log('[MCPClient] Request headers:', JSON.stringify(toolsHeaders, null, 2));
+
+      const response = await httpClient.post(endpoint, toolsRequest, toolsHeaders);
 
       if (!response.ok) {
         const errorBody = await response.text();
@@ -334,6 +335,11 @@ class HTTPMCPClient implements MCPClient {
 
       const data = (await response.json()) as MCPJsonRpcResponse<MCPToolsListResult>;
       if (data.error) {
+        console.log(
+          '[MCPClient] tools/list returned JSON-RPC error:',
+          JSON.stringify(data.error, null, 2)
+        );
+        console.log('[MCPClient] Full response:', JSON.stringify(data, null, 2));
         throw new Error(data.error.message || 'MCP server error');
       }
 
