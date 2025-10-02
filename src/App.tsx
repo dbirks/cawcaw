@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import ChatView from './components/ChatView';
 import { mcpManager } from './services/mcpManager';
-import { oauthRedirectHandler } from './services/oauthRedirectHandler';
 
 function App() {
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
@@ -60,18 +59,6 @@ function App() {
         return;
       }
     }
-
-    // Initialize OAuth redirect handler when app starts (for mobile)
-    oauthRedirectHandler.initialize().catch((error) => {
-      console.error('Failed to initialize OAuth redirect handler:', error);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      oauthRedirectHandler.cleanup().catch((error) => {
-        console.error('Failed to cleanup OAuth redirect handler:', error);
-      });
-    };
   }, []);
 
   // Show loading screen during OAuth processing
