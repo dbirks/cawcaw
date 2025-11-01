@@ -88,7 +88,7 @@ jobs:
 
     - name: 📊 Upload test results
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: playwright-test-results
         path: |
@@ -98,7 +98,7 @@ jobs:
 
     - name: 🎥 Upload test videos & screenshots
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: playwright-media-artifacts
         path: |
