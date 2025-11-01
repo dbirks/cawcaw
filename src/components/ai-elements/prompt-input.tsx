@@ -101,23 +101,29 @@ export const PromptInputButton = ({
   variant = 'ghost',
   className,
   size,
+  children,
   ...props
 }: PromptInputButtonProps) => {
-  const newSize = (size ?? Children.count(props.children) > 1) ? 'default' : 'icon';
+  const childCount = Children.count(children);
+  const hasTextContent = childCount > 1;
+  const newSize = size ?? (hasTextContent ? 'sm' : 'icon');
 
   return (
     <Button
       className={cn(
-        'shrink-0 gap-1.5 rounded-lg',
-        variant === 'ghost' && 'text-muted-foreground',
-        newSize === 'default' && 'px-3',
+        'shrink-0 gap-1.5 rounded-lg transition-colors',
+        variant === 'ghost' && 'text-muted-foreground hover:text-foreground',
+        newSize === 'sm' && 'h-9 px-3',
+        newSize === 'icon' && 'h-9 w-9',
         className
       )}
       size={newSize}
       type="button"
       variant={variant}
       {...props}
-    />
+    >
+      {children}
+    </Button>
   );
 };
 

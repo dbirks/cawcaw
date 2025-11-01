@@ -20,7 +20,6 @@ import {
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import {
   PromptInput,
-  PromptInputButton,
   PromptInputModelSelect,
   PromptInputModelSelectContent,
   PromptInputModelSelectItem,
@@ -29,7 +28,6 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
-  PromptInputTools,
 } from '@/components/ai-elements/prompt-input';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning'; // For reasoning models like o1 and o3-mini
 import { Response } from '@/components/ai-elements/response';
@@ -50,9 +48,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
+import { cn } from '@/lib/utils';
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Settings from './Settings';
+
+// Available OpenAI models
+const AVAILABLE_MODELS = [
+  { value: 'gpt-4.1', label: 'GPT-4.1' },
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+  { value: 'gpt-4o', label: 'GPT-4o' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Default)' },
+  { value: 'o4-mini', label: 'o4-mini' },
+  { value: 'o3', label: 'o3' },
+  { value: 'o3-mini', label: 'o3-mini' },
+  { value: 'gpt-4o-with-web-search', label: 'GPT-4o + Web Search' },
+] as const;
 
 // Updated interfaces for AI Elements compatibility
 interface MessagePart {
@@ -713,11 +724,11 @@ export default function ChatView() {
       <div className="border-t pt-4 pb-6 safe-bottom safe-x flex-shrink-0">
         <PromptInput
           onSubmit={handleFormSubmit}
-          className={
-            isRecording
-              ? 'ring-2 ring-red-500 ring-opacity-50 shadow-lg shadow-red-200 dark:shadow-red-900/20'
-              : ''
-          }
+          className={cn(
+            'transition-all duration-200',
+            isRecording &&
+              'ring-2 ring-red-500 ring-opacity-50 shadow-lg shadow-red-200 dark:shadow-red-900/20'
+          )}
         >
           <PromptInputTextarea
             value={input}
@@ -726,49 +737,69 @@ export default function ChatView() {
               isRecording ? "🎤 Recording... Click 'Stop' to finish" : 'Type your message...'
             }
             disabled={isRecording || status === 'streaming'}
-            className={isRecording ? 'bg-red-50 dark:bg-red-950/20' : ''}
+            className={cn('min-h-[48px]', isRecording && 'bg-red-50 dark:bg-red-950/20')}
           />
-          <PromptInputToolbar>
-            <PromptInputTools>
-              {/* MCP Server selector */}
+          <PromptInputToolbar className="flex items-center justify-between gap-2 p-2">
+            {/* Left side: Contextual controls */}
+            <div className="flex items-center gap-1">
+              {/* Model selector - always visible with label */}
+              <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
+                <PromptInputModelSelectTrigger className="h-9 gap-1.5">
+                  <BotIcon size={14} className="shrink-0" />
+                  <span className="text-xs font-medium">
+                    <span className="hidden sm:inline">Model: </span>
+                    <PromptInputModelSelectValue placeholder="Select model" />
+                  </span>
+                </PromptInputModelSelectTrigger>
+                <PromptInputModelSelectContent>
+                  {AVAILABLE_MODELS.map((model) => (
+                    <PromptInputModelSelectItem key={model.value} value={model.value}>
+                      {model.label}
+                    </PromptInputModelSelectItem>
+                  ))}
+                </PromptInputModelSelectContent>
+              </PromptInputModelSelect>
+
+              {/* MCP Tools - with clear label */}
               <Popover open={mcpPopoverOpen} onOpenChange={setMcpPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <PromptInputButton>
-                    <McpIcon size={16} />
-                    <span className="hidden md:inline">Model Context Protocol</span>
-                    <span className="hidden sm:inline md:hidden">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <McpIcon size={14} className="shrink-0" />
+                    <span className="text-xs font-medium">
                       {(() => {
                         const enabledCount = availableServers.filter((s) => s.enabled).length;
                         return enabledCount === 0
-                          ? 'No tools'
-                          : enabledCount === 1
-                            ? '1 tool'
-                            : `${enabledCount} tools`;
+                          ? 'Tools'
+                          : `${enabledCount} ${enabledCount === 1 ? 'Tool' : 'Tools'}`;
                       })()}
                     </span>
-                  </PromptInputButton>
+                  </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="start">
                   <div className="p-1">
                     {availableServers.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        No servers configured
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        No MCP servers configured. Add servers in Settings.
                       </div>
                     ) : (
                       availableServers.map((server) => {
-                        const status = serverStatuses.get(server.id);
+                        const serverStatus = serverStatuses.get(server.id);
                         return (
                           <button
                             key={server.id}
                             type="button"
-                            className="flex items-center justify-between w-full cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground border-none bg-transparent"
+                            className="flex items-center justify-between w-full cursor-pointer rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground border-none bg-transparent transition-colors"
                             onClick={() => toggleServerEnabled(server.id)}
                           >
                             <div className="flex items-center gap-2">
-                              <span>{server.name}</span>
-                              {!status?.connected && (
+                              <span className="font-medium">{server.name}</span>
+                              {!serverStatus?.connected && (
                                 <span className="text-xs text-muted-foreground">
-                                  {status?.error ? 'Error' : 'Disconnected'}
+                                  {serverStatus?.error ? '⚠️ Error' : '○ Disconnected'}
                                 </span>
                               )}
                             </div>
@@ -782,15 +813,19 @@ export default function ChatView() {
                   </div>
                 </PopoverContent>
               </Popover>
-              {/* Enhanced Microphone button with recording state */}
-              <PromptInputButton
+            </div>
+
+            {/* Right side: Input actions */}
+            <div className="flex items-center gap-1">
+              {/* Voice input - moved next to submit */}
+              <Button
                 type="button"
+                variant={isRecording ? 'destructive' : 'ghost'}
+                size="icon"
+                className={cn('h-9 w-9 shrink-0 transition-all', isRecording && 'animate-pulse')}
                 onClick={handleVoiceInput}
                 disabled={status === 'submitted' && !isRecording}
-                variant={isRecording ? 'default' : 'ghost'}
-                className={
-                  isRecording ? 'bg-red-500 text-white animate-pulse hover:bg-red-600' : ''
-                }
+                title={isRecording ? 'Stop recording' : 'Start voice input'}
               >
                 {isRecording ? (
                   <MicOffIcon size={16} />
@@ -799,41 +834,17 @@ export default function ChatView() {
                 ) : (
                   <MicIcon size={16} />
                 )}
-                <span className="hidden sm:inline">
-                  {isRecording
-                    ? 'Stop'
-                    : status === 'submitted' && !isRecording
-                      ? 'Processing...'
-                      : 'Mic'}
-                </span>
-              </PromptInputButton>
-              {/* Model selector */}
-              <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
-                <PromptInputModelSelectTrigger>
-                  <BotIcon size={16} />
-                  <div className="hidden sm:block">
-                    <PromptInputModelSelectValue placeholder="Select model" />
-                  </div>
-                </PromptInputModelSelectTrigger>
-                <PromptInputModelSelectContent>
-                  <PromptInputModelSelectItem value="gpt-4.1">gpt-4.1</PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4.1-mini">
-                    gpt-4.1-mini
-                  </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4o">gpt-4o</PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4o-mini">
-                    gpt-4o-mini
-                  </PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="o4-mini">o4-mini</PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="o3">o3</PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="o3-mini">o3-mini</PromptInputModelSelectItem>
-                  <PromptInputModelSelectItem value="gpt-4o-with-web-search">
-                    gpt-4o + Web Search
-                  </PromptInputModelSelectItem>
-                </PromptInputModelSelectContent>
-              </PromptInputModelSelect>
-            </PromptInputTools>
-            <PromptInputSubmit disabled={!input.trim() || status === 'streaming'} status={status} />
+              </Button>
+
+              {/* Submit button - prominent style */}
+              <PromptInputSubmit
+                disabled={!input.trim() || status === 'streaming'}
+                status={status}
+                variant="default"
+                size="icon"
+                className="h-9 w-9 shrink-0 bg-primary hover:bg-primary/90"
+              />
+            </div>
           </PromptInputToolbar>
         </PromptInput>
       </div>
