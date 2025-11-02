@@ -4,13 +4,13 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Conversation } from '@/services/conversationStorage';
 import { conversationStorage } from '@/services/conversationStorage';
-import Settings from './Settings';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onNewConversation: () => void;
   onSelectConversation: (conversationId: string) => void;
+  onOpenSettings: () => void;
   currentConversationId: string | null;
 }
 
@@ -19,10 +19,10 @@ export default function Sidebar({
   onClose,
   onNewConversation,
   onSelectConversation,
+  onOpenSettings,
   currentConversationId,
 }: SidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [showSettings, setShowSettings] = useState(false);
 
   const loadConversations = useCallback(() => {
     const allConversations = conversationStorage.getAllConversations();
@@ -85,11 +85,6 @@ export default function Sidebar({
     return date.toLocaleDateString();
   };
 
-  // Show settings screen
-  if (showSettings) {
-    return <Settings onClose={() => setShowSettings(false)} />;
-  }
-
   return (
     <>
       {/* Overlay for mobile */}
@@ -120,22 +115,11 @@ export default function Sidebar({
           </Button>
         </div>
 
-        {/* Settings Section */}
-        <div className="p-4 border-b">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => setShowSettings(true)}
-          >
-            <SettingsIcon className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-        </div>
-
         {/* New Conversation Button */}
         <div className="p-4 border-b">
           <Button
-            variant="default"
+            variant="outline"
+            size="sm"
             className="w-full justify-start"
             onClick={handleNewConversation}
           >
@@ -192,8 +176,20 @@ export default function Sidebar({
           </ScrollArea>
         </div>
 
-        {/* Safe area for mobile */}
-        <div className="safe-bottom" />
+        {/* Settings Section - at bottom */}
+        <div className="border-t p-4 safe-bottom">
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => {
+              onOpenSettings();
+              onClose();
+            }}
+          >
+            <SettingsIcon className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
+        </div>
       </div>
     </>
   );

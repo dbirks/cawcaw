@@ -45,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { conversationStorage, type Message as StoredMessage } from '@/services/conversationStorage';
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
+import Settings from './Settings';
 import Sidebar, { SidebarToggle } from './Sidebar';
 
 // Available OpenAI models
@@ -86,6 +87,7 @@ export default function ChatView() {
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // New state for AI Elements features
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
@@ -635,6 +637,11 @@ export default function ChatView() {
     }
   };
 
+  // Show Settings screen
+  if (showSettings) {
+    return <Settings onClose={() => setShowSettings(false)} />;
+  }
+
   // Show API Key input screen
   if (showApiKeyInput) {
     return (
@@ -678,6 +685,7 @@ export default function ChatView() {
         onClose={() => setIsSidebarOpen(false)}
         onNewConversation={handleNewConversation}
         onSelectConversation={handleSelectConversation}
+        onOpenSettings={() => setShowSettings(true)}
         currentConversationId={currentConversationId}
       />
 
