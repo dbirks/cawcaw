@@ -5,6 +5,47 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <title>caw caw</title>
+    <!-- CRITICAL: Apply theme synchronously BEFORE React loads to prevent flash -->
+    <script>
+      (function() {
+        try {
+          // Get theme preference from localStorage (fast, synchronous)
+          const themePreference = localStorage.getItem('theme_preference') || 'system';
+
+          // Detect system theme preference
+          const getSystemTheme = () => {
+            if (typeof window !== 'undefined' && window.matchMedia) {
+              return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return 'light';
+          };
+
+          // Determine which theme to apply
+          let themeToApply = 'light';
+          if (themePreference === 'system') {
+            themeToApply = getSystemTheme();
+          } else if (themePreference === 'dark' || themePreference === 'light') {
+            themeToApply = themePreference;
+          } else {
+            // Invalid preference, fallback to system
+            themeToApply = getSystemTheme();
+          }
+
+          // Apply theme immediately by adding/removing 'dark' class
+          if (themeToApply === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (error) {
+          // If anything fails, check system preference as fallback
+          console.error('Theme initialization error:', error);
+          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

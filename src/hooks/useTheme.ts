@@ -29,11 +29,18 @@ export function useTheme() {
     async (preference: ThemePreference) => {
       setThemePreference(preference);
 
-      // Save preference to secure storage
+      // Save to localStorage first (synchronous, enables instant theme on reload)
+      try {
+        localStorage.setItem('theme_preference', preference);
+      } catch (error) {
+        console.error('Failed to save theme preference to localStorage:', error);
+      }
+
+      // Also save to secure storage for mobile
       try {
         await SecureStoragePlugin.set({ key: 'theme_preference', value: preference });
       } catch (error) {
-        console.error('Failed to save theme preference:', error);
+        console.error('Failed to save theme preference to secure storage:', error);
       }
 
       // Apply the theme
@@ -52,19 +59,45 @@ export function useTheme() {
   useEffect(() => {
     const initializeTheme = async () => {
       try {
-        // Load theme preference
-        const themeResult = await SecureStoragePlugin.get({ key: 'theme_preference' });
-        const savedPreference = (themeResult?.value as ThemePreference) || 'system';
-        setThemePreference(savedPreference);
+        // Try localStorage first (synchronous, already applied by inline script)
+        let savedPreference: ThemePreference | null = null;
+        try {
+          const localStorageValue = localStorage.getItem('theme_preference');
+          if (localStorageValue) {
+            savedPreference = localStorageValue as ThemePreference;
+          }
+        } catch (error) {
+          console.error('Failed to read from localStorage:', error);
+        }
 
-        // Apply initial theme
+        // Fallback to secure storage if localStorage not available
+        if (!savedPreference) {
+          const themeResult = await SecureStoragePlugin.get({ key: 'theme_preference' });
+          savedPreference = (themeResult?.value as ThemePreference) || null;
+        }
+
+        // Use system as default if no preference found
+        const preference = savedPreference || 'system';
+        setThemePreference(preference);
+
+        // Theme should already be applied by inline script in index.html,
+        // but we apply it again to ensure consistency
         let initialTheme: Theme;
-        if (savedPreference === 'system') {
+        if (preference === 'system') {
           initialTheme = getSystemTheme();
         } else {
-          initialTheme = savedPreference;
+          initialTheme = preference;
         }
         applyTheme(initialTheme);
+
+        // Sync localStorage with secure storage if needed
+        if (savedPreference && !localStorage.getItem('theme_preference')) {
+          try {
+            localStorage.setItem('theme_preference', savedPreference);
+          } catch (error) {
+            console.error('Failed to sync theme to localStorage:', error);
+          }
+        }
       } catch (error) {
         console.error('Failed to initialize theme:', error);
         // Fallback to system theme
