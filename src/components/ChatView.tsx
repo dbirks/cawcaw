@@ -692,7 +692,7 @@ export default function ChatView() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full">
         {/* Fixed Header with safe area */}
-        <div className="border-b pb-4 pt-8 flex justify-between items-center safe-top safe-x flex-shrink-0">
+        <div className="border-b pb-3 pt-4 px-4 flex justify-between items-center safe-top flex-shrink-0">
           <div className="flex items-center gap-2">
             <SidebarToggle onClick={() => setIsSidebarOpen(true)} />
             <h1 className="text-xl font-semibold">caw caw</h1>
