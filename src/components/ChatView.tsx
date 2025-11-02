@@ -6,7 +6,6 @@ import {
   Loader2Icon,
   MicIcon,
   MicOffIcon,
-  Settings as SettingsIcon,
   User,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -51,7 +50,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
-import Settings from './Settings';
+import Sidebar, { SidebarToggle } from './Sidebar';
+import { conversationStorage, type Message as StoredMessage } from '@/services/conversationStorage';
 
 // Available OpenAI models
 const AVAILABLE_MODELS = [
@@ -80,6 +80,7 @@ interface UIMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   parts: MessagePart[];
+  timestamp?: number;
 }
 
 export default function ChatView() {
@@ -89,8 +90,8 @@ export default function ChatView() {
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(true);
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<UIMessage[]>([]);
-  // const [isLoading, setIsLoading] = useState<boolean>(false); // Replaced with status state
-  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   // New state for AI Elements features
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
@@ -122,6 +123,16 @@ export default function ChatView() {
         const modelResult = await SecureStoragePlugin.get({ key: 'selected_model' });
         if (modelResult?.value) {
           setSelectedModel(modelResult.value);
+        }
+
+        // Initialize conversation storage
+        await conversationStorage.initialize();
+
+        // Load current conversation
+        const currentConversation = await conversationStorage.getCurrentConversation();
+        if (currentConversation) {
+          setCurrentConversationId(currentConversation.id);
+          setMessages(currentConversation.messages);
         }
 
         // Initialize MCP servers and load data
@@ -210,8 +221,16 @@ export default function ChatView() {
       id: Date.now().toString(),
       role: 'user',
       parts: [{ type: 'text', text: command }],
+      timestamp: Date.now(),
     };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => {
+      const newMessages = [...prev, userMessage];
+      // Save to conversation storage
+      conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
+        console.error('Failed to save message:', error);
+      });
+      return newMessages;
+    });
 
     // Add system message indicating we're testing the connection
     addSystemMessage(`🔄 Testing connection to ${hostname}...`);
@@ -285,8 +304,16 @@ export default function ChatView() {
       id: Date.now().toString(),
       role: 'assistant',
       parts: [{ type: 'text', text: content }],
+      timestamp: Date.now(),
     };
-    setMessages((prev) => [...prev, systemMessage]);
+    setMessages((prev) => {
+      const newMessages = [...prev, systemMessage];
+      // Save to conversation storage
+      conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
+        console.error('Failed to save message:', error);
+      });
+      return newMessages;
+    });
   };
 
   const sendMessage = async (content: string) => {
@@ -305,9 +332,17 @@ export default function ChatView() {
       id: Date.now().toString(),
       role: 'user',
       parts: [{ type: 'text', text: trimmedContent }],
+      timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => {
+      const newMessages = [...prev, userMessage];
+      // Save to conversation storage
+      conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
+        console.error('Failed to save message:', error);
+      });
+      return newMessages;
+    });
     setStatus('submitted');
 
     try {
@@ -423,9 +458,17 @@ export default function ChatView() {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         parts: assistantParts,
+        timestamp: Date.now(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => {
+        const newMessages = [...prev, assistantMessage];
+        // Save to conversation storage
+        conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
+          console.error('Failed to save message:', error);
+        });
+        return newMessages;
+      });
       setStatus('ready');
     } catch (error) {
       console.error('Chat error:', error);
@@ -439,9 +482,17 @@ export default function ChatView() {
             text: 'Sorry, I encountered an error. Please check your API key and try again.',
           },
         ],
+        timestamp: Date.now(),
       };
 
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => {
+        const newMessages = [...prev, errorMessage];
+        // Save to conversation storage
+        conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
+          console.error('Failed to save message:', error);
+        });
+        return newMessages;
+      });
       setStatus('error');
     }
   };
@@ -575,10 +626,20 @@ export default function ChatView() {
     scrollToBottom();
   }, [scrollToBottom]);
 
-  // Show Settings screen
-  if (showSettings) {
-    return <Settings onClose={() => setShowSettings(false)} />;
-  }
+  const handleNewConversation = async () => {
+    const newConv = await conversationStorage.createNewConversation();
+    setCurrentConversationId(newConv.id);
+    setMessages([]);
+    setInput('');
+  };
+
+  const handleSelectConversation = async (_conversationId: string) => {
+    const conversation = await conversationStorage.getCurrentConversation();
+    if (conversation) {
+      setCurrentConversationId(conversation.id);
+      setMessages(conversation.messages);
+    }
+  };
 
   // Show API Key input screen
   if (showApiKeyInput) {
@@ -616,14 +677,25 @@ export default function ChatView() {
   }
 
   return (
-    <div className="h-dvh bg-background flex flex-col">
-      {/* Fixed Header with safe area */}
-      <div className="border-b pb-4 pt-8 flex justify-between items-center safe-top safe-x flex-shrink-0">
-        <h1 className="text-xl font-semibold">caw caw</h1>
-        <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-          <SettingsIcon className="h-4 w-4" />
-        </Button>
-      </div>
+    <div className="h-dvh bg-background flex">
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNewConversation={handleNewConversation}
+        onSelectConversation={handleSelectConversation}
+        currentConversationId={currentConversationId}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-full">
+        {/* Fixed Header with safe area */}
+        <div className="border-b pb-4 pt-8 flex justify-between items-center safe-top safe-x flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <SidebarToggle onClick={() => setIsSidebarOpen(true)} />
+            <h1 className="text-xl font-semibold">caw caw</h1>
+          </div>
+        </div>
 
       {/* Main Conversation - scrollable area */}
       <div ref={conversationRef} className="flex-1 overflow-auto">
@@ -847,6 +919,7 @@ export default function ChatView() {
             </div>
           </PromptInputToolbar>
         </PromptInput>
+      </div>
       </div>
     </div>
   );
