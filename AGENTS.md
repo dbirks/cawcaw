@@ -245,18 +245,22 @@ Always use conventional commit messages when making changes:
 Keep commit messages short and descriptive (under 50 characters for the subject line).
 
 ### Development & Testing Workflow
-1. **Work in chunks**: Complete logical units of work before committing
-2. **Code quality checks**: Always run `pnpm lint` before committing
-3. **Local testing**: Test with Playwright MCP locally after major UI changes
-4. **Commit small**: Make focused commits with clear conventional messages
-5. **Use Tailwind**: Always prefer Tailwind CSS classes over custom CSS - we have the full Tailwind v4 utility system available
-6. **Example workflow**:
+**IMPORTANT: Commit after EVERY chunk of work. Do not accumulate uncommitted changes.**
+
+1. **Work in chunks**: Complete one logical unit of work at a time
+2. **Commit immediately**: After each chunk is complete and working, commit it right away
+3. **Code quality checks**: Always run `pnpm lint` before committing
+4. **Local testing**: Test with Playwright MCP locally after major UI changes
+5. **Commit small**: Make focused commits with clear conventional messages
+6. **Use Tailwind**: Always prefer Tailwind CSS classes over custom CSS - we have the full Tailwind v4 utility system available
+7. **Example workflow**:
    ```bash
-   # After completing a feature/fix
+   # After completing each feature/fix chunk
    pnpm lint
    # Test with Playwright if UI changes
    git add .
    git commit -m "fix: resolve theme initialization on app startup"
+   # IMMEDIATELY commit, don't wait to accumulate more changes
    ```
 
 ### Testing with Playwright MCP Tools (Ad-Hoc Testing)
