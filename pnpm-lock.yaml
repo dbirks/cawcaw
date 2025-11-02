@@ -17,9 +17,6 @@ importers:
       '@capacitor-community/safe-area':
         specifier: 7.0.0-alpha.1
         version: 7.0.0-alpha.1(@capacitor/core@7.4.2)
-      '@capacitor/android':
-        specifier: ^7.4.2
-        version: 7.4.2(@capacitor/core@7.4.2)
       '@capacitor/app':
         specifier: ^7.0.2
         version: 7.0.2(@capacitor/core@7.4.2)
@@ -360,11 +357,6 @@ packages:
     resolution: {integrity: sha512-N6ktkRiofqrt+N/vQzh4jcWY8IzJ4TVw1tKAPssvbddWFTyZzXzSdBeX/l/nracJF0PZqmLdA7JYTBfnOxXQYw==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
-
-  '@capacitor/android@7.4.2':
-    resolution: {integrity: sha512-FZ7M9NwFkljR7EP5eXiE32mAIfZNcYw2CzRMCG3rQu0u0ZaIoeOeq5/oK4YcDnGpNmu8jpngKJqZ+9OiSQSwDg==}
-    peerDependencies:
-      '@capacitor/core': ^7.4.0
 
   '@capacitor/app@7.0.2':
     resolution: {integrity: sha512-kRWBF6Wc6OQxhL+N6rsegyfJY37Lj9/VJhtrmgmH+y+rdxQLQwUOpMyxXStym7cF+QzGeVpItyVxyUT9fE5ByQ==}
@@ -3296,10 +3288,6 @@ snapshots:
     optional: true
 
   '@capacitor-community/safe-area@7.0.0-alpha.1(@capacitor/core@7.4.2)':
-    dependencies:
-      '@capacitor/core': 7.4.2
-
-  '@capacitor/android@7.4.2(@capacitor/core@7.4.2)':
     dependencies:
       '@capacitor/core': 7.4.2
 
