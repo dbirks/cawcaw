@@ -1,6 +1,6 @@
-import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 
 const CONVERSATIONS_STORAGE_KEY = 'chat_conversations';
 const CURRENT_CONVERSATION_KEY = 'current_conversation_id';
@@ -101,7 +101,11 @@ class ConversationStorage {
     conversation.updatedAt = Date.now();
 
     // Auto-generate title after first user message
-    if (conversation.messages.length === 1 && message.role === 'user' && conversation.title === 'New Conversation') {
+    if (
+      conversation.messages.length === 1 &&
+      message.role === 'user' &&
+      conversation.title === 'New Conversation'
+    ) {
       // Don't await this - let it run in background
       this.generateConversationTitle(conversation.id).catch((error) => {
         console.error('Failed to generate conversation title:', error);

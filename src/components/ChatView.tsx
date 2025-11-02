@@ -1,13 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import {
-  BotIcon,
-  Loader2Icon,
-  MicIcon,
-  MicOffIcon,
-  User,
-} from 'lucide-react';
+import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, User } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -48,10 +42,10 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { cn } from '@/lib/utils';
+import { conversationStorage, type Message as StoredMessage } from '@/services/conversationStorage';
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Sidebar, { SidebarToggle } from './Sidebar';
-import { conversationStorage, type Message as StoredMessage } from '@/services/conversationStorage';
 
 // Available OpenAI models
 const AVAILABLE_MODELS = [
@@ -697,229 +691,231 @@ export default function ChatView() {
           </div>
         </div>
 
-      {/* Main Conversation - scrollable area */}
-      <div ref={conversationRef} className="flex-1 overflow-auto">
-        <Conversation className="px-4">
-          <ConversationContent className="safe-x h-full">
-            {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <p>Start a conversation with AI</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <Message key={message.id} from={message.role}>
-                    <MessageContent>
-                      {message.parts.map((part, idx) => {
-                        if (part.type === 'text') {
-                          return <Response key={`text-${idx}`}>{part.text || ''}</Response>;
-                        } else if (part.type.startsWith('tool-')) {
-                          return (
-                            <Tool key={`tool-${idx}`} defaultOpen={false}>
-                              <ToolHeader
-                                type={part.type as `tool-${string}`}
-                                state={part.state || 'input-available'}
-                              />
-                              <ToolContent>
-                                <ToolInput input={part.input} toolType={part.type} />
-                                {(part.state === 'input-streaming' ||
-                                  part.state === 'input-available') && (
-                                  <div className="p-4">
-                                    <LoadingMessage />
-                                  </div>
-                                )}
-                                {part.state === 'output-available' && (
-                                  <ToolOutput
-                                    output={
-                                      <Response>
-                                        {typeof part.output === 'object' && part.output !== null
-                                          ? JSON.stringify(part.output, null, 2)
-                                          : String(part.output || '')}
-                                      </Response>
-                                    }
-                                    errorText={part.errorText}
-                                  />
-                                )}
-                              </ToolContent>
-                            </Tool>
-                          );
-                        } else if (part.type === 'reasoning') {
-                          return (
-                            <Reasoning key={`reasoning-${idx}`} defaultOpen={false}>
-                              <ReasoningTrigger />
-                              <ReasoningContent>{part.text || ''}</ReasoningContent>
-                            </Reasoning>
-                          );
-                        }
-                        return null;
-                      })}
-                    </MessageContent>
-                    {message.role === 'assistant' ? (
+        {/* Main Conversation - scrollable area */}
+        <div ref={conversationRef} className="flex-1 overflow-auto">
+          <Conversation className="px-4">
+            <ConversationContent className="safe-x h-full">
+              {messages.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>Start a conversation with AI</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <Message key={message.id} from={message.role}>
+                      <MessageContent>
+                        {message.parts.map((part, idx) => {
+                          if (part.type === 'text') {
+                            return <Response key={`text-${idx}`}>{part.text || ''}</Response>;
+                          } else if (part.type.startsWith('tool-')) {
+                            return (
+                              <Tool key={`tool-${idx}`} defaultOpen={false}>
+                                <ToolHeader
+                                  type={part.type as `tool-${string}`}
+                                  state={part.state || 'input-available'}
+                                />
+                                <ToolContent>
+                                  <ToolInput input={part.input} toolType={part.type} />
+                                  {(part.state === 'input-streaming' ||
+                                    part.state === 'input-available') && (
+                                    <div className="p-4">
+                                      <LoadingMessage />
+                                    </div>
+                                  )}
+                                  {part.state === 'output-available' && (
+                                    <ToolOutput
+                                      output={
+                                        <Response>
+                                          {typeof part.output === 'object' && part.output !== null
+                                            ? JSON.stringify(part.output, null, 2)
+                                            : String(part.output || '')}
+                                        </Response>
+                                      }
+                                      errorText={part.errorText}
+                                    />
+                                  )}
+                                </ToolContent>
+                              </Tool>
+                            );
+                          } else if (part.type === 'reasoning') {
+                            return (
+                              <Reasoning key={`reasoning-${idx}`} defaultOpen={false}>
+                                <ReasoningTrigger />
+                                <ReasoningContent>{part.text || ''}</ReasoningContent>
+                              </Reasoning>
+                            );
+                          }
+                          return null;
+                        })}
+                      </MessageContent>
+                      {message.role === 'assistant' ? (
+                        <Avatar className="size-8 ring ring-1 ring-border">
+                          <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
+                            <OpenAIIcon size={16} />
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <Avatar className="size-8 ring ring-1 ring-border">
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            <User size={16} />
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </Message>
+                  ))}
+
+                  {/* AI thinking indicator when streaming */}
+                  {status === 'streaming' && (
+                    <Message from="assistant">
+                      <MessageContent>
+                        <div className="p-3">
+                          <LoadingMessage />
+                        </div>
+                      </MessageContent>
                       <Avatar className="size-8 ring ring-1 ring-border">
                         <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
                           <OpenAIIcon size={16} />
                         </AvatarFallback>
                       </Avatar>
-                    ) : (
-                      <Avatar className="size-8 ring ring-1 ring-border">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          <User size={16} />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </Message>
-                ))}
+                    </Message>
+                  )}
+                </div>
+              )}
+            </ConversationContent>
+            <ConversationScrollButton />
+          </Conversation>
+        </div>
 
-                {/* AI thinking indicator when streaming */}
-                {status === 'streaming' && (
-                  <Message from="assistant">
-                    <MessageContent>
-                      <div className="p-3">
-                        <LoadingMessage />
-                      </div>
-                    </MessageContent>
-                    <Avatar className="size-8 ring ring-1 ring-border">
-                      <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
-                        <OpenAIIcon size={16} />
-                      </AvatarFallback>
-                    </Avatar>
-                  </Message>
-                )}
-              </div>
+        {/* Fixed Input Area with safe area */}
+        <div className="border-t pt-4 pb-6 safe-bottom safe-x flex-shrink-0">
+          <PromptInput
+            onSubmit={handleFormSubmit}
+            className={cn(
+              'transition-all duration-200',
+              isRecording &&
+                'ring-2 ring-red-500 ring-opacity-50 shadow-lg shadow-red-200 dark:shadow-red-900/20'
             )}
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
-      </div>
-
-      {/* Fixed Input Area with safe area */}
-      <div className="border-t pt-4 pb-6 safe-bottom safe-x flex-shrink-0">
-        <PromptInput
-          onSubmit={handleFormSubmit}
-          className={cn(
-            'transition-all duration-200',
-            isRecording &&
-              'ring-2 ring-red-500 ring-opacity-50 shadow-lg shadow-red-200 dark:shadow-red-900/20'
-          )}
-        >
-          <PromptInputTextarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              isRecording ? "🎤 Recording... Click 'Stop' to finish" : 'Type your message...'
-            }
-            disabled={isRecording || status === 'streaming'}
-            className={cn('min-h-[48px]', isRecording && 'bg-red-50 dark:bg-red-950/20')}
-          />
-          <PromptInputToolbar className="flex items-center justify-between gap-2 p-2">
-            {/* Left side: Contextual controls */}
-            <div className="flex items-center gap-1">
-              {/* Model selector - always visible with label */}
-              <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
-                <PromptInputModelSelectTrigger className="h-9 gap-1.5">
-                  <BotIcon size={14} className="shrink-0" />
-                  <span className="text-xs font-medium">
-                    <span className="hidden sm:inline">Model: </span>
-                    <PromptInputModelSelectValue placeholder="Select model" />
-                  </span>
-                </PromptInputModelSelectTrigger>
-                <PromptInputModelSelectContent>
-                  {AVAILABLE_MODELS.map((model) => (
-                    <PromptInputModelSelectItem key={model.value} value={model.value}>
-                      {model.label}
-                    </PromptInputModelSelectItem>
-                  ))}
-                </PromptInputModelSelectContent>
-              </PromptInputModelSelect>
-
-              {/* MCP Tools - with clear label */}
-              <Popover open={mcpPopoverOpen} onOpenChange={setMcpPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
-                  >
-                    <McpIcon size={14} className="shrink-0" />
+          >
+            <PromptInputTextarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                isRecording ? "🎤 Recording... Click 'Stop' to finish" : 'Type your message...'
+              }
+              disabled={isRecording || status === 'streaming'}
+              className={cn('min-h-[48px]', isRecording && 'bg-red-50 dark:bg-red-950/20')}
+            />
+            <PromptInputToolbar className="flex items-center justify-between gap-2 p-2">
+              {/* Left side: Contextual controls */}
+              <div className="flex items-center gap-1">
+                {/* Model selector - always visible with label */}
+                <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
+                  <PromptInputModelSelectTrigger className="h-9 gap-1.5">
+                    <BotIcon size={14} className="shrink-0" />
                     <span className="text-xs font-medium">
-                      {(() => {
-                        const enabledCount = availableServers.filter((s) => s.enabled).length;
-                        return enabledCount === 0
-                          ? 'Tools'
-                          : `${enabledCount} ${enabledCount === 1 ? 'Tool' : 'Tools'}`;
-                      })()}
+                      <span className="hidden sm:inline">Model: </span>
+                      <PromptInputModelSelectValue placeholder="Select model" />
                     </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="start">
-                  <div className="p-1">
-                    {availableServers.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">
-                        No MCP servers configured. Add servers in Settings.
-                      </div>
-                    ) : (
-                      availableServers.map((server) => {
-                        const serverStatus = serverStatuses.get(server.id);
-                        return (
-                          <button
-                            key={server.id}
-                            type="button"
-                            className="flex items-center justify-between w-full cursor-pointer rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground border-none bg-transparent transition-colors"
-                            onClick={() => toggleServerEnabled(server.id)}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{server.name}</span>
-                              {!serverStatus?.connected && (
-                                <span className="text-xs text-muted-foreground">
-                                  {serverStatus?.error ? '⚠️ Error' : '○ Disconnected'}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex size-4 items-center justify-center">
-                              {server.enabled && <div className="size-2 rounded-full bg-primary" />}
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
+                  </PromptInputModelSelectTrigger>
+                  <PromptInputModelSelectContent>
+                    {AVAILABLE_MODELS.map((model) => (
+                      <PromptInputModelSelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </PromptInputModelSelectItem>
+                    ))}
+                  </PromptInputModelSelectContent>
+                </PromptInputModelSelect>
 
-            {/* Right side: Input actions */}
-            <div className="flex items-center gap-1">
-              {/* Voice input - moved next to submit */}
-              <Button
-                type="button"
-                variant={isRecording ? 'destructive' : 'ghost'}
-                size="icon"
-                className={cn('h-9 w-9 shrink-0 transition-all', isRecording && 'animate-pulse')}
-                onClick={handleVoiceInput}
-                disabled={status === 'submitted' && !isRecording}
-                title={isRecording ? 'Stop recording' : 'Start voice input'}
-              >
-                {isRecording ? (
-                  <MicOffIcon size={16} />
-                ) : status === 'submitted' && !isRecording ? (
-                  <Loader2Icon size={16} className="animate-spin" />
-                ) : (
-                  <MicIcon size={16} />
-                )}
-              </Button>
+                {/* MCP Tools - with clear label */}
+                <Popover open={mcpPopoverOpen} onOpenChange={setMcpPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <McpIcon size={14} className="shrink-0" />
+                      <span className="text-xs font-medium">
+                        {(() => {
+                          const enabledCount = availableServers.filter((s) => s.enabled).length;
+                          return enabledCount === 0
+                            ? 'Tools'
+                            : `${enabledCount} ${enabledCount === 1 ? 'Tool' : 'Tools'}`;
+                        })()}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <div className="p-1">
+                      {availableServers.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No MCP servers configured. Add servers in Settings.
+                        </div>
+                      ) : (
+                        availableServers.map((server) => {
+                          const serverStatus = serverStatuses.get(server.id);
+                          return (
+                            <button
+                              key={server.id}
+                              type="button"
+                              className="flex items-center justify-between w-full cursor-pointer rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground border-none bg-transparent transition-colors"
+                              onClick={() => toggleServerEnabled(server.id)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{server.name}</span>
+                                {!serverStatus?.connected && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {serverStatus?.error ? '⚠️ Error' : '○ Disconnected'}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex size-4 items-center justify-center">
+                                {server.enabled && (
+                                  <div className="size-2 rounded-full bg-primary" />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-              {/* Submit button - prominent style */}
-              <PromptInputSubmit
-                disabled={!input.trim() || status === 'streaming'}
-                status={status}
-                variant="default"
-                size="icon"
-                className="h-9 w-9 shrink-0 bg-primary hover:bg-primary/90"
-              />
-            </div>
-          </PromptInputToolbar>
-        </PromptInput>
-      </div>
+              {/* Right side: Input actions */}
+              <div className="flex items-center gap-1">
+                {/* Voice input - moved next to submit */}
+                <Button
+                  type="button"
+                  variant={isRecording ? 'destructive' : 'ghost'}
+                  size="icon"
+                  className={cn('h-9 w-9 shrink-0 transition-all', isRecording && 'animate-pulse')}
+                  onClick={handleVoiceInput}
+                  disabled={status === 'submitted' && !isRecording}
+                  title={isRecording ? 'Stop recording' : 'Start voice input'}
+                >
+                  {isRecording ? (
+                    <MicOffIcon size={16} />
+                  ) : status === 'submitted' && !isRecording ? (
+                    <Loader2Icon size={16} className="animate-spin" />
+                  ) : (
+                    <MicIcon size={16} />
+                  )}
+                </Button>
+
+                {/* Submit button - prominent style */}
+                <PromptInputSubmit
+                  disabled={!input.trim() || status === 'streaming'}
+                  status={status}
+                  variant="default"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 bg-primary hover:bg-primary/90"
+                />
+              </div>
+            </PromptInputToolbar>
+          </PromptInput>
+        </div>
       </div>
     </div>
   );

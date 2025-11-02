@@ -1,9 +1,9 @@
 import { Menu, MessageSquare, Plus, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import type { Conversation } from '@/services/conversationStorage';
-import { conversationStorage } from '@/services/conversationStorage';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { Conversation } from '@/services/conversationStorage';
+import { conversationStorage } from '@/services/conversationStorage';
 import Settings from './Settings';
 
 interface SidebarProps {
@@ -134,7 +134,11 @@ export default function Sidebar({
 
         {/* New Conversation Button */}
         <div className="p-4 border-b">
-          <Button variant="default" className="w-full justify-start" onClick={handleNewConversation}>
+          <Button
+            variant="default"
+            className="w-full justify-start"
+            onClick={handleNewConversation}
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Conversation
           </Button>
