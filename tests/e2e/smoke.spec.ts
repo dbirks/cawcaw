@@ -52,17 +52,23 @@ test.describe('App Smoke Tests', () => {
   test('should have accessible settings', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    
-    // Look for settings button/link
-    const settingsElement = page.locator('button, a, [role="button"]').filter({ hasText: /settings|Settings|⚙/i });
-    const hasSettings = await settingsElement.count() > 0;
-    
+
+    // New UI pattern: Settings is in sidebar, so open sidebar first
+    // Click sidebar toggle (first button with SVG icon)
+    const sidebarToggle = page.locator('button').filter({ has: page.locator('svg') }).first();
+    await sidebarToggle.click();
+
+    // Wait for sidebar to open, then look for Settings button
+    await page.waitForTimeout(500);
+    const settingsButton = page.getByRole('button', { name: /Settings/i });
+    const hasSettings = await settingsButton.count() > 0;
+
     if (hasSettings) {
-      await settingsElement.first().click();
-      
-      // Should navigate to settings or show settings panel
-      const settingsContent = page.locator('text=/settings|Settings|configuration|Configuration/i');
-      await expect(settingsContent.first()).toBeVisible({ timeout: 10000 });
+      await settingsButton.click();
+
+      // Should show settings panel
+      const settingsContent = page.getByRole('heading', { name: 'Settings' });
+      await expect(settingsContent).toBeVisible({ timeout: 10000 });
     }
   });
 

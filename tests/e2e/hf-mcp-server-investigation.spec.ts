@@ -31,9 +31,13 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
       }
     }
     
-    // Step 1: Navigate to Settings using better selectors
-    console.log('🔧 Opening settings in mobile view...');
-    const settingsButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    // Step 1: Navigate to Settings via Sidebar (new UI pattern)
+    console.log('🔧 Opening sidebar...');
+    const sidebarToggle = page.locator('button').filter({ has: page.locator('svg') }).first();
+    await sidebarToggle.click();
+
+    console.log('🔧 Opening settings from sidebar...');
+    const settingsButton = page.getByRole('button', { name: /Settings/i });
     await settingsButton.click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
     
@@ -176,8 +180,10 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
       }
     }
     
-    // Navigate to MCP settings using modern selectors
-    const settingsButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    // Navigate to MCP settings via sidebar
+    const sidebarToggle = page.locator('button').filter({ has: page.locator('svg') }).first();
+    await sidebarToggle.click();
+    const settingsButton = page.getByRole('button', { name: /Settings/i });
     await settingsButton.click();
     await page.getByRole('tab', { name: 'MCP' }).click();
     
@@ -219,8 +225,10 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
     // Test full mobile navigation flow
     await expect(page.getByText('caw caw')).toBeVisible();
     
-    // Settings navigation using modern selectors
-    const settingsButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    // Settings navigation via sidebar
+    const sidebarToggle = page.locator('button').filter({ has: page.locator('svg') }).first();
+    await sidebarToggle.click();
+    const settingsButton = page.getByRole('button', { name: /Settings/i });
     await settingsButton.click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
     
