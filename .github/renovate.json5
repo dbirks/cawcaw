@@ -7,6 +7,9 @@
     "group:allNonMajor",
   ],
 
+  // Pin dependencies to exact versions (no ^ or ~)
+  rangeStrategy: "pin",
+
   // Enable lockfile maintenance for pnpm-lock.yaml updates
   // This refreshes the lockfile to update transitive dependencies
   lockFileMaintenance: {
