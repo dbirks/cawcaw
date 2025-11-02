@@ -28,8 +28,8 @@
     "test:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.59",
-    "@ai-sdk/react": "^2.0.86",
+    "@ai-sdk/openai": "^3.0.0-beta.47",
+    "@ai-sdk/react": "^3.0.0-beta.92",
     "@capacitor-community/safe-area": "7.0.0-alpha.1",
     "@capacitor/app": "^7.0.2",
     "@capacitor/cli": "^7.4.2",
@@ -51,7 +51,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
-    "ai": "^5.0.86",
+    "ai": "^6.0.0-beta.92",
     "better-react-mathjax": "^2.3.0",
     "capacitor-secure-storage-plugin": "^0.11.0",
     "class-variance-authority": "^0.7.1",
