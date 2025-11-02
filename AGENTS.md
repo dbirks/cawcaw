@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a cross-platform AI chat application built with React + Capacitor for iOS and Android deployment. The app allows users to chat with AI using their own OpenAI API keys with MCP (Model Context Protocol) server integration for external tools.
+This is a cross-platform AI chat application built with React + Capacitor for iOS deployment. The app allows users to chat with AI using their own OpenAI API keys with MCP (Model Context Protocol) server integration for external tools.
 
 ### Tech Stack
 - **Frontend**: React 19 + TypeScript + Vite
 - **Styling**: Tailwind CSS v4 + ShadCN/UI components
 - **AI Integration**: Vercel AI SDK v5.0 with direct OpenAI provider calls
-- **Mobile**: Capacitor 7 for iOS/Android deployment
+- **Mobile**: Capacitor 7 for iOS deployment
 - **Code Quality**: Biome for linting, formatting, and import organization
 - **External Tools**: MCP (Model Context Protocol) for AI tool integration
 - **Package Manager**: pnpm
@@ -43,23 +43,18 @@ pnpm build:mobile
 # Sync commands
 pnpm cap:sync              # Sync to all platforms
 pnpm cap:sync:ios          # Sync to iOS only
-pnpm cap:sync:android      # Sync to Android only
 
 # Open native IDEs
 pnpm cap:open:ios          # Open Xcode
-pnpm cap:open:android      # Open Android Studio
 
 # Run on devices/simulators
 pnpm cap:run:ios           # Build and run on iOS
-pnpm cap:run:android       # Build and run on Android
 
 # Build native apps
 pnpm cap:build:ios         # Build iOS app
-pnpm cap:build:android     # Build Android app
 
 # Quick mobile workflows
 pnpm ios                   # Build, sync, and run on iOS
-pnpm android               # Build, sync, and run on Android
 
 # Diagnostic commands
 pnpm cap:doctor            # Check Capacitor health
@@ -107,7 +102,7 @@ This project uses AI SDK v5.0 with significant architectural changes:
 
 ### Mobile Architecture
 - **Capacitor Config**: `capacitor.config.ts` defines app metadata (`app.cawcaw`)
-- **Native Projects**: `ios/` and `android/` contain platform-specific code
+- **Native Projects**: `ios/` contains platform-specific code
 - **Web Build**: `dist/` directory synced to mobile platforms
 - **Secure Storage**: Uses `capacitor-secure-storage-plugin` for API keys and MCP configs
 - **MCP Integration**: Works on mobile devices with proper tool integration
@@ -187,12 +182,6 @@ Use `pnpm dev` to start the development server. The app now runs entirely client
 - **Bundle ID**: `app.cawcaw`
 - **Fastlane**: Automated deployment configured with certificate management
 
-### Android Platform  
-- Native project in `android/`
-- Uses Gradle build system
-- Requires Android Studio
-- **Package name**: `app.cawcaw`
-
 ### Plugin Integration
 The app includes `capacitor-secure-storage-plugin` for secure API key and MCP config storage. After adding new plugins, always run `pnpm cap:sync` to update native projects.
 
@@ -228,15 +217,6 @@ The Settings component uses a tabbed interface:
 - **iOS Deployment**: Automated TestFlight uploads with Fastlane
 - **Certificate Management**: Uses Fastlane Match for iOS signing
 - **Build Process**: Fails fast on code quality issues
-
-### Android Package Structure Changes
-When changing bundle identifiers:
-1. Update `capacitor.config.ts` 
-2. Update `android/app/build.gradle` (namespace + applicationId)
-3. Move Java files to new package structure: `android/app/src/main/java/app/cawcaw/`
-4. Update `android/app/src/main/res/values/strings.xml`
-5. Run `./gradlew clean` in android folder before rebuilding
-6. Run `pnpm cap:sync` to apply changes
 
 ### iOS Bundle Identifier Updates
 - Update `ios/App/App.xcodeproj/project.pbxproj` (PRODUCT_BUNDLE_IDENTIFIER)
