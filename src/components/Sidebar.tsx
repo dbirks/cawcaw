@@ -198,7 +198,13 @@ export default function Sidebar({
 // Export a toggle button component for convenience
 export function SidebarToggle({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="outline" size="icon" onClick={onClick} className="lg:hidden">
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      className="lg:hidden"
+      aria-label="Open sidebar"
+    >
       <Menu className="h-5 w-5" />
     </Button>
   );
