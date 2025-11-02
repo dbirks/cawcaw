@@ -25,6 +25,7 @@ dist-ssr
 *.sw?
 ios/vendor/
 ios/.bundle/
+android/
 test-results
 playwright-report
 

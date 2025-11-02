@@ -15,9 +15,6 @@ const config: CapacitorConfig = {
     contentInset: 'never', // Let CSS handle safe areas to avoid double padding
     scheme: 'cawcaw' // Register custom URL scheme for OAuth redirects
   },
-  android: {
-    scheme: 'cawcaw' // Register custom URL scheme for OAuth redirects
-  },
   plugins: {
     SplashScreen: {
       launchAutoHide: true
