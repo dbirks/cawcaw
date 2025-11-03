@@ -1,9 +1,21 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
+import { Preferences } from '@capacitor/preferences';
 import { generateText } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+import {
+  type ChatDb,
+  appendMessage as dbAppendMessage,
+  createConversation as dbCreateConversation,
+  deleteConversation as dbDeleteConversation,
+  getAllConversations as dbGetAllConversations,
+  getConversation as dbGetConversation,
+  getMessages as dbGetMessages,
+  updateConversationTitle as dbUpdateConversationTitle,
+  updateMessages as dbUpdateMessages,
+  openChatDb,
+} from './chatDb';
 
-const CONVERSATIONS_STORAGE_KEY = 'chat_conversations';
 const CURRENT_CONVERSATION_KEY = 'current_conversation_id';
 
 export interface Message {
@@ -30,37 +42,67 @@ export interface Conversation {
   updatedAt: number;
 }
 
+/**
+ * ConversationStorage manages chat conversations using SQLite with WAL mode.
+ *
+ * Storage details:
+ * - iOS: Database stored in Application Support (backed up by iCloud Backup)
+ * - Android: Database stored in internal app storage
+ * - WAL mode enabled for better concurrency and crash-safety
+ * - Automatic checkpointing on app backgrounding
+ */
 class ConversationStorage {
-  private conversations: Map<string, Conversation> = new Map();
+  private db: ChatDb | null = null;
   private currentConversationId: string | null = null;
+  private initPromise: Promise<void> | null = null;
 
   async initialize(): Promise<void> {
-    try {
-      // Load all conversations
-      const result = await SecureStoragePlugin.get({ key: CONVERSATIONS_STORAGE_KEY });
-      if (result?.value) {
-        const conversationsArray = JSON.parse(result.value) as Conversation[];
-        this.conversations = new Map(conversationsArray.map((c) => [c.id, c]));
-      }
-
-      // Load current conversation ID
-      const currentResult = await SecureStoragePlugin.get({ key: CURRENT_CONVERSATION_KEY });
-      if (currentResult?.value) {
-        this.currentConversationId = currentResult.value;
-      }
-
-      // If no current conversation, create a new one
-      if (!this.currentConversationId || !this.conversations.has(this.currentConversationId)) {
-        await this.createNewConversation();
-      }
-    } catch (error) {
-      console.error('Failed to initialize conversation storage:', error);
-      // Create a new conversation if initialization fails
-      await this.createNewConversation();
+    // Prevent multiple concurrent initializations
+    if (this.initPromise) {
+      return this.initPromise;
     }
+
+    this.initPromise = (async () => {
+      try {
+        // Open SQLite database with WAL mode
+        this.db = await openChatDb();
+
+        // Load current conversation ID from Preferences (lightweight key-value store)
+        const currentResult = await Preferences.get({ key: CURRENT_CONVERSATION_KEY });
+        if (currentResult?.value) {
+          this.currentConversationId = currentResult.value;
+        }
+
+        // If no current conversation or it doesn't exist, create a new one
+        if (!this.currentConversationId) {
+          await this.createNewConversation();
+        } else {
+          const conversation = await dbGetConversation(this.db, this.currentConversationId);
+          if (!conversation) {
+            await this.createNewConversation();
+          }
+        }
+      } catch (error) {
+        console.error('Failed to initialize conversation storage:', error);
+        // Create a new conversation if initialization fails
+        if (this.db) {
+          await this.createNewConversation();
+        }
+      }
+    })();
+
+    return this.initPromise;
+  }
+
+  private ensureInitialized(): ChatDb {
+    if (!this.db) {
+      throw new Error('ConversationStorage not initialized. Call initialize() first.');
+    }
+    return this.db;
   }
 
   async createNewConversation(): Promise<Conversation> {
+    const db = this.ensureInitialized();
     const now = Date.now();
     const newConversation: Conversation = {
       id: `conv_${now}_${Math.random().toString(36).substr(2, 9)}`,
@@ -70,24 +112,55 @@ class ConversationStorage {
       updatedAt: now,
     };
 
-    this.conversations.set(newConversation.id, newConversation);
-    this.currentConversationId = newConversation.id;
+    await dbCreateConversation(db, {
+      id: newConversation.id,
+      title: newConversation.title,
+      createdAt: newConversation.createdAt,
+    });
 
-    await this.save();
+    this.currentConversationId = newConversation.id;
+    await Preferences.set({
+      key: CURRENT_CONVERSATION_KEY,
+      value: newConversation.id,
+    });
+
     return newConversation;
   }
 
   async getCurrentConversation(): Promise<Conversation | null> {
     if (!this.currentConversationId) return null;
-    return this.conversations.get(this.currentConversationId) || null;
+
+    const db = this.ensureInitialized();
+    const convRow = await dbGetConversation(db, this.currentConversationId);
+    if (!convRow) return null;
+
+    const messageRows = await dbGetMessages(db, this.currentConversationId);
+    const messages: Message[] = messageRows.map((row) => ({
+      id: row.id,
+      role: row.role as 'user' | 'assistant' | 'system',
+      parts: JSON.parse(row.parts),
+      timestamp: row.created_at,
+      provider: (row.provider as 'openai' | 'anthropic' | undefined) ?? undefined,
+    }));
+
+    return {
+      id: convRow.id,
+      title: convRow.title ?? 'New Conversation',
+      messages,
+      createdAt: convRow.created_at,
+      updatedAt: convRow.updated_at,
+    };
   }
 
   async setCurrentConversation(conversationId: string): Promise<void> {
-    if (!this.conversations.has(conversationId)) {
+    const db = this.ensureInitialized();
+    const conversation = await dbGetConversation(db, conversationId);
+    if (!conversation) {
       throw new Error('Conversation not found');
     }
+
     this.currentConversationId = conversationId;
-    await SecureStoragePlugin.set({
+    await Preferences.set({
       key: CURRENT_CONVERSATION_KEY,
       value: conversationId,
     });
@@ -99,12 +172,19 @@ class ConversationStorage {
       throw new Error('No current conversation');
     }
 
-    conversation.messages.push(message);
-    conversation.updatedAt = Date.now();
+    const db = this.ensureInitialized();
+    await dbAppendMessage(db, {
+      id: message.id,
+      conversationId: conversation.id,
+      role: message.role,
+      parts: message.parts,
+      createdAt: message.timestamp,
+      provider: message.provider,
+    });
 
     // Auto-generate title after first user message
     if (
-      conversation.messages.length === 1 &&
+      conversation.messages.length === 0 &&
       message.role === 'user' &&
       conversation.title === 'New Conversation'
     ) {
@@ -113,8 +193,6 @@ class ConversationStorage {
         console.error('Failed to generate conversation title:', error);
       });
     }
-
-    await this.save();
   }
 
   async updateMessages(messages: Message[]): Promise<void> {
@@ -123,8 +201,18 @@ class ConversationStorage {
       throw new Error('No current conversation');
     }
 
-    conversation.messages = messages;
-    conversation.updatedAt = Date.now();
+    const db = this.ensureInitialized();
+    await dbUpdateMessages(
+      db,
+      conversation.id,
+      messages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        parts: m.parts,
+        timestamp: m.timestamp,
+        provider: m.provider,
+      }))
+    );
 
     // Auto-generate title if this is the first update with messages
     if (messages.length > 0 && conversation.title === 'New Conversation') {
@@ -136,13 +224,15 @@ class ConversationStorage {
         });
       }
     }
-
-    await this.save();
   }
 
   async generateConversationTitle(conversationId: string): Promise<void> {
-    const conversation = this.conversations.get(conversationId);
-    if (!conversation || conversation.messages.length === 0) return;
+    const db = this.ensureInitialized();
+    const convRow = await dbGetConversation(db, conversationId);
+    if (!convRow) return;
+
+    const messageRows = await dbGetMessages(db, conversationId);
+    if (messageRows.length === 0) return;
 
     try {
       // Get title model preference (defaults to 'same' which means use current provider)
@@ -196,11 +286,16 @@ class ConversationStorage {
       }
 
       // Get the first few messages for context (max 3)
-      const contextMessages = conversation.messages.slice(0, 3);
+      const contextMessages = messageRows.slice(0, 3);
       const contextText = contextMessages
-        .map((msg) => {
-          const textPart = msg.parts.find((p) => p.type === 'text');
-          return textPart?.text || '';
+        .map((row) => {
+          try {
+            const parts = JSON.parse(row.parts);
+            const textPart = parts.find((p: { type: string }) => p.type === 'text');
+            return textPart?.text || '';
+          } catch {
+            return '';
+          }
         })
         .filter((text) => text.trim())
         .join('\n');
@@ -228,73 +323,82 @@ class ConversationStorage {
 
       const title = result.text.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
 
-      // Update the conversation title
-      conversation.title = title;
-      conversation.updatedAt = Date.now();
-      await this.save();
+      // Update the conversation title in database
+      await dbUpdateConversationTitle(db, conversationId, title);
     } catch (error) {
       console.error('Failed to generate title:', error);
       // Fallback: use first few words of first message
-      const firstUserMessage = conversation.messages.find((m) => m.role === 'user');
+      const firstUserMessage = messageRows.find((m) => m.role === 'user');
       if (firstUserMessage) {
-        const textPart = firstUserMessage.parts.find((p) => p.type === 'text');
-        if (textPart?.text) {
-          const words = textPart.text.split(' ').slice(0, 5).join(' ');
-          conversation.title = words + (textPart.text.split(' ').length > 5 ? '...' : '');
-          await this.save();
+        try {
+          const parts = JSON.parse(firstUserMessage.parts);
+          const textPart = parts.find((p: { type: string }) => p.type === 'text');
+          if (textPart?.text) {
+            const words = textPart.text.split(' ').slice(0, 5).join(' ');
+            const fallbackTitle = words + (textPart.text.split(' ').length > 5 ? '...' : '');
+            await dbUpdateConversationTitle(db, conversationId, fallbackTitle);
+          }
+        } catch (parseError) {
+          console.error('Failed to parse message parts for fallback title:', parseError);
         }
       }
     }
   }
 
   async deleteConversation(conversationId: string): Promise<void> {
-    this.conversations.delete(conversationId);
+    const db = this.ensureInitialized();
+    await dbDeleteConversation(db, conversationId);
 
     // If we deleted the current conversation, switch to another or create new
     if (this.currentConversationId === conversationId) {
-      const conversations = this.getAllConversations();
+      const conversations = await this.getAllConversations();
       if (conversations.length > 0) {
         this.currentConversationId = conversations[0].id;
+        await Preferences.set({
+          key: CURRENT_CONVERSATION_KEY,
+          value: this.currentConversationId,
+        });
       } else {
         await this.createNewConversation();
       }
     }
-
-    await this.save();
   }
 
-  getAllConversations(): Conversation[] {
-    return Array.from(this.conversations.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+  async getAllConversations(): Promise<Conversation[]> {
+    const db = this.ensureInitialized();
+    const convRows = await dbGetAllConversations(db);
+
+    // Convert to Conversation objects (populate message count but not full messages for performance)
+    return convRows.map((row) => ({
+      id: row.id,
+      title: row.title ?? 'New Conversation',
+      messages: new Array(row.messageCount).fill(null).map((_, i) => ({
+        id: `placeholder-${i}`,
+        role: 'user' as const,
+        parts: [],
+        timestamp: 0,
+      })), // Placeholder array with correct length for count display
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
   }
 
   async updateConversationTitle(conversationId: string, title: string): Promise<void> {
-    const conversation = this.conversations.get(conversationId);
+    const db = this.ensureInitialized();
+    const conversation = await dbGetConversation(db, conversationId);
     if (!conversation) {
       throw new Error('Conversation not found');
     }
-    conversation.title = title.trim() || 'New Conversation';
-    conversation.updatedAt = Date.now();
-    await this.save();
+
+    await dbUpdateConversationTitle(db, conversationId, title.trim() || 'New Conversation');
   }
 
-  private async save(): Promise<void> {
-    try {
-      const conversationsArray = Array.from(this.conversations.values());
-      await SecureStoragePlugin.set({
-        key: CONVERSATIONS_STORAGE_KEY,
-        value: JSON.stringify(conversationsArray),
-      });
-
-      if (this.currentConversationId) {
-        await SecureStoragePlugin.set({
-          key: CURRENT_CONVERSATION_KEY,
-          value: this.currentConversationId,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to save conversations:', error);
-      throw error;
-    }
+  /**
+   * Get the underlying database connection.
+   * Use this for advanced operations or maintenance tasks.
+   */
+  getDb(): ChatDb | null {
+    return this.db;
   }
 }
 
