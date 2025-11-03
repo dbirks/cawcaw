@@ -22,6 +22,7 @@ on:
 env:
   NODE_VERSION: '20'
   RUBY_VERSION: '3.2'
+  TZ: 'America/New_York'
 
 jobs:
   build-and-deploy:
@@ -39,7 +40,7 @@ jobs:
       run: |
         BUILD_NUMBER=$(date +%Y%m%d%H%M)
         echo "build_number=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-        echo "Build number: ${BUILD_NUMBER}"
+        echo "Build number: ${BUILD_NUMBER} (Eastern Time)"
 
     - name: 📦 Setup Node.js
       uses: actions/setup-node@v6
@@ -178,7 +179,7 @@ jobs:
         echo "2. 📱 Build will be available in TestFlight within 10-15 minutes" >> $GITHUB_STEP_SUMMARY
         echo "3. 👥 Add testers and distribute when ready" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "_Build completed at $(date)_" >> $GITHUB_STEP_SUMMARY
+        echo "_Build completed at $(date '+%Y-%m-%d %H:%M:%S %Z')_" >> $GITHUB_STEP_SUMMARY
 
     - name: 🧹 Cleanup Keychain
       if: always()
