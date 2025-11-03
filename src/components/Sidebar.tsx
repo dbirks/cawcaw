@@ -107,6 +107,7 @@ export default function Sidebar({
     await conversationStorage.createNewConversation();
     loadConversations();
     onNewConversation();
+    onClose(); // Close sidebar after creating new conversation
   };
 
   const handleSelectConversation = async (conversationId: string) => {

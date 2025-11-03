@@ -50,6 +50,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { SelectGroup, SelectLabel } from '@/components/ui/select';
 
 import { cn } from '@/lib/utils';
 import { conversationStorage, type Message as StoredMessage } from '@/services/conversationStorage';
@@ -990,20 +991,22 @@ export default function ChatView() {
                     </span>
                   </PromptInputModelSelectTrigger>
                   <PromptInputModelSelectContent>
-                    <optgroup label="OpenAI Models">
+                    <SelectGroup>
+                      <SelectLabel>OpenAI Models</SelectLabel>
                       {AVAILABLE_MODELS.filter((m) => m.provider === 'openai').map((model) => (
                         <PromptInputModelSelectItem key={model.value} value={model.value}>
                           {model.label}
                         </PromptInputModelSelectItem>
                       ))}
-                    </optgroup>
-                    <optgroup label="Anthropic Models">
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Anthropic Models</SelectLabel>
                       {AVAILABLE_MODELS.filter((m) => m.provider === 'anthropic').map((model) => (
                         <PromptInputModelSelectItem key={model.value} value={model.value}>
                           {model.label}
                         </PromptInputModelSelectItem>
                       ))}
-                    </optgroup>
+                    </SelectGroup>
                   </PromptInputModelSelectContent>
                 </PromptInputModelSelect>
 
