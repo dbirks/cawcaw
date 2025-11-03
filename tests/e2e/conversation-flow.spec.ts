@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 test.describe('Conversation Flow - Modernized 2025', () => {
   test.beforeEach(async ({ page }) => {
     // Set mobile viewport (iPhone 15 dimensions) for Capacitor app testing
@@ -18,11 +19,7 @@ test.describe('Conversation Flow - Modernized 2025', () => {
     const apiKeyInput = page.getByPlaceholder(/sk-/);
 
     if (await apiKeyInput.isVisible()) {
-      if (
-        openaiApiKey &&
-        openaiApiKey.startsWith('sk-') &&
-        !openaiApiKey.includes('your-test-openai-api-key')
-      ) {
+      if (openaiApiKey?.startsWith('sk-') && !openaiApiKey.includes('your-test-openai-api-key')) {
         console.log('🔑 Setting up API key from TEST_OPENAI_API_KEY...');
         await apiKeyInput.fill(openaiApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
@@ -134,7 +131,7 @@ test.describe('Conversation Flow - Modernized 2025', () => {
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
         await page.waitForLoadState('networkidle');
@@ -193,7 +190,7 @@ test.describe('Conversation Flow - Modernized 2025', () => {
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
         await page.waitForLoadState('networkidle');
@@ -264,7 +261,7 @@ test.describe('Conversation Flow - Modernized 2025', () => {
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
         await page.waitForLoadState('networkidle');

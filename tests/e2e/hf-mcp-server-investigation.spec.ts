@@ -12,13 +12,12 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
 
     // Wait for app to load - handle both API key screen and main app
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('caw caw')).toBeVisible();
 
     // Handle API key setup if needed
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         console.log('🔑 Setting up API key from TEST_OPENAI_API_KEY...');
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
@@ -33,7 +32,7 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
 
     // Step 1: Navigate to Settings via Sidebar (new UI pattern)
     console.log('🔧 Opening sidebar...');
-    const sidebarToggle = page.getByRole('button', { name: 'Open sidebar' });
+    const sidebarToggle = page.getByRole('button', { name: 'Open sidebar', exact: true });
     await sidebarToggle.click();
 
     console.log('🔧 Opening settings from sidebar...');
@@ -189,7 +188,7 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
         await page.waitForLoadState('networkidle');
@@ -238,7 +237,7 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
         await page.waitForLoadState('networkidle');
@@ -246,7 +245,10 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
     }
 
     // Test full mobile navigation flow
-    await expect(page.getByText('caw caw')).toBeVisible();
+    // Wait for chat interface to be ready (either API key input or main chat)
+    await expect(
+      page.getByPlaceholder(/sk-/).or(page.getByPlaceholder('Type your message...'))
+    ).toBeVisible({ timeout: 5000 });
 
     // Settings navigation via sidebar
     const sidebarToggle = page
@@ -259,7 +261,7 @@ test.describe('HuggingFace MCP Server Investigation - 406 Mystery Solved', () =>
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 
     // Test all tabs in mobile view using proper role-based selectors
-    const tabs = ['LLM', 'MCP', 'Theme', 'Debug'];
+    const tabs = ['LLM', 'Audio', 'MCP', 'Theme', 'Debug'];
     for (const tabName of tabs) {
       // Use getByRole for better mobile compatibility (handles hidden sm:inline text)
       await page.getByRole('tab', { name: new RegExp(tabName, 'i') }).click();

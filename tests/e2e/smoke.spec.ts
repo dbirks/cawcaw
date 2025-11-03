@@ -59,7 +59,7 @@ test.describe('App Smoke Tests', () => {
 
     // New UI pattern: Settings is in sidebar, so open sidebar first
     // Use accessible role and name for reliable mobile testing
-    const sidebarToggle = page.getByRole('button', { name: 'Open sidebar' });
+    const sidebarToggle = page.getByRole('button', { name: 'Open sidebar', exact: true });
     await sidebarToggle.click();
 
     // Wait for sidebar to open, then look for Settings button

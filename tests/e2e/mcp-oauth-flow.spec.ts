@@ -135,7 +135,7 @@ test.describe('MCP OAuth Flow', () => {
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
         await page.waitForLoadState('networkidle');
@@ -194,7 +194,7 @@ test.describe('MCP OAuth Flow', () => {
     const apiKeyInput = page.getByPlaceholder(/sk-/);
     if (await apiKeyInput.isVisible()) {
       const testApiKey = process.env.TEST_OPENAI_API_KEY;
-      if (testApiKey && testApiKey.startsWith('sk-')) {
+      if (testApiKey?.startsWith('sk-')) {
         await apiKeyInput.fill(testApiKey);
         await page.getByRole('button', { name: 'Save API Key' }).click();
         await page.waitForLoadState('networkidle');

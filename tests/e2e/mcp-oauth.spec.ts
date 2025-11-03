@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 const TEST_BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:5173';
 const TEST_HF_USERNAME = process.env.TEST_HF_USERNAME || '';
 const TEST_HF_PASSWORD = process.env.TEST_HF_PASSWORD || '';
-const TEST_TIMEOUT = parseInt(process.env.TEST_TIMEOUT || '30000');
+const TEST_TIMEOUT = parseInt(process.env.TEST_TIMEOUT || '30000', 10);
 
 test.describe('MCP OAuth Flow - Hugging Face', () => {
   test.beforeEach(async ({ page }) => {
@@ -133,7 +133,7 @@ test.describe('MCP OAuth Flow - Hugging Face', () => {
       await page.waitForURL(new RegExp(TEST_BASE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
         timeout: TEST_TIMEOUT,
       });
-    } catch (error) {
+    } catch (_error) {
       // OAuth might open in popup - handle popup case
       const popup = await page.waitForEvent('popup', { timeout: 10000 }).catch(() => null);
       if (popup) {
