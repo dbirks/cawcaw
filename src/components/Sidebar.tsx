@@ -1,7 +1,7 @@
 import { Menu, MessageSquare, Plus, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
+import { Drawer, DrawerClose, DrawerContent } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Conversation } from '@/services/conversationStorage';
 import { conversationStorage } from '@/services/conversationStorage';
@@ -146,17 +146,6 @@ export default function Sidebar({
         dismissible={true}
         modal={true}
       >
-        {/* Edge Swipe Trigger - positioned 32px from left edge for iOS compatibility */}
-        <DrawerTrigger asChild>
-          <button
-            type="button"
-            className="fixed left-8 top-1/2 -translate-y-1/2 z-30 lg:hidden h-16 w-6 bg-accent/50 rounded-r-lg backdrop-blur-sm hover:bg-accent/70 transition-colors flex items-center justify-center"
-            aria-label="Open sidebar menu"
-          >
-            <Menu className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </DrawerTrigger>
-
         {/* Drawer Content */}
         <DrawerContent className="w-80 h-full flex flex-col lg:hidden">
           {/* Header */}
