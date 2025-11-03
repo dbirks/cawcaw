@@ -9,6 +9,7 @@ import {
   Edit,
   Info,
   Lock,
+  Mic,
   Monitor,
   Moon,
   Network,
@@ -25,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { AnthropicIcon } from '@/components/icons/AnthropicIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +52,25 @@ interface SettingsProps {
   onClose: () => void;
 }
 
+// Available AI models
+const AVAILABLE_MODELS = [
+  // OpenAI Models
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'openai' },
+  { value: 'gpt-4.1', label: 'GPT-4.1', provider: 'openai' },
+
+  // Anthropic Models
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic' },
+  { value: 'claude-3-haiku-latest', label: 'Claude Haiku 3', provider: 'anthropic' },
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', provider: 'anthropic' },
+] as const;
+
+// Available STT (Speech-to-Text) models
+const AVAILABLE_STT_MODELS = [
+  { value: 'whisper-1', label: 'Whisper-1 (Legacy)' },
+  { value: 'gpt-4o-mini-transcribe', label: 'GPT-4o Mini Transcribe (Default)' },
+  { value: 'gpt-4o-transcribe', label: 'GPT-4o Transcribe' },
+] as const;
+
 export default function Settings({ onClose }: SettingsProps) {
   // MCP state
   const [servers, setServers] = useState<MCPServerConfig[]>([]);
@@ -68,6 +89,14 @@ export default function Settings({ onClose }: SettingsProps) {
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
   const [isUpdatingKey, setIsUpdatingKey] = useState(false);
+  const [anthropicApiKey, setAnthropicApiKey] = useState<string>('');
+  const [isUpdatingAnthropicKey, setIsUpdatingAnthropicKey] = useState(false);
+
+  // Provider and model state
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic'>('openai');
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
+  const [titleModel, setTitleModel] = useState<string>('same');
+  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe');
 
   // Theme management
   const { themePreference, updateThemePreference } = useTheme();
@@ -117,6 +146,11 @@ export default function Settings({ onClose }: SettingsProps) {
 
   // Generate unique IDs for form elements
   const apiKeyId = useId();
+  const anthropicApiKeyId = useId();
+  const providerSelectId = useId();
+  const modelSelectId = useId();
+  const titleModelSelectId = useId();
+  const sttModelSelectId = useId();
   const serverNameId = useId();
   const serverUrlId = useId();
   const transportTypeId = useId();
@@ -144,10 +178,37 @@ export default function Settings({ onClose }: SettingsProps) {
       setServers(configs);
       setServerStatuses(mcpManager.getServerStatuses());
 
-      // Load current API key
+      // Load current API keys
       const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
       if (result?.value) {
         setApiKey(result.value);
+      }
+
+      const anthropicResult = await SecureStoragePlugin.get({ key: 'anthropic_api_key' });
+      if (anthropicResult?.value) {
+        setAnthropicApiKey(anthropicResult.value);
+      }
+
+      // Load provider and model preferences
+      const providerResult = await SecureStoragePlugin.get({ key: 'selected_provider' });
+      if (providerResult?.value) {
+        setSelectedProvider(providerResult.value as 'openai' | 'anthropic');
+      }
+
+      const modelResult = await SecureStoragePlugin.get({ key: 'selected_model' });
+      if (modelResult?.value) {
+        setSelectedModel(modelResult.value);
+      }
+
+      const titleModelResult = await SecureStoragePlugin.get({ key: 'title_model' });
+      if (titleModelResult?.value) {
+        setTitleModel(titleModelResult.value);
+      }
+
+      // Load STT model preference
+      const sttModelResult = await SecureStoragePlugin.get({ key: 'stt_model' });
+      if (sttModelResult?.value) {
+        setSttModel(sttModelResult.value);
       }
 
       // Load OAuth statuses for servers that require or support OAuth
@@ -217,6 +278,73 @@ export default function Settings({ onClose }: SettingsProps) {
         console.error('Failed to clear API key:', error);
         alert('❌ Failed to clear API key');
       }
+    }
+  };
+
+  const handleAnthropicApiKeyChange = async (newValue: string) => {
+    setAnthropicApiKey(newValue);
+
+    if (newValue.trim()) {
+      setIsUpdatingAnthropicKey(true);
+      try {
+        await SecureStoragePlugin.set({ key: 'anthropic_api_key', value: newValue.trim() });
+      } catch (error) {
+        console.error('Failed to save Anthropic API key:', error);
+      } finally {
+        setIsUpdatingAnthropicKey(false);
+      }
+    }
+  };
+
+  const handleClearAnthropicApiKey = async () => {
+    if (
+      confirm(
+        "Are you sure you want to remove your Anthropic API key? You'll need to re-enter it to use Claude models."
+      )
+    ) {
+      try {
+        await SecureStoragePlugin.remove({ key: 'anthropic_api_key' });
+        setAnthropicApiKey('');
+      } catch (error) {
+        console.error('Failed to clear Anthropic API key:', error);
+        alert('❌ Failed to clear Anthropic API key');
+      }
+    }
+  };
+
+  const handleProviderChange = async (provider: 'openai' | 'anthropic') => {
+    setSelectedProvider(provider);
+    try {
+      await SecureStoragePlugin.set({ key: 'selected_provider', value: provider });
+    } catch (error) {
+      console.error('Failed to save provider preference:', error);
+    }
+  };
+
+  const handleModelChange = async (model: string) => {
+    setSelectedModel(model);
+    try {
+      await SecureStoragePlugin.set({ key: 'selected_model', value: model });
+    } catch (error) {
+      console.error('Failed to save model preference:', error);
+    }
+  };
+
+  const handleTitleModelChange = async (model: string) => {
+    setTitleModel(model);
+    try {
+      await SecureStoragePlugin.set({ key: 'title_model', value: model });
+    } catch (error) {
+      console.error('Failed to save title model preference:', error);
+    }
+  };
+
+  const handleSttModelChange = async (model: string) => {
+    setSttModel(model);
+    try {
+      await SecureStoragePlugin.set({ key: 'stt_model', value: model });
+    } catch (error) {
+      console.error('Failed to save STT model preference:', error);
     }
   };
 
@@ -490,7 +618,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger
               value="llm"
               className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
@@ -498,6 +626,14 @@ export default function Settings({ onClose }: SettingsProps) {
               <Brain className="h-4 w-4" />
               <span className="hidden sm:inline">LLM Provider</span>
               <span className="sm:hidden">LLM</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="audio"
+              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
+              <Mic className="h-4 w-4" />
+              <span className="hidden sm:inline">Speech & Audio</span>
+              <span className="sm:hidden">Audio</span>
             </TabsTrigger>
             <TabsTrigger
               value="tools"
@@ -537,7 +673,7 @@ export default function Settings({ onClose }: SettingsProps) {
                         OpenAI Configuration
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-4">
                       {/* API Key */}
                       <div>
                         <label htmlFor={apiKeyId} className="text-sm font-medium mb-2 block">
@@ -568,26 +704,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
-
-                      {/* Model Info */}
-                      <div className="bg-muted/50 p-4 rounded-lg">
-                        <h4 className="font-medium mb-2">Current Model</h4>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">GPT-4o Mini</span>
-                          <Badge variant="outline">Fast & Cost-effective</Badge>
-                        </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          The fastest and most cost-effective OpenAI model as of 2025
-                        </p>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground">
-                        <p>
-                          Your API key is stored securely on your device and never sent to our
-                          servers.
-                        </p>
-                        <p>
                           Get your API key from{' '}
                           <a
                             href="https://platform.openai.com/api-keys"
@@ -599,6 +716,265 @@ export default function Settings({ onClose }: SettingsProps) {
                           </a>
                         </p>
                       </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Security Notice */}
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Your API key is stored securely on your device and never sent to our servers.
+                  </p>
+
+                  {/* Anthropic Configuration Card */}
+                  <Card className="mt-6 border-[#C15F3C]/20 bg-[#C15F3C]/5">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <AnthropicIcon size={20} className="text-[#C15F3C]" />
+                        Anthropic Configuration
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* API Key */}
+                      <div>
+                        <label
+                          htmlFor={anthropicApiKeyId}
+                          className="text-sm font-medium mb-2 block"
+                        >
+                          Anthropic API Key
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 relative">
+                            <Input
+                              id={anthropicApiKeyId}
+                              type="password"
+                              placeholder="sk-ant-..."
+                              value={anthropicApiKey}
+                              onChange={(e) => handleAnthropicApiKeyChange(e.target.value)}
+                              className="pr-8"
+                            />
+                            {isUpdatingAnthropicKey && (
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={handleClearAnthropicApiKey}
+                            disabled={!anthropicApiKey.trim()}
+                            size="sm"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Get your API key from{' '}
+                          <a
+                            href="https://console.anthropic.com"
+                            className="text-[#C15F3C] hover:underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Anthropic Console
+                          </a>
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Security Notice for Anthropic */}
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Your API key is stored securely on your device and never sent to our servers.
+                  </p>
+
+                  {/* Provider Selection */}
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle>Provider & Model Selection</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Provider Selection */}
+                      <div>
+                        <label
+                          htmlFor={providerSelectId}
+                          className="text-sm font-medium mb-2 block"
+                        >
+                          AI Provider
+                        </label>
+                        <select
+                          id={providerSelectId}
+                          value={selectedProvider}
+                          onChange={(e) =>
+                            handleProviderChange(e.target.value as 'openai' | 'anthropic')
+                          }
+                          className="w-full p-2 border rounded-md bg-background"
+                        >
+                          <option value="openai">OpenAI</option>
+                          <option value="anthropic">Anthropic (Claude)</option>
+                        </select>
+                      </div>
+
+                      {/* Model Selection with Provider Grouping */}
+                      <div>
+                        <label htmlFor={modelSelectId} className="text-sm font-medium mb-2 block">
+                          Chat Model
+                        </label>
+                        <select
+                          id={modelSelectId}
+                          value={selectedModel}
+                          onChange={(e) => handleModelChange(e.target.value)}
+                          className="w-full p-2 border rounded-md bg-background"
+                        >
+                          <optgroup label="OpenAI Models">
+                            {AVAILABLE_MODELS.filter((m) => m.provider === 'openai').map(
+                              (model) => (
+                                <option key={model.value} value={model.value}>
+                                  {model.label}
+                                </option>
+                              )
+                            )}
+                          </optgroup>
+                          <optgroup label="Anthropic Models">
+                            {AVAILABLE_MODELS.filter((m) => m.provider === 'anthropic').map(
+                              (model) => (
+                                <option key={model.value} value={model.value}>
+                                  {model.label}
+                                </option>
+                              )
+                            )}
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      {/* Title Generation Model Selection */}
+                      <div>
+                        <label
+                          htmlFor={titleModelSelectId}
+                          className="text-sm font-medium mb-2 block"
+                        >
+                          Title Generation Model
+                        </label>
+                        <select
+                          id={titleModelSelectId}
+                          value={titleModel}
+                          onChange={(e) => handleTitleModelChange(e.target.value)}
+                          className="w-full p-2 border rounded-md bg-background"
+                        >
+                          <option value="same">Use same model as chat</option>
+                          <optgroup label="OpenAI Models">
+                            {AVAILABLE_MODELS.filter((m) => m.provider === 'openai').map(
+                              (model) => (
+                                <option key={model.value} value={model.value}>
+                                  {model.label}
+                                </option>
+                              )
+                            )}
+                          </optgroup>
+                          <optgroup label="Anthropic Models">
+                            {AVAILABLE_MODELS.filter((m) => m.provider === 'anthropic').map(
+                              (model) => (
+                                <option key={model.value} value={model.value}>
+                                  {model.label}
+                                </option>
+                              )
+                            )}
+                          </optgroup>
+                        </select>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Choose a lightweight model for generating conversation titles (optional)
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </ScrollArea>
+            </div>
+          </TabsContent>
+
+          {/* Speech & Audio Tab */}
+          <TabsContent value="audio" className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full">
+                <div className="pr-4 safe-x safe-bottom">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Mic className="h-5 w-5" />
+                        Speech-to-Text (STT) Configuration
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Configure the model used for voice transcription when using the microphone
+                        button
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* STT Model Selection */}
+                      <div>
+                        <label
+                          htmlFor={sttModelSelectId}
+                          className="text-sm font-medium mb-2 block"
+                        >
+                          Transcription Model
+                        </label>
+                        <select
+                          id={sttModelSelectId}
+                          value={sttModel}
+                          onChange={(e) => handleSttModelChange(e.target.value)}
+                          className="w-full p-2 border rounded-md bg-background"
+                        >
+                          {AVAILABLE_STT_MODELS.map((model) => (
+                            <option key={model.value} value={model.value}>
+                              {model.label}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Choose which OpenAI model to use for converting speech to text. GPT-4o
+                          Mini Transcribe is recommended for best balance of speed, accuracy, and
+                          cost.
+                        </p>
+                      </div>
+
+                      {/* Model Comparison Info */}
+                      <div className="border rounded-md p-4 bg-muted/30 space-y-3">
+                        <h4 className="text-sm font-medium">Model Comparison</h4>
+                        <div className="space-y-2 text-xs text-muted-foreground">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-foreground">
+                              GPT-4o Transcribe (Premium)
+                            </span>
+                            <span>
+                              • Best accuracy and error rates
+                              <br />• Excellent for accents, noise, and complex speech
+                              <br />• Cost: $0.006/minute ($6 per 1M audio tokens)
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-foreground">
+                              GPT-4o Mini Transcribe (Recommended)
+                            </span>
+                            <span>
+                              • Great accuracy at half the cost
+                              <br />• Ideal for most use cases
+                              <br />• Cost: $0.003/minute ($3 per 1M audio tokens)
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-foreground">Whisper-1 (Legacy)</span>
+                            <span>
+                              • Original OpenAI speech model from 2022
+                              <br />• Good for clean audio
+                              <br />• Cost: $0.006/minute (same as GPT-4o Transcribe)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Note about API Keys */}
+                      <p className="text-xs text-muted-foreground border-t pt-4">
+                        <strong>Note:</strong> Voice transcription always uses your OpenAI API key,
+                        even if you have Anthropic selected as your chat provider. Make sure you
+                        have an OpenAI API key configured in the LLM Provider tab.
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
