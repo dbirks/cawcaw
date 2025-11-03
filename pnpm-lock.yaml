@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^2.0.40
+        version: 2.0.40(zod@4.1.12)
       '@ai-sdk/openai':
         specifier: ^3.0.0-beta.47
         version: 3.0.0-beta.47(zod@4.1.12)
@@ -131,6 +134,9 @@ importers:
       use-stick-to-bottom:
         specifier: ^1.1.1
         version: 1.1.1(react@19.1.1)
+      vaul:
+        specifier: ^1.1.2
+        version: 1.1.2(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -177,6 +183,12 @@ importers:
 
 packages:
 
+  '@ai-sdk/anthropic@2.0.40':
+    resolution: {integrity: sha512-aHtqlIIS8lyesSNFxevLGWozCCZ1xQ4Wy2HfQSVVQu3dWtndfPzF6hbWof2Way+qNrvRtjnBpRQyaVeu6Js4pQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/gateway@2.0.0-beta.49':
     resolution: {integrity: sha512-deEtKPA4sexV4ReV+ubSEat6tUJrY0inmt3RIUN3KguGuwMXjogYwjrueO5FxCt/INh+Mc6t5QALx14otHYp0g==}
     engines: {node: '>=18'}
@@ -185,6 +197,12 @@ packages:
 
   '@ai-sdk/openai@3.0.0-beta.47':
     resolution: {integrity: sha512-ge1ysi2pgCo4lQmxBcHulBbndd8W6NykRElSQ0a7lBA3tAxnIFWWbIkTXLMx/IeGkUhd4ESlMSBX2rBeXlOwVg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@3.0.15':
+    resolution: {integrity: sha512-kOc6Pxb7CsRlNt+sLZKL7/VGQUd7ccl3/tIK+Bqf5/QhHR0Qm3qRBMz1IwU1RmjJEZA73x+KB5cUckbDl2WF7Q==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -204,6 +222,10 @@ packages:
         optional: true
       effect:
         optional: true
+
+  '@ai-sdk/provider@2.0.0':
+    resolution: {integrity: sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==}
+    engines: {node: '>=18'}
 
   '@ai-sdk/provider@3.0.0-beta.14':
     resolution: {integrity: sha512-OhSPIz9kI6RTS3tAlabo6gnnFap5WqutXG96/u0LeXxB2P145KTnPwrJI+Bu0JIwgmJH2uyfD+LHm0ohoiTP0w==}
@@ -2989,6 +3011,12 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
+  vaul@1.1.2:
+    resolution: {integrity: sha512-ZFkClGpWyI2WUQjdLJ/BaGuV6AVQiJ3uELGk3OYtP+B6yCO7Cmn9vPFXVJkRaGkOJu3m8bQMgtyzNHixULceQA==}
+    peerDependencies:
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
+
   vfile-location@5.0.3:
     resolution: {integrity: sha512-5yXvWDEgqeiYiBe1lbxYF7UMAIm/IcopxMHrMQDq3nvKcjPKIhZklUKL+AE7J7uApI4kwe2snsK+eI6UTj9EHg==}
 
@@ -3105,6 +3133,12 @@ packages:
 
 snapshots:
 
+  '@ai-sdk/anthropic@2.0.40(zod@4.1.12)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.15(zod@4.1.12)
+      zod: 4.1.12
+
   '@ai-sdk/gateway@2.0.0-beta.49(zod@4.1.12)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.14
@@ -3126,12 +3160,23 @@ snapshots:
       - arktype
       - effect
 
+  '@ai-sdk/provider-utils@3.0.15(zod@4.1.12)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@standard-schema/spec': 1.0.0
+      eventsource-parser: 3.0.6
+      zod: 4.1.12
+
   '@ai-sdk/provider-utils@4.0.0-beta.30(zod@4.1.12)':
     dependencies:
       '@ai-sdk/provider': 3.0.0-beta.14
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.6
       zod: 4.1.12
+
+  '@ai-sdk/provider@2.0.0':
+    dependencies:
+      json-schema: 0.4.0
 
   '@ai-sdk/provider@3.0.0-beta.14':
     dependencies:
@@ -6189,6 +6234,15 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   vary@1.1.2: {}
+
+  vaul@1.1.2(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
 
   vfile-location@5.0.3:
     dependencies:
