@@ -54,17 +54,22 @@ export function useChatDb() {
   useEffect(() => {
     if (!db) return;
 
-    const listener = App.addListener('appStateChange', async (state) => {
+    let listenerHandle: { remove: () => void } | null = null;
+
+    // Set up listener
+    App.addListener('appStateChange', async (state) => {
       if (!state.isActive && dbRef.current) {
         // App is going to background - checkpoint to fold WAL into main DB
         // This ensures backups capture the latest state
         console.log('App backgrounding - checkpointing SQLite WAL');
         await checkpointDb(dbRef.current);
       }
+    }).then((handle) => {
+      listenerHandle = handle;
     });
 
     return () => {
-      listener.remove();
+      listenerHandle?.remove();
     };
   }, [db]);
 

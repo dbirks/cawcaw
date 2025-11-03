@@ -1,4 +1,8 @@
-import { CapacitorSQLite, type SQLiteDBConnection } from '@capacitor-community/sqlite';
+import {
+  CapacitorSQLite,
+  SQLiteConnection,
+  type SQLiteDBConnection,
+} from '@capacitor-community/sqlite';
 
 export type ChatDb = SQLiteDBConnection;
 
@@ -14,19 +18,18 @@ export type ChatDb = SQLiteDBConnection;
  * @returns Connected database instance
  */
 export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb> {
-  const sqlite = CapacitorSQLite;
+  const sqlite = new SQLiteConnection(CapacitorSQLite);
   const dbName = 'chat.db';
 
   // Create/open connection (encrypted if you set a passphrase)
-  await sqlite.createConnection({
-    database: dbName,
-    encrypted: !!opts?.passphrase,
-    mode: 'no-encryption',
-    version: 1,
-    readonly: false,
-  });
+  const db = await sqlite.createConnection(
+    dbName,
+    !!opts?.passphrase,
+    'no-encryption',
+    1,
+    false
+  );
 
-  const db = await sqlite.retrieveConnection(dbName, false);
   await db.open();
 
   // --- Enable WAL mode for better concurrency and crash-safety ---

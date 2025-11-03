@@ -65,8 +65,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
-  const loadConversations = useCallback(() => {
-    const allConversations = conversationStorage.getAllConversations();
+  const loadConversations = useCallback(async () => {
+    const allConversations = await conversationStorage.getAllConversations();
     setConversations(allConversations);
   }, []);
 
