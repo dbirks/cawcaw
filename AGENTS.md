@@ -24,7 +24,7 @@ pnpm cap:run:ios      # Run on iOS device/simulator
 ### Important Notes
 - **Update CLAUDE.md**: Always document technical changes and architecture updates here
 - **Commit frequently**: After every logical chunk of work
-- **Code quality**: Run `pnpm check` before committing
+- **Code quality**: Run `pnpm check` AND `pnpm build` before committing to catch TypeScript errors
 - **Use Biome**: For linting, formatting, and import organization
 - **Tailwind CSS**: Always prefer Tailwind classes over custom CSS
 - **Mobile-first**: Test on iOS for UI changes (uses `h-dvh` for viewport)
