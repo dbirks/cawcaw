@@ -1,3 +1,4 @@
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
@@ -18,6 +19,7 @@ export interface Message {
     errorText?: string;
   }>;
   timestamp: number;
+  provider?: 'openai' | 'anthropic'; // Track which provider generated this message
 }
 
 export interface Conversation {
@@ -143,11 +145,54 @@ class ConversationStorage {
     if (!conversation || conversation.messages.length === 0) return;
 
     try {
-      // Get API key for title generation
-      const apiKeyResult = await SecureStoragePlugin.get({ key: 'openai_api_key' });
-      if (!apiKeyResult?.value) {
-        console.warn('No API key available for title generation');
-        return;
+      // Get title model preference (defaults to 'same' which means use current provider)
+      const titleModelResult = await SecureStoragePlugin.get({ key: 'title_model' });
+      const titleModel = titleModelResult?.value || 'same';
+
+      // Determine which provider and model to use
+      let providerType: 'openai' | 'anthropic';
+      let modelName: string;
+      let apiKey: string;
+
+      if (titleModel === 'same') {
+        // Use current provider
+        const providerResult = await SecureStoragePlugin.get({ key: 'selected_provider' });
+        providerType = (providerResult?.value as 'openai' | 'anthropic') || 'openai';
+
+        const selectedModelResult = await SecureStoragePlugin.get({ key: 'selected_model' });
+        modelName = selectedModelResult?.value || 'gpt-4o-mini';
+
+        // Get the appropriate API key
+        const keyResult = await SecureStoragePlugin.get({
+          key: providerType === 'openai' ? 'openai_api_key' : 'anthropic_api_key',
+        });
+        if (!keyResult?.value) {
+          console.warn(`No API key available for ${providerType} title generation`);
+          return;
+        }
+        apiKey = keyResult.value;
+      } else {
+        // Use specific model
+        modelName = titleModel;
+
+        // Determine provider based on model name
+        if (modelName.startsWith('claude-')) {
+          providerType = 'anthropic';
+          const anthropicKeyResult = await SecureStoragePlugin.get({ key: 'anthropic_api_key' });
+          if (!anthropicKeyResult?.value) {
+            console.warn('No Anthropic API key available for title generation');
+            return;
+          }
+          apiKey = anthropicKeyResult.value;
+        } else {
+          providerType = 'openai';
+          const openaiKeyResult = await SecureStoragePlugin.get({ key: 'openai_api_key' });
+          if (!openaiKeyResult?.value) {
+            console.warn('No OpenAI API key available for title generation');
+            return;
+          }
+          apiKey = openaiKeyResult.value;
+        }
       }
 
       // Get the first few messages for context (max 3)
@@ -162,10 +207,12 @@ class ConversationStorage {
 
       if (!contextText.trim()) return;
 
-      // Use OpenAI to generate a concise title
-      const openai = createOpenAI({ apiKey: apiKeyResult.value });
+      // Create the appropriate provider client
+      const providerClient =
+        providerType === 'openai' ? createOpenAI({ apiKey }) : createAnthropic({ apiKey });
+
       const result = await generateText({
-        model: openai('gpt-4o-mini'),
+        model: providerClient(modelName),
         messages: [
           {
             role: 'system',
@@ -218,6 +265,16 @@ class ConversationStorage {
 
   getAllConversations(): Conversation[] {
     return Array.from(this.conversations.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  async updateConversationTitle(conversationId: string, title: string): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+    conversation.title = title.trim() || 'New Conversation';
+    conversation.updatedAt = Date.now();
+    await this.save();
   }
 
   private async save(): Promise<void> {
