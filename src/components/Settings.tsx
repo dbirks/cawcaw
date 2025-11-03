@@ -699,7 +699,7 @@ export default function Settings({ onClose }: SettingsProps) {
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full">
                 <div className="pr-4 safe-x safe-bottom">
-                  <Card>
+                  <Card className="border-slate-500/20 bg-slate-500/5">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <OpenAIIcon size={20} />
