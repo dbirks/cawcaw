@@ -1,6 +1,7 @@
 import { Menu, MessageSquare, Plus, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Conversation } from '@/services/conversationStorage';
 import { conversationStorage } from '@/services/conversationStorage';
@@ -86,33 +87,36 @@ export default function Sidebar({
   };
 
   return (
-    <>
-      {/* Overlay for mobile */}
-      {isOpen && (
+    <Drawer
+      direction="left"
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      dismissible={true}
+      modal={true}
+    >
+      {/* Edge Swipe Trigger - positioned 32px from left edge for iOS compatibility */}
+      <DrawerTrigger asChild>
         <button
           type="button"
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onClose}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') onClose();
-          }}
-          tabIndex={0}
-          aria-label="Close sidebar"
-        />
-      )}
+          className="fixed left-8 top-1/2 -translate-y-1/2 z-30 lg:hidden h-16 w-6 bg-accent/50 rounded-r-lg backdrop-blur-sm hover:bg-accent/70 transition-colors flex items-center justify-center"
+          aria-label="Open sidebar menu"
+        >
+          <Menu className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </DrawerTrigger>
 
-      {/* Sidebar */}
-      <div
-        className={`fixed top-0 left-0 h-full w-80 bg-background border-r z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-auto flex flex-col`}
-      >
+      {/* Drawer Content */}
+      <DrawerContent className="w-80 h-full flex flex-col lg:hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b safe-top">
           <h2 className="text-lg font-semibold">caw caw</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">
-            <X className="h-5 w-5" />
-          </Button>
+          <DrawerClose asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden">
+              <X className="h-5 w-5" />
+            </Button>
+          </DrawerClose>
         </div>
 
         {/* New Conversation Button */}
@@ -190,8 +194,8 @@ export default function Sidebar({
             Settings
           </Button>
         </div>
-      </div>
-    </>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
