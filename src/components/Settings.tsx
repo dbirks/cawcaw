@@ -55,20 +55,24 @@ interface SettingsProps {
 // Available AI models
 const AVAILABLE_MODELS = [
   // OpenAI Models
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'openai' },
-  { value: 'gpt-4.1', label: 'GPT-4.1', provider: 'openai' },
+  { value: 'gpt-4o-mini', label: 'gpt-4o-mini', provider: 'openai' },
+  { value: 'gpt-4.1', label: 'gpt-4.1', provider: 'openai' },
 
   // Anthropic Models
-  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'anthropic' },
-  { value: 'claude-3-haiku-latest', label: 'Claude Haiku 3', provider: 'anthropic' },
-  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', provider: 'anthropic' },
+  { value: 'claude-haiku-4-5-20251001', label: 'claude-haiku-4-5-20251001', provider: 'anthropic' },
+  { value: 'claude-3-haiku-latest', label: 'claude-3-haiku-latest', provider: 'anthropic' },
+  {
+    value: 'claude-sonnet-4-5-20250929',
+    label: 'claude-sonnet-4-5-20250929',
+    provider: 'anthropic',
+  },
 ] as const;
 
 // Available STT (Speech-to-Text) models
 const AVAILABLE_STT_MODELS = [
-  { value: 'whisper-1', label: 'Whisper-1 (Legacy)' },
-  { value: 'gpt-4o-mini-transcribe', label: 'GPT-4o Mini Transcribe (Default)' },
-  { value: 'gpt-4o-transcribe', label: 'GPT-4o Transcribe' },
+  { value: 'whisper-1', label: 'whisper-1' },
+  { value: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe' },
+  { value: 'gpt-4o-transcribe', label: 'gpt-4o-transcribe' },
 ] as const;
 
 export default function Settings({ onClose }: SettingsProps) {

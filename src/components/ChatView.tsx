@@ -60,14 +60,14 @@ import Sidebar, { SidebarToggle } from './Sidebar';
 
 // Available OpenAI models
 const AVAILABLE_MODELS = [
-  { value: 'gpt-4.1', label: 'GPT-4.1' },
-  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-  { value: 'gpt-4o', label: 'GPT-4o' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Default)' },
+  { value: 'gpt-4.1', label: 'gpt-4.1' },
+  { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini' },
+  { value: 'gpt-4o', label: 'gpt-4o' },
+  { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
   { value: 'o4-mini', label: 'o4-mini' },
   { value: 'o3', label: 'o3' },
   { value: 'o3-mini', label: 'o3-mini' },
-  { value: 'gpt-4o-with-web-search', label: 'GPT-4o + Web Search' },
+  { value: 'gpt-4o-with-web-search', label: 'gpt-4o-with-web-search' },
 ] as const;
 
 // Updated interfaces for AI Elements compatibility
