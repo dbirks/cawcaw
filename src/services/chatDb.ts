@@ -22,13 +22,7 @@ export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb
   const dbName = 'chat.db';
 
   // Create/open connection (encrypted if you set a passphrase)
-  const db = await sqlite.createConnection(
-    dbName,
-    !!opts?.passphrase,
-    'no-encryption',
-    1,
-    false
-  );
+  const db = await sqlite.createConnection(dbName, !!opts?.passphrase, 'no-encryption', 1, false);
 
   await db.open();
 
