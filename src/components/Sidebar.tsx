@@ -203,7 +203,7 @@ export default function Sidebar({
 export function SidebarToggle({ onClick }: { onClick: () => void }) {
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="icon"
       onClick={onClick}
       className="lg:hidden"

@@ -621,7 +621,11 @@ export default function Settings({ onClose }: SettingsProps) {
         </div>
 
         {/* Settings Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger
               value="llm"
@@ -723,11 +727,6 @@ export default function Settings({ onClose }: SettingsProps) {
                     </CardContent>
                   </Card>
 
-                  {/* Security Notice */}
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Your API key is stored securely on your device and never sent to our servers.
-                  </p>
-
                   {/* Anthropic Configuration Card */}
                   <Card className="mt-6 border-[#C15F3C]/20 bg-[#C15F3C]/5">
                     <CardHeader>
@@ -784,11 +783,6 @@ export default function Settings({ onClose }: SettingsProps) {
                       </div>
                     </CardContent>
                   </Card>
-
-                  {/* Security Notice for Anthropic */}
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Your API key is stored securely on your device and never sent to our servers.
-                  </p>
 
                   {/* Provider Selection */}
                   <Card className="mt-6">
@@ -889,6 +883,11 @@ export default function Settings({ onClose }: SettingsProps) {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Security Notice */}
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Your API keys are stored securely on your device and never sent to our servers.
+                  </p>
                 </div>
               </ScrollArea>
             </div>
