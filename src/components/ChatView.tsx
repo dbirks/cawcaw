@@ -58,16 +58,26 @@ import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Settings from './Settings';
 import Sidebar, { SidebarToggle } from './Sidebar';
 
-// Available OpenAI models
+// Available AI models (both OpenAI and Anthropic)
 const AVAILABLE_MODELS = [
-  { value: 'gpt-4.1', label: 'gpt-4.1' },
-  { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini' },
-  { value: 'gpt-4o', label: 'gpt-4o' },
-  { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
-  { value: 'o4-mini', label: 'o4-mini' },
-  { value: 'o3', label: 'o3' },
-  { value: 'o3-mini', label: 'o3-mini' },
-  { value: 'gpt-4o-with-web-search', label: 'gpt-4o-with-web-search' },
+  // OpenAI Models
+  { value: 'gpt-4.1', label: 'gpt-4.1', provider: 'openai' },
+  { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini', provider: 'openai' },
+  { value: 'gpt-4o', label: 'gpt-4o', provider: 'openai' },
+  { value: 'gpt-4o-mini', label: 'gpt-4o-mini', provider: 'openai' },
+  { value: 'o4-mini', label: 'o4-mini', provider: 'openai' },
+  { value: 'o3', label: 'o3', provider: 'openai' },
+  { value: 'o3-mini', label: 'o3-mini', provider: 'openai' },
+  { value: 'gpt-4o-with-web-search', label: 'gpt-4o-with-web-search', provider: 'openai' },
+
+  // Anthropic Models
+  { value: 'claude-haiku-4-5-20251001', label: 'claude-haiku-4-5-20251001', provider: 'anthropic' },
+  { value: 'claude-3-haiku-latest', label: 'claude-3-haiku-latest', provider: 'anthropic' },
+  {
+    value: 'claude-sonnet-4-5-20250929',
+    label: 'claude-sonnet-4-5-20250929',
+    provider: 'anthropic',
+  },
 ] as const;
 
 // Updated interfaces for AI Elements compatibility
@@ -980,11 +990,20 @@ export default function ChatView() {
                     </span>
                   </PromptInputModelSelectTrigger>
                   <PromptInputModelSelectContent>
-                    {AVAILABLE_MODELS.map((model) => (
-                      <PromptInputModelSelectItem key={model.value} value={model.value}>
-                        {model.label}
-                      </PromptInputModelSelectItem>
-                    ))}
+                    <optgroup label="OpenAI Models">
+                      {AVAILABLE_MODELS.filter((m) => m.provider === 'openai').map((model) => (
+                        <PromptInputModelSelectItem key={model.value} value={model.value}>
+                          {model.label}
+                        </PromptInputModelSelectItem>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Anthropic Models">
+                      {AVAILABLE_MODELS.filter((m) => m.provider === 'anthropic').map((model) => (
+                        <PromptInputModelSelectItem key={model.value} value={model.value}>
+                          {model.label}
+                        </PromptInputModelSelectItem>
+                      ))}
+                    </optgroup>
                   </PromptInputModelSelectContent>
                 </PromptInputModelSelect>
 
