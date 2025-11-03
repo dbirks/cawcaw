@@ -22,6 +22,7 @@ pnpm cap:run:ios      # Run on iOS device/simulator
 ```
 
 ### Important Notes
+- **Update CLAUDE.md**: Always document technical changes and architecture updates here
 - **Commit frequently**: After every logical chunk of work
 - **Code quality**: Run `pnpm check` before committing
 - **Use Biome**: For linting, formatting, and import organization
@@ -35,6 +36,20 @@ pnpm cap:run:ios      # Run on iOS device/simulator
 - **Multi-provider**: Supports both OpenAI and Anthropic models
 - **MCP integration**: External tools via Model Context Protocol
 - **AI SDK v5.0**: Uses `generateText` with tool integration
+- **SQLite with WAL**: Persistent conversation storage with Write-Ahead Logging
+
+#### SQLite Storage Architecture
+- **Database**: `@capacitor-community/sqlite` with WAL mode enabled
+- **iOS**: Stored in Application Support (included in iCloud Backup)
+- **Android**: Internal app storage (~25MB Auto Backup cap)
+- **Schema**: `conversations` + `messages` with foreign key cascade
+- **Checkpointing**: Auto on app backgrounding via `@capacitor/app` listener
+- **Service files**:
+  - `src/services/chatDb.ts` - Core SQLite connection and DAO layer
+  - `src/services/conversationStorage.ts` - Public API wrapping SQLite
+  - `src/hooks/useChatDb.ts` - React hook for lifecycle management
+- **Important**: No migration from pre-SQLite data (fresh start)
+- **Best practice**: Use `conversationStorage` API, not direct DB access
 
 ### Testing Best Practices
 - **Use `getByRole()`**: Primary selector for accessibility
