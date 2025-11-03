@@ -1,7 +1,16 @@
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, User } from 'lucide-react';
+import {
+  BotIcon,
+  CheckIcon,
+  Loader2Icon,
+  MicIcon,
+  MicOffIcon,
+  PencilIcon,
+  User,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -31,6 +40,7 @@ import {
   ToolInput,
   ToolOutput,
 } from '@/components/ai-elements/tool';
+import { AnthropicIcon } from '@/components/icons/AnthropicIcon';
 import { McpIcon } from '@/components/icons/McpIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -76,23 +86,30 @@ interface UIMessage {
   role: 'user' | 'assistant' | 'system';
   parts: MessagePart[];
   timestamp?: number;
+  provider?: 'openai' | 'anthropic'; // Track which provider generated this message
 }
 
 export default function ChatView() {
   // Existing state
   const [apiKey, setApiKey] = useState<string>('');
+  const [anthropicApiKey, setAnthropicApiKey] = useState<string>('');
   const [tempApiKey, setTempApiKey] = useState<string>('');
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(true);
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState<string>('New Chat');
+  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
+  const [editedTitle, setEditedTitle] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic'>('openai');
 
   // New state for AI Elements features
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
   const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
+  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
   const [mcpPopoverOpen, setMcpPopoverOpen] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -108,17 +125,35 @@ export default function ChatView() {
     // Check if we have a stored API key and initialize MCP
     const initialize = async () => {
       try {
-        // Load API key
+        // Load OpenAI API key
         const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
         if (result?.value) {
           setApiKey(result.value);
           setShowApiKeyInput(false);
         }
 
+        // Load Anthropic API key
+        const anthropicResult = await SecureStoragePlugin.get({ key: 'anthropic_api_key' });
+        if (anthropicResult?.value) {
+          setAnthropicApiKey(anthropicResult.value);
+        }
+
+        // Load provider preference
+        const providerResult = await SecureStoragePlugin.get({ key: 'selected_provider' });
+        if (providerResult?.value) {
+          setSelectedProvider(providerResult.value as 'openai' | 'anthropic');
+        }
+
         // Load selected model
         const modelResult = await SecureStoragePlugin.get({ key: 'selected_model' });
         if (modelResult?.value) {
           setSelectedModel(modelResult.value);
+        }
+
+        // Load STT model preference
+        const sttModelResult = await SecureStoragePlugin.get({ key: 'stt_model' });
+        if (sttModelResult?.value) {
+          setSttModel(sttModelResult.value);
         }
 
         // Initialize conversation storage
@@ -129,6 +164,7 @@ export default function ChatView() {
         if (currentConversation) {
           setCurrentConversationId(currentConversation.id);
           setMessages(currentConversation.messages);
+          setConversationTitle(currentConversation.title);
         }
 
         // Initialize MCP servers and load data
@@ -313,7 +349,14 @@ export default function ChatView() {
   };
 
   const sendMessage = async (content: string) => {
-    if (!content.trim() || !apiKey) return;
+    if (!content.trim()) return;
+
+    // Check if we have the appropriate API key for the selected provider
+    const currentApiKey = selectedProvider === 'openai' ? apiKey : anthropicApiKey;
+    if (!currentApiKey) {
+      console.error(`No API key available for provider: ${selectedProvider}`);
+      return;
+    }
 
     const trimmedContent = content.trim();
 
@@ -342,7 +385,11 @@ export default function ChatView() {
     setStatus('submitted');
 
     try {
-      const openai = createOpenAI({ apiKey });
+      // Create the appropriate provider client
+      const providerClient =
+        selectedProvider === 'openai'
+          ? createOpenAI({ apiKey: currentApiKey })
+          : createAnthropic({ apiKey: currentApiKey });
 
       // Get tools from MCP manager
       const mcpTools = await mcpManager.getAllTools();
@@ -395,7 +442,7 @@ export default function ChatView() {
       setStatus('streaming');
 
       const result = await generateText({
-        model: openai(selectedModel),
+        model: providerClient(selectedModel),
         messages: formattedMessages,
         tools,
         stopWhen: stepCountIs(5), // Enable multi-step: AI can use tools and then respond
@@ -455,6 +502,7 @@ export default function ChatView() {
         role: 'assistant',
         parts: assistantParts,
         timestamp: Date.now(),
+        provider: selectedProvider, // Track which provider generated this message
       };
 
       setMessages((prev) => {
@@ -533,10 +581,16 @@ export default function ChatView() {
           // Set processing status
           setStatus('submitted');
 
-          // Transcribe using OpenAI Whisper
+          // Transcribe using OpenAI Whisper (always use OpenAI for transcription)
+          if (!apiKey) {
+            console.error('No OpenAI API key available for transcription');
+            setStatus('error');
+            return;
+          }
+
           const openai = createOpenAI({ apiKey });
           const transcript = await transcribe({
-            model: openai.transcription('whisper-1'), // Use Whisper model
+            model: openai.transcription(sttModel), // Use selected STT model from settings
             audio: audioData,
           });
 
@@ -622,9 +676,26 @@ export default function ChatView() {
     scrollToBottom();
   }, [scrollToBottom]);
 
+  // Poll for title updates (in case it's generated in the background)
+  useEffect(() => {
+    if (!currentConversationId) return;
+
+    const pollTitleUpdates = async () => {
+      const conversation = await conversationStorage.getCurrentConversation();
+      if (conversation && conversation.title !== conversationTitle) {
+        setConversationTitle(conversation.title);
+      }
+    };
+
+    // Poll every 500ms
+    const interval = setInterval(pollTitleUpdates, 500);
+    return () => clearInterval(interval);
+  }, [currentConversationId, conversationTitle]);
+
   const handleNewConversation = async () => {
     const newConv = await conversationStorage.createNewConversation();
     setCurrentConversationId(newConv.id);
+    setConversationTitle(newConv.title);
     setMessages([]);
     setInput('');
   };
@@ -633,8 +704,34 @@ export default function ChatView() {
     const conversation = await conversationStorage.getCurrentConversation();
     if (conversation) {
       setCurrentConversationId(conversation.id);
+      setConversationTitle(conversation.title);
       setMessages(conversation.messages);
     }
+  };
+
+  const handleEditTitle = () => {
+    setEditedTitle(conversationTitle);
+    setIsEditingTitle(true);
+  };
+
+  const handleSaveTitle = async () => {
+    if (!currentConversationId) return;
+
+    const trimmed = editedTitle.trim();
+    if (trimmed && trimmed !== conversationTitle) {
+      try {
+        await conversationStorage.updateConversationTitle(currentConversationId, trimmed);
+        setConversationTitle(trimmed);
+      } catch (error) {
+        console.error('Failed to update title:', error);
+      }
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingTitle(false);
+    setEditedTitle('');
   };
 
   // Show Settings screen
@@ -693,9 +790,45 @@ export default function ChatView() {
       <div className="flex-1 flex flex-col h-full">
         {/* Fixed Header with safe area */}
         <div className="border-b pb-3 pt-4 px-4 flex justify-between items-center safe-top flex-shrink-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <SidebarToggle onClick={() => setIsSidebarOpen(true)} />
-            <h1 className="text-xl font-semibold">caw caw</h1>
+            {isEditingTitle ? (
+              <div className="flex items-center gap-1 flex-1">
+                <Input
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSaveTitle();
+                    } else if (e.key === 'Escape') {
+                      handleCancelEdit();
+                    }
+                  }}
+                  className="h-8 text-base font-semibold"
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={handleSaveTitle}
+                >
+                  <CheckIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                <h1 className="text-xl font-semibold truncate">{conversationTitle}</h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
+                  onClick={handleEditTitle}
+                >
+                  <PencilIcon className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -758,8 +891,18 @@ export default function ChatView() {
                       </MessageContent>
                       {message.role === 'assistant' ? (
                         <Avatar className="size-8 ring ring-1 ring-border">
-                          <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
-                            <OpenAIIcon size={16} />
+                          <AvatarFallback
+                            className={
+                              message.provider === 'anthropic'
+                                ? 'bg-[#C15F3C] text-white'
+                                : 'bg-black text-white dark:bg-white dark:text-black'
+                            }
+                          >
+                            {message.provider === 'anthropic' ? (
+                              <AnthropicIcon size={16} />
+                            ) : (
+                              <OpenAIIcon size={16} />
+                            )}
                           </AvatarFallback>
                         </Avatar>
                       ) : (
@@ -781,8 +924,18 @@ export default function ChatView() {
                         </div>
                       </MessageContent>
                       <Avatar className="size-8 ring ring-1 ring-border">
-                        <AvatarFallback className="bg-black text-white dark:bg-white dark:text-black">
-                          <OpenAIIcon size={16} />
+                        <AvatarFallback
+                          className={
+                            selectedProvider === 'anthropic'
+                              ? 'bg-[#C15F3C] text-white'
+                              : 'bg-black text-white dark:bg-white dark:text-black'
+                          }
+                        >
+                          {selectedProvider === 'anthropic' ? (
+                            <AnthropicIcon size={16} />
+                          ) : (
+                            <OpenAIIcon size={16} />
+                          )}
                         </AvatarFallback>
                       </Avatar>
                     </Message>
