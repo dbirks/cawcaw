@@ -105,7 +105,7 @@ export default function Sidebar({
 
   const handleNewConversation = async () => {
     await conversationStorage.createNewConversation();
-    loadConversations();
+    await loadConversations(); // Wait for sidebar to update
     onNewConversation();
     onClose(); // Close sidebar after creating new conversation
   };
