@@ -704,11 +704,15 @@ export default function ChatView() {
   }, [currentConversationId, conversationTitle]);
 
   const handleNewConversation = async () => {
-    const newConv = await conversationStorage.createNewConversation();
-    setCurrentConversationId(newConv.id);
-    setConversationTitle(newConv.title);
-    setMessages([]);
-    setInput('');
+    // Don't create a new conversation here - Sidebar already created it
+    // Just load the current conversation from storage (matches handleSelectConversation pattern)
+    const conversation = await conversationStorage.getCurrentConversation();
+    if (conversation) {
+      setCurrentConversationId(conversation.id);
+      setConversationTitle(conversation.title);
+      setMessages(conversation.messages);
+      setInput('');
+    }
   };
 
   const handleSelectConversation = async (_conversationId: string) => {
