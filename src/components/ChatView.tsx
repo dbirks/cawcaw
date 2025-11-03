@@ -11,7 +11,7 @@ import {
   PencilIcon,
   User,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
 import {
@@ -151,6 +151,18 @@ export default function ChatView() {
   // Ref for auto-scrolling to latest messages
   const conversationRef = useRef<HTMLDivElement>(null);
 
+  // Filter models based on available API keys
+  const availableModels = useMemo(() => {
+    const models = AVAILABLE_MODELS.filter((model) => {
+      if (model.provider === 'openai') return !!apiKey;
+      if (model.provider === 'anthropic') return !!anthropicApiKey;
+      return false;
+    });
+
+    // If no API keys are set, show all models (for settings view)
+    return models.length > 0 ? models : AVAILABLE_MODELS;
+  }, [apiKey, anthropicApiKey]);
+
   useEffect(() => {
     // Check if we have a stored API key and initialize MCP
     const initialize = async () => {
@@ -217,6 +229,39 @@ export default function ChatView() {
       mcpManager.cleanup();
     };
   }, []);
+
+  // Update selected model when API keys change to ensure it's valid
+  useEffect(() => {
+    // Check if current selected model is still available
+    const isCurrentModelAvailable = availableModels.some((m) => m.value === selectedModel);
+
+    if (!isCurrentModelAvailable && availableModels.length > 0) {
+      // Set smart default based on available API keys
+      let defaultModel: string;
+
+      if (apiKey && !anthropicApiKey) {
+        // Only OpenAI key: default to gpt-5-mini
+        defaultModel = 'gpt-5-mini';
+      } else if (anthropicApiKey && !apiKey) {
+        // Only Anthropic key: default to Claude Sonnet 4.5
+        defaultModel = 'claude-sonnet-4-5-20250929';
+      } else {
+        // Both keys or fallback: default to Claude Sonnet 4.5
+        defaultModel = 'claude-sonnet-4-5-20250929';
+      }
+
+      // Make sure the default model is actually available
+      const modelToSet =
+        availableModels.find((m) => m.value === defaultModel)?.value || availableModels[0].value;
+
+      setSelectedModel(modelToSet);
+
+      // Save the new default
+      SecureStoragePlugin.set({ key: 'selected_model', value: modelToSet }).catch((err) => {
+        console.error('Failed to save default model:', err);
+      });
+    }
+  }, [apiKey, anthropicApiKey, availableModels, selectedModel]);
 
   const saveApiKey = async () => {
     if (tempApiKey.trim()) {
@@ -1014,22 +1059,30 @@ export default function ChatView() {
                     </span>
                   </PromptInputModelSelectTrigger>
                   <PromptInputModelSelectContent>
-                    <SelectGroup>
-                      <SelectLabel>OpenAI Models</SelectLabel>
-                      {AVAILABLE_MODELS.filter((m) => m.provider === 'openai').map((model) => (
-                        <PromptInputModelSelectItem key={model.value} value={model.value}>
-                          {model.label}
-                        </PromptInputModelSelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectGroup>
-                      <SelectLabel>Anthropic Models</SelectLabel>
-                      {AVAILABLE_MODELS.filter((m) => m.provider === 'anthropic').map((model) => (
-                        <PromptInputModelSelectItem key={model.value} value={model.value}>
-                          {model.label}
-                        </PromptInputModelSelectItem>
-                      ))}
-                    </SelectGroup>
+                    {availableModels.filter((m) => m.provider === 'openai').length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>OpenAI Models</SelectLabel>
+                        {availableModels
+                          .filter((m) => m.provider === 'openai')
+                          .map((model) => (
+                            <PromptInputModelSelectItem key={model.value} value={model.value}>
+                              {model.label}
+                            </PromptInputModelSelectItem>
+                          ))}
+                      </SelectGroup>
+                    )}
+                    {availableModels.filter((m) => m.provider === 'anthropic').length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Anthropic Models</SelectLabel>
+                        {availableModels
+                          .filter((m) => m.provider === 'anthropic')
+                          .map((model) => (
+                            <PromptInputModelSelectItem key={model.value} value={model.value}>
+                              {model.label}
+                            </PromptInputModelSelectItem>
+                          ))}
+                      </SelectGroup>
+                    )}
                   </PromptInputModelSelectContent>
                 </PromptInputModelSelect>
 
