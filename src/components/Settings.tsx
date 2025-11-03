@@ -55,16 +55,18 @@ interface SettingsProps {
 // Available AI models
 const AVAILABLE_MODELS = [
   // OpenAI Models
-  { value: 'gpt-4o-2024-11-20', label: 'GPT-4o', provider: 'openai' },
-  { value: 'gpt-4o', label: 'GPT-4o (latest)', provider: 'openai' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'openai' },
-  { value: 'gpt-4-turbo-2024-04-09', label: 'GPT-4 Turbo', provider: 'openai' },
-  { value: 'gpt-4.5-preview', label: 'GPT-4.5 Preview', provider: 'openai' },
-  { value: 'gpt-4.1', label: 'GPT-4.1', provider: 'openai' },
-  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', provider: 'openai' },
+  { value: 'gpt-4o', label: 'gpt-4o', provider: 'openai' },
+  { value: 'gpt-4o-mini', label: 'gpt-4o-mini', provider: 'openai' },
+  { value: 'gpt-4.1', label: 'gpt-4.1', provider: 'openai' },
+  { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini', provider: 'openai' },
   { value: 'o4-mini', label: 'o4-mini', provider: 'openai' },
   { value: 'o3', label: 'o3', provider: 'openai' },
   { value: 'o3-mini', label: 'o3-mini', provider: 'openai' },
+  { value: 'gpt-4o-search-preview', label: 'gpt-4o (Web Search)', provider: 'openai' },
+  { value: 'gpt-4o-mini-search-preview', label: 'gpt-4o-mini (Web Search)', provider: 'openai' },
+  { value: 'gpt-5', label: 'gpt-5', provider: 'openai' },
+  { value: 'gpt-5-mini', label: 'gpt-5-mini', provider: 'openai' },
+  { value: 'gpt-5-nano', label: 'gpt-5-nano', provider: 'openai' },
 
   // Anthropic Models - Claude 4.5 Series
   {
@@ -87,11 +89,6 @@ const AVAILABLE_MODELS = [
   {
     value: 'claude-sonnet-4-20250514',
     label: 'Claude Sonnet 4',
-    provider: 'anthropic',
-  },
-  {
-    value: 'claude-opus-4-20250514',
-    label: 'Claude Opus 4',
     provider: 'anthropic',
   },
 ] as const;
