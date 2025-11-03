@@ -62,37 +62,46 @@ import Sidebar, { SidebarToggle } from './Sidebar';
 // Available AI models (both OpenAI and Anthropic)
 const AVAILABLE_MODELS = [
   // OpenAI Models
-  { value: 'gpt-4o-2024-11-20', label: 'gpt-4o-2024-11-20', provider: 'openai' },
-  { value: 'gpt-4o', label: 'gpt-4o', provider: 'openai' },
-  { value: 'gpt-4o-mini', label: 'gpt-4o-mini', provider: 'openai' },
-  { value: 'gpt-4-turbo-2024-04-09', label: 'gpt-4-turbo-2024-04-09', provider: 'openai' },
-  { value: 'gpt-4.1', label: 'gpt-4.1', provider: 'openai' },
-  { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini', provider: 'openai' },
+  { value: 'gpt-4o-2024-11-20', label: 'GPT-4o', provider: 'openai' },
+  { value: 'gpt-4o', label: 'GPT-4o (latest)', provider: 'openai' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'openai' },
+  { value: 'gpt-4-turbo-2024-04-09', label: 'GPT-4 Turbo', provider: 'openai' },
+  { value: 'gpt-4.5-preview', label: 'GPT-4.5 Preview', provider: 'openai' },
+  { value: 'gpt-4.1', label: 'GPT-4.1', provider: 'openai' },
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', provider: 'openai' },
   { value: 'o4-mini', label: 'o4-mini', provider: 'openai' },
   { value: 'o3', label: 'o3', provider: 'openai' },
   { value: 'o3-mini', label: 'o3-mini', provider: 'openai' },
-  { value: 'gpt-4o-with-web-search', label: 'gpt-4o-with-web-search', provider: 'openai' },
+  { value: 'gpt-4o-with-web-search', label: 'GPT-4o with Web Search', provider: 'openai' },
 
   // Anthropic Models - Claude 4.5 Series
   {
     value: 'claude-sonnet-4-5-20250929',
-    label: 'claude-sonnet-4-5-20250929',
+    label: 'Claude Sonnet 4.5',
     provider: 'anthropic',
   },
-  { value: 'claude-haiku-4-5-20251001', label: 'claude-haiku-4-5-20251001', provider: 'anthropic' },
+  {
+    value: 'claude-haiku-4-5-20251001',
+    label: 'Claude Haiku 4.5',
+    provider: 'anthropic',
+  },
 
   // Anthropic Models - Claude 4 Series
-  { value: 'claude-opus-4-1-20250805', label: 'claude-opus-4-1-20250805', provider: 'anthropic' },
-  { value: 'claude-sonnet-4-20250514', label: 'claude-sonnet-4-20250514', provider: 'anthropic' },
-  { value: 'claude-opus-4-20250514', label: 'claude-opus-4-20250514', provider: 'anthropic' },
-
-  // Anthropic Models - Claude 3.x Series
   {
-    value: 'claude-3-7-sonnet-20250219',
-    label: 'claude-3-7-sonnet-20250219',
+    value: 'claude-opus-4-1-20250805',
+    label: 'Claude Opus 4.1',
     provider: 'anthropic',
   },
-  { value: 'claude-3-haiku-latest', label: 'claude-3-haiku-latest', provider: 'anthropic' },
+  {
+    value: 'claude-sonnet-4-20250514',
+    label: 'Claude Sonnet 4',
+    provider: 'anthropic',
+  },
+  {
+    value: 'claude-opus-4-20250514',
+    label: 'Claude Opus 4',
+    provider: 'anthropic',
+  },
 ] as const;
 
 // Updated interfaces for AI Elements compatibility
