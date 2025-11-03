@@ -1045,7 +1045,7 @@ export default function ChatView() {
                   </PromptInputModelSelectTrigger>
                   <PromptInputModelSelectContent>
                     {availableModels.filter((m) => m.provider === 'openai').length > 0 && (
-                      <SelectGroup>
+                      <SelectGroup className="bg-slate-500/5">
                         <SelectLabel>OpenAI Models</SelectLabel>
                         {availableModels
                           .filter((m) => m.provider === 'openai')
@@ -1057,7 +1057,7 @@ export default function ChatView() {
                       </SelectGroup>
                     )}
                     {availableModels.filter((m) => m.provider === 'anthropic').length > 0 && (
-                      <SelectGroup>
+                      <SelectGroup className="bg-[#C15F3C]/5">
                         <SelectLabel>Anthropic Models</SelectLabel>
                         {availableModels
                           .filter((m) => m.provider === 'anthropic')

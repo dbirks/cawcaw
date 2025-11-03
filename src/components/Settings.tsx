@@ -122,8 +122,6 @@ export default function Settings({ onClose }: SettingsProps) {
   const [isUpdatingAnthropicKey, setIsUpdatingAnthropicKey] = useState(false);
 
   // Provider and model state
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic'>('openai');
-  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [titleModel, setTitleModel] = useState<string>('same');
   const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe');
 
@@ -176,8 +174,6 @@ export default function Settings({ onClose }: SettingsProps) {
   // Generate unique IDs for form elements
   const apiKeyId = useId();
   const anthropicApiKeyId = useId();
-  const providerSelectId = useId();
-  const modelSelectId = useId();
   const titleModelSelectId = useId();
   const sttModelSelectId = useId();
   const serverNameId = useId();
@@ -216,17 +212,6 @@ export default function Settings({ onClose }: SettingsProps) {
       const anthropicResult = await SecureStoragePlugin.get({ key: 'anthropic_api_key' });
       if (anthropicResult?.value) {
         setAnthropicApiKey(anthropicResult.value);
-      }
-
-      // Load provider and model preferences
-      const providerResult = await SecureStoragePlugin.get({ key: 'selected_provider' });
-      if (providerResult?.value) {
-        setSelectedProvider(providerResult.value as 'openai' | 'anthropic');
-      }
-
-      const modelResult = await SecureStoragePlugin.get({ key: 'selected_model' });
-      if (modelResult?.value) {
-        setSelectedModel(modelResult.value);
       }
 
       const titleModelResult = await SecureStoragePlugin.get({ key: 'title_model' });
@@ -338,24 +323,6 @@ export default function Settings({ onClose }: SettingsProps) {
         console.error('Failed to clear Anthropic API key:', error);
         alert('❌ Failed to clear Anthropic API key');
       }
-    }
-  };
-
-  const handleProviderChange = async (provider: 'openai' | 'anthropic') => {
-    setSelectedProvider(provider);
-    try {
-      await SecureStoragePlugin.set({ key: 'selected_provider', value: provider });
-    } catch (error) {
-      console.error('Failed to save provider preference:', error);
-    }
-  };
-
-  const handleModelChange = async (model: string) => {
-    setSelectedModel(model);
-    try {
-      await SecureStoragePlugin.set({ key: 'selected_model', value: model });
-    } catch (error) {
-      console.error('Failed to save model preference:', error);
     }
   };
 
@@ -809,65 +776,12 @@ export default function Settings({ onClose }: SettingsProps) {
                     </CardContent>
                   </Card>
 
-                  {/* Provider Selection */}
+                  {/* Title Generation */}
                   <Card className="mt-6">
                     <CardHeader>
-                      <CardTitle>Provider & Model Selection</CardTitle>
+                      <CardTitle>Title Generation</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Provider Selection */}
-                      <div>
-                        <label
-                          htmlFor={providerSelectId}
-                          className="text-sm font-medium mb-2 block"
-                        >
-                          AI Provider
-                        </label>
-                        <select
-                          id={providerSelectId}
-                          value={selectedProvider}
-                          onChange={(e) =>
-                            handleProviderChange(e.target.value as 'openai' | 'anthropic')
-                          }
-                          className="w-full p-2 border rounded-md bg-background"
-                        >
-                          <option value="openai">OpenAI</option>
-                          <option value="anthropic">Anthropic (Claude)</option>
-                        </select>
-                      </div>
-
-                      {/* Model Selection with Provider Grouping */}
-                      <div>
-                        <label htmlFor={modelSelectId} className="text-sm font-medium mb-2 block">
-                          Chat Model
-                        </label>
-                        <select
-                          id={modelSelectId}
-                          value={selectedModel}
-                          onChange={(e) => handleModelChange(e.target.value)}
-                          className="w-full p-2 border rounded-md bg-background"
-                        >
-                          <optgroup label="OpenAI Models">
-                            {AVAILABLE_MODELS.filter((m) => m.provider === 'openai').map(
-                              (model) => (
-                                <option key={model.value} value={model.value}>
-                                  {model.label}
-                                </option>
-                              )
-                            )}
-                          </optgroup>
-                          <optgroup label="Anthropic Models">
-                            {AVAILABLE_MODELS.filter((m) => m.provider === 'anthropic').map(
-                              (model) => (
-                                <option key={model.value} value={model.value}>
-                                  {model.label}
-                                </option>
-                              )
-                            )}
-                          </optgroup>
-                        </select>
-                      </div>
-
+                    <CardContent>
                       {/* Title Generation Model Selection */}
                       <div>
                         <label
