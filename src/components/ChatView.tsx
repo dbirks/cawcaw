@@ -2,15 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import {
-  BotIcon,
-  CheckIcon,
-  Loader2Icon,
-  MicIcon,
-  MicOffIcon,
-  PencilIcon,
-  User,
-} from 'lucide-react';
+import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, PencilIcon, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -884,17 +876,10 @@ export default function ChatView() {
                       handleCancelEdit();
                     }
                   }}
+                  onBlur={handleSaveTitle}
                   className="h-8 text-base font-semibold"
                   autoFocus
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={handleSaveTitle}
-                >
-                  <CheckIcon className="h-4 w-4" />
-                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-1 flex-1 min-w-0">
