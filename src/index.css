@@ -111,6 +111,12 @@
 }
 
 @layer base {
+  /* Prevent horizontal overscroll to avoid conflicts with edge swipe gestures on iOS */
+  html,
+  body {
+    overscroll-behavior-x: none;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }

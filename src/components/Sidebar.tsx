@@ -1,14 +1,53 @@
 import { Menu, MessageSquare, Plus, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Conversation } from '@/services/conversationStorage';
 import { conversationStorage } from '@/services/conversationStorage';
 
+// Edge swipe activator for iOS-style left edge gesture
+function LeftEdgeActivator({ onOpen }: { onOpen: () => void }) {
+  const draggingRef = useRef(false);
+  const startRef = useRef({ x: 0, y: 0 });
+
+  const onDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    if (e.clientX > 24) return; // only within the edge zone
+    draggingRef.current = true;
+    startRef.current = { x: e.clientX, y: e.clientY };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - startRef.current.x;
+    const dy = Math.abs(e.clientY - startRef.current.y);
+    if (dx > 32 && dy < 30) {
+      draggingRef.current = false;
+      onOpen(); // open the drawer
+    }
+  };
+
+  const onUp: React.PointerEventHandler<HTMLDivElement> = () => {
+    draggingRef.current = false;
+  };
+
+  return (
+    <div
+      className="fixed inset-y-0 left-0 z-40"
+      style={{ width: 16, touchAction: 'pan-y' }}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      aria-hidden="true"
+    />
+  );
+}
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpen: () => void;
   onNewConversation: () => void;
   onSelectConversation: (conversationId: string) => void;
   onOpenSettings: () => void;
@@ -18,6 +57,7 @@ interface SidebarProps {
 export default function Sidebar({
   isOpen,
   onClose,
+  onOpen,
   onNewConversation,
   onSelectConversation,
   onOpenSettings,
@@ -86,116 +126,127 @@ export default function Sidebar({
     return date.toLocaleDateString();
   };
 
+  const handleOpen = () => {
+    if (!isOpen) {
+      onOpen();
+    }
+  };
+
   return (
-    <Drawer
-      direction="left"
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      dismissible={true}
-      modal={true}
-    >
-      {/* Edge Swipe Trigger - positioned 32px from left edge for iOS compatibility */}
-      <DrawerTrigger asChild>
-        <button
-          type="button"
-          className="fixed left-8 top-1/2 -translate-y-1/2 z-30 lg:hidden h-16 w-6 bg-accent/50 rounded-r-lg backdrop-blur-sm hover:bg-accent/70 transition-colors flex items-center justify-center"
-          aria-label="Open sidebar menu"
-        >
-          <Menu className="h-4 w-4 text-muted-foreground" />
-        </button>
-      </DrawerTrigger>
+    <>
+      {/* Edge swipe activator for iOS-style gesture */}
+      <LeftEdgeActivator onOpen={handleOpen} />
 
-      {/* Drawer Content */}
-      <DrawerContent className="w-80 h-full flex flex-col lg:hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b safe-top">
-          <h2 className="text-lg font-semibold">caw caw</h2>
-          <DrawerClose asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden">
-              <X className="h-5 w-5" />
+      <Drawer
+        direction="left"
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+        dismissible={true}
+        modal={true}
+      >
+        {/* Edge Swipe Trigger - positioned 32px from left edge for iOS compatibility */}
+        <DrawerTrigger asChild>
+          <button
+            type="button"
+            className="fixed left-8 top-1/2 -translate-y-1/2 z-30 lg:hidden h-16 w-6 bg-accent/50 rounded-r-lg backdrop-blur-sm hover:bg-accent/70 transition-colors flex items-center justify-center"
+            aria-label="Open sidebar menu"
+          >
+            <Menu className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </DrawerTrigger>
+
+        {/* Drawer Content */}
+        <DrawerContent className="w-80 h-full flex flex-col lg:hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b safe-top">
+            <h2 className="text-lg font-semibold">caw caw</h2>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" className="lg:hidden">
+                <X className="h-5 w-5" />
+              </Button>
+            </DrawerClose>
+          </div>
+
+          {/* New Conversation Button */}
+          <div className="p-4 border-b">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={handleNewConversation}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Conversation
             </Button>
-          </DrawerClose>
-        </div>
+          </div>
 
-        {/* New Conversation Button */}
-        <div className="p-4 border-b">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-            onClick={handleNewConversation}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Conversation
-          </Button>
-        </div>
-
-        {/* Conversations List */}
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="p-4 space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Conversations</h3>
-              {conversations.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8 text-sm">
-                  No conversations yet
-                </div>
-              ) : (
-                conversations.map((conversation) => (
-                  <button
-                    key={conversation.id}
-                    type="button"
-                    onClick={() => handleSelectConversation(conversation.id)}
-                    className={`w-full text-left p-3 rounded-lg hover:bg-accent transition-colors group ${
-                      conversation.id === currentConversationId ? 'bg-accent' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <h4 className="text-sm font-medium truncate">{conversation.title}</h4>
+          {/* Conversations List */}
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Conversations</h3>
+                {conversations.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8 text-sm">
+                    No conversations yet
+                  </div>
+                ) : (
+                  conversations.map((conversation) => (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      onClick={() => handleSelectConversation(conversation.id)}
+                      className={`w-full text-left p-3 rounded-lg hover:bg-accent transition-colors group ${
+                        conversation.id === currentConversationId ? 'bg-accent' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <h4 className="text-sm font-medium truncate">{conversation.title}</h4>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{conversation.messages.length} messages</span>
+                            <span>•</span>
+                            <span>{formatDate(conversation.updatedAt)}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{conversation.messages.length} messages</span>
-                          <span>•</span>
-                          <span>{formatDate(conversation.updatedAt)}</span>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                          title="Delete conversation"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        onClick={(e) => handleDeleteConversation(conversation.id, e)}
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
 
-        {/* Settings Section - at bottom */}
-        <div className="border-t p-4 safe-bottom">
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => {
-              onOpenSettings();
-              onClose();
-            }}
-          >
-            <SettingsIcon className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-        </div>
-      </DrawerContent>
-    </Drawer>
+          {/* Settings Section - at bottom */}
+          <div className="border-t p-4 safe-bottom">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                onOpenSettings();
+                onClose();
+              }}
+            >
+              <SettingsIcon className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 }
 

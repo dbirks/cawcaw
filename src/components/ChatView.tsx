@@ -780,6 +780,7 @@ export default function ChatView() {
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        onOpen={() => setIsSidebarOpen(true)}
         onNewConversation={handleNewConversation}
         onSelectConversation={handleSelectConversation}
         onOpenSettings={() => setShowSettings(true)}
