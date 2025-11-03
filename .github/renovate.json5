@@ -8,7 +8,18 @@
   ],
 
   // Pin dependencies to exact versions (no ^ or ~)
-  rangeStrategy: "pin",
+  // Must be in packageRules to override config:recommended preset
+  packageRules: [
+    {
+      matchPackagePatterns: ["*"],
+      rangeStrategy: "pin"
+    },
+    // Keep peerDependencies and engines as ranges for compatibility
+    {
+      matchDepTypes: ["engines", "peerDependencies"],
+      rangeStrategy: "auto"
+    }
+  ],
 
   // Enable lockfile maintenance for pnpm-lock.yaml updates
   // This refreshes the lockfile to update transitive dependencies
