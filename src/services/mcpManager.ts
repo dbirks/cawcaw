@@ -615,7 +615,11 @@ class MCPManager {
         }
 
         this.serverConfigs = allServers;
-        console.log('[MCPManager] Final server configs after loading:', allServers.length, allServers);
+        console.log(
+          '[MCPManager] Final server configs after loading:',
+          allServers.length,
+          allServers
+        );
         return this.serverConfigs;
       }
       console.log('[MCPManager] No stored configurations found, using defaults');
