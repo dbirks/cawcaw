@@ -48,7 +48,7 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
-  onNewConversation: () => void;
+  onNewConversation: () => Promise<void>;
   onSelectConversation: (conversationId: string) => void;
   onOpenSettings: () => void;
   currentConversationId: string | null;
@@ -104,10 +104,21 @@ export default function Sidebar({
   };
 
   const handleNewConversation = async () => {
-    await conversationStorage.createNewConversation();
-    await loadConversations(); // Wait for sidebar to update
-    onNewConversation();
-    onClose(); // Close sidebar after creating new conversation
+    try {
+      console.log('[Sidebar] Creating new conversation...');
+      const newConv = await conversationStorage.createNewConversation();
+      console.log('[Sidebar] New conversation created:', newConv.id);
+
+      await loadConversations(); // Wait for sidebar to update
+      console.log('[Sidebar] Conversations reloaded');
+
+      await onNewConversation(); // CHANGED: Now awaiting this
+      console.log('[Sidebar] onNewConversation callback completed');
+
+      onClose(); // Close sidebar after creating new conversation
+    } catch (error) {
+      console.error('[Sidebar] Error in handleNewConversation:', error);
+    }
   };
 
   const handleSelectConversation = async (conversationId: string) => {

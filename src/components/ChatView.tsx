@@ -760,14 +760,24 @@ export default function ChatView() {
   }, [currentConversationId, conversationTitle]);
 
   const handleNewConversation = async () => {
+    console.log('[ChatView] handleNewConversation called');
     // Don't create a new conversation here - Sidebar already created it
     // Just load the current conversation from storage (matches handleSelectConversation pattern)
     const conversation = await conversationStorage.getCurrentConversation();
+    console.log(
+      '[ChatView] Got conversation:',
+      conversation?.id,
+      'messages:',
+      conversation?.messages.length
+    );
     if (conversation) {
       setCurrentConversationId(conversation.id);
       setConversationTitle(conversation.title);
       setMessages(conversation.messages);
       setInput('');
+      console.log('[ChatView] State updated successfully');
+    } else {
+      console.error('[ChatView] No conversation returned!');
     }
   };
 
