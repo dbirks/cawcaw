@@ -606,9 +606,8 @@ export default function Settings({ onClose }: SettingsProps) {
         {/* Header with safe area */}
         <div className="flex items-center justify-between mb-4 sm:mb-6 pt-4 pb-4 safe-top safe-x">
           <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
-          <Button variant="outline" onClick={onClose} size="sm" className="sm:size-default">
-            <X className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Close</span>
+          <Button variant="ghost" onClick={onClose} size="icon">
+            <X className="h-6 w-6" />
           </Button>
         </div>
 
