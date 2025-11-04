@@ -1,4 +1,11 @@
-import { Menu, MessageSquare, Plus, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
+import {
+  Menu,
+  MessageSquare,
+  PanelLeftClose,
+  Plus,
+  Settings as SettingsIcon,
+  Trash2,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent } from '@/components/ui/drawer';
@@ -165,7 +172,7 @@ export default function Sidebar({
             <h2 className="text-lg font-semibold">caw caw</h2>
             <DrawerClose asChild>
               <Button variant="ghost" size="icon" className="lg:hidden">
-                <X className="h-5 w-5" />
+                <PanelLeftClose className="h-6 w-6" />
               </Button>
             </DrawerClose>
           </div>
