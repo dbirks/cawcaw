@@ -869,45 +869,8 @@ export default function Settings({ onClose }: SettingsProps) {
                           ))}
                         </select>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Choose which OpenAI model to use for converting speech to text. GPT-4o
-                          Mini Transcribe is recommended for best balance of speed, accuracy, and
-                          cost.
+                          Choose which OpenAI model to use for converting speech to text.
                         </p>
-                      </div>
-
-                      {/* Model Comparison Info */}
-                      <div className="border rounded-md p-4 bg-muted/30 space-y-3">
-                        <h4 className="text-sm font-medium">Model Comparison</h4>
-                        <div className="space-y-2 text-xs text-muted-foreground">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium text-foreground">
-                              GPT-4o Transcribe (Premium)
-                            </span>
-                            <span>
-                              • Best accuracy and error rates
-                              <br />• Excellent for accents, noise, and complex speech
-                              <br />• Cost: $0.006/minute ($6 per 1M audio tokens)
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium text-foreground">
-                              GPT-4o Mini Transcribe (Recommended)
-                            </span>
-                            <span>
-                              • Great accuracy at half the cost
-                              <br />• Ideal for most use cases
-                              <br />• Cost: $0.003/minute ($3 per 1M audio tokens)
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium text-foreground">Whisper-1 (Legacy)</span>
-                            <span>
-                              • Original OpenAI speech model from 2022
-                              <br />• Good for clean audio
-                              <br />• Cost: $0.006/minute (same as GPT-4o Transcribe)
-                            </span>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Note about API Keys */}
