@@ -48,7 +48,7 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
-  onNewConversation: () => Promise<void>;
+  onNewConversation: (conversation: Conversation) => Promise<void>;
   onSelectConversation: (conversationId: string) => void;
   onOpenSettings: () => void;
   currentConversationId: string | null;
@@ -112,7 +112,7 @@ export default function Sidebar({
       await loadConversations(); // Wait for sidebar to update
       console.log('[Sidebar] Conversations reloaded');
 
-      await onNewConversation(); // CHANGED: Now awaiting this
+      await onNewConversation(newConv); // Pass the conversation object directly
       console.log('[Sidebar] onNewConversation callback completed');
 
       onClose(); // Close sidebar after creating new conversation

@@ -45,7 +45,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { SelectGroup, SelectLabel } from '@/components/ui/select';
 
 import { cn } from '@/lib/utils';
-import { conversationStorage, type Message as StoredMessage } from '@/services/conversationStorage';
+import {
+  type Conversation as ConversationData,
+  conversationStorage,
+  type Message as StoredMessage,
+} from '@/services/conversationStorage';
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Settings from './Settings';
@@ -759,26 +763,14 @@ export default function ChatView() {
     return () => clearInterval(interval);
   }, [currentConversationId, conversationTitle]);
 
-  const handleNewConversation = async () => {
-    console.log('[ChatView] handleNewConversation called');
-    // Don't create a new conversation here - Sidebar already created it
-    // Just load the current conversation from storage (matches handleSelectConversation pattern)
-    const conversation = await conversationStorage.getCurrentConversation();
-    console.log(
-      '[ChatView] Got conversation:',
-      conversation?.id,
-      'messages:',
-      conversation?.messages.length
-    );
-    if (conversation) {
-      setCurrentConversationId(conversation.id);
-      setConversationTitle(conversation.title);
-      setMessages(conversation.messages);
-      setInput('');
-      console.log('[ChatView] State updated successfully');
-    } else {
-      console.error('[ChatView] No conversation returned!');
-    }
+  const handleNewConversation = async (conversation: ConversationData) => {
+    console.log('[ChatView] handleNewConversation called with conversation:', conversation.id);
+    // Use the conversation object passed directly from Sidebar (no database query needed)
+    setCurrentConversationId(conversation.id);
+    setConversationTitle(conversation.title);
+    setMessages(conversation.messages);
+    setInput('');
+    console.log('[ChatView] State updated successfully');
   };
 
   const handleSelectConversation = async (_conversationId: string) => {
