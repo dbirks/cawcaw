@@ -206,12 +206,14 @@ export default function ChatView() {
         }
 
         // Initialize MCP servers and load data
+        console.log('[ChatView] Loading MCP configurations...');
         await mcpManager.loadConfigurations();
         await mcpManager.connectToEnabledServers();
 
         // Load server data for compact selector
         const servers = mcpManager.getServerConfigs();
         const statuses = mcpManager.getServerStatuses();
+        console.log('[ChatView] MCP servers loaded:', servers.length, servers);
         setAvailableServers(servers);
         setServerStatuses(statuses);
       } catch (error) {

@@ -574,10 +574,14 @@ class MCPManager {
   // Load server configurations from secure storage
   async loadConfigurations(): Promise<MCPServerConfig[]> {
     try {
+      console.log('[MCPManager] Loading configurations from storage...');
       const result = await SecureStoragePlugin.get({ key: MCP_STORAGE_KEY });
+      console.log('[MCPManager] Storage result:', result?.value ? 'Found data' : 'No data');
+
       if (result?.value) {
         const config: MCPManagerConfig = JSON.parse(result.value);
         const userServers = config.servers || [];
+        console.log('[MCPManager] Loaded user servers:', userServers.length, userServers);
 
         // Merge with default servers, preserving user-added servers
         const defaultServers = this.serverConfigs;
@@ -611,11 +615,14 @@ class MCPManager {
         }
 
         this.serverConfigs = allServers;
+        console.log('[MCPManager] Final server configs after loading:', allServers.length, allServers);
         return this.serverConfigs;
       }
+      console.log('[MCPManager] No stored configurations found, using defaults');
     } catch (error) {
       console.error('Failed to load MCP configurations:', error);
     }
+    console.log('[MCPManager] Returning current server configs:', this.serverConfigs.length);
     return this.serverConfigs;
   }
 
