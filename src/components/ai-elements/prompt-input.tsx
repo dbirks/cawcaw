@@ -1,7 +1,7 @@
 'use client';
 
 import type { ChatStatus } from 'ai';
-import { Loader2Icon, SendIcon, SquareIcon, XIcon } from 'lucide-react';
+import { ArrowUpIcon, Loader2Icon, SquareIcon, XIcon } from 'lucide-react';
 import type { ComponentProps, HTMLAttributes, KeyboardEventHandler } from 'react';
 import { Children } from 'react';
 import { Button } from '@/components/ui/button';
@@ -139,7 +139,7 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
-  let Icon = <SendIcon className="size-4" />;
+  let Icon = <ArrowUpIcon className="size-4" />;
 
   if (status === 'submitted') {
     Icon = <Loader2Icon className="size-4 animate-spin" />;
@@ -151,7 +151,7 @@ export const PromptInputSubmit = ({
 
   return (
     <Button
-      className={cn('gap-1.5 rounded-lg', className)}
+      className={cn('gap-1.5 rounded-full', className)}
       size={size}
       type="submit"
       variant={variant}
