@@ -383,6 +383,29 @@ class ConversationStorage {
     }));
   }
 
+  async getConversationById(conversationId: string): Promise<Conversation | null> {
+    const db = this.ensureInitialized();
+    const convRow = await dbGetConversation(db, conversationId);
+    if (!convRow) return null;
+
+    const messageRows = await dbGetMessages(db, conversationId);
+    const messages: Message[] = messageRows.map((row) => ({
+      id: row.id,
+      role: row.role as 'user' | 'assistant' | 'system',
+      parts: JSON.parse(row.parts),
+      timestamp: row.created_at,
+      provider: (row.provider as 'openai' | 'anthropic' | undefined) ?? undefined,
+    }));
+
+    return {
+      id: convRow.id,
+      title: convRow.title ?? 'New Conversation',
+      messages,
+      createdAt: convRow.created_at,
+      updatedAt: convRow.updated_at,
+    };
+  }
+
   async updateConversationTitle(conversationId: string, title: string): Promise<void> {
     const db = this.ensureInitialized();
     const conversation = await dbGetConversation(db, conversationId);

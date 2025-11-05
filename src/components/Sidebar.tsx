@@ -172,7 +172,7 @@ export default function Sidebar({
             <h2 className="text-lg font-semibold">caw caw</h2>
             <DrawerClose asChild>
               <Button variant="ghost" size="icon" className="lg:hidden">
-                <PanelLeftClose className="h-6 w-6" />
+                <PanelLeftClose className="h-7 w-7" />
               </Button>
             </DrawerClose>
           </div>
@@ -268,7 +268,7 @@ export function SidebarToggle({ onClick }: { onClick: () => void }) {
       className="lg:hidden"
       aria-label="Open sidebar"
     >
-      <Menu className="h-6 w-6" />
+      <Menu className="h-7 w-7" />
     </Button>
   );
 }
