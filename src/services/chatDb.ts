@@ -12,6 +12,9 @@ export type ChatDb = SQLiteDBConnection | ChatDbWeb;
  * Opens the chat database with WAL mode enabled.
  * This provides better concurrency and crash-safety for conversation storage.
  *
+ * CRITICAL FIX: Implements proper connection lifecycle management to prevent
+ * "connection already exists" and "safety level may not be changed inside a transaction" errors.
+ *
  * Storage location:
  * - iOS: Application Support (backed up by iCloud Backup)
  * - Android: Internal app storage
@@ -30,50 +33,106 @@ export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb
       return await openChatDbWeb();
     }
 
+    console.log('[ChatDb] Initializing native SQLite connection...');
+
     const sqlite = new SQLiteConnection(CapacitorSQLite);
     const dbName = 'chat.db';
+    const readonly = false;
 
-    // Create/open connection (encrypted if you set a passphrase)
-    const db = await sqlite.createConnection(dbName, !!opts?.passphrase, 'no-encryption', 1, false);
+    // CRITICAL FIX #1: Check connection consistency between JS and native
+    // This prevents "connection already exists" errors on app reload/force-close
+    console.log('[ChatDb] Checking connection consistency...');
+    const retCC = await sqlite.checkConnectionsConsistency();
+    console.log('[ChatDb] Connection consistency result:', retCC.result);
 
+    // CRITICAL FIX #2: Check if connection already exists before creating
+    const isConn = (await sqlite.isConnection(dbName, readonly)).result;
+    console.log('[ChatDb] Connection exists:', isConn);
+
+    let db: SQLiteDBConnection;
+    if (retCC.result && isConn) {
+      // Connection exists - retrieve it instead of creating new one
+      console.log('[ChatDb] Retrieving existing connection...');
+      db = await sqlite.retrieveConnection(dbName, readonly);
+    } else {
+      // Create new connection
+      console.log('[ChatDb] Creating new connection...');
+      db = await sqlite.createConnection(dbName, !!opts?.passphrase, 'no-encryption', 1, readonly);
+    }
+
+    // Open the connection
+    console.log('[ChatDb] Opening database connection...');
     await db.open();
 
-    // --- Enable WAL mode for better concurrency and crash-safety ---
-    const walRes = await db.query('PRAGMA journal_mode = WAL;');
-    console.log('SQLite WAL mode enabled:', walRes.values);
+    // CRITICAL FIX #3: Use execute() for ALL PRAGMA statements (not query())
+    // CRITICAL FIX #4: Execute PRAGMAs individually BEFORE any transactions
+    // This prevents "safety level may not be changed inside a transaction" error
 
-    // --- Pragmas that help mobile apps ---
-    await db.execute(`
-      PRAGMA foreign_keys = ON;
-      PRAGMA synchronous = NORMAL;
-    `);
+    console.log('[ChatDb] Setting PRAGMA journal_mode = WAL...');
+    await db.execute('PRAGMA journal_mode = WAL;');
+
+    console.log('[ChatDb] Setting PRAGMA foreign_keys = ON...');
+    await db.execute('PRAGMA foreign_keys = ON;');
+
+    console.log('[ChatDb] Setting PRAGMA synchronous = NORMAL...');
+    await db.execute('PRAGMA synchronous = NORMAL;');
+
+    console.log('[ChatDb] PRAGMAs configured successfully');
 
     // --- Migrations (idempotent) ---
+    console.log('[ChatDb] Running migrations...');
     await runMigrations(db);
+    console.log('[ChatDb] Migrations completed');
 
+    console.log('[ChatDb] Database initialized successfully');
     return db;
   } catch (error) {
     // Enhance error with more context for debugging
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorDetails = errorMessage.toLowerCase();
+
     console.error('[ChatDb] Failed to open database:', {
       error: errorMessage,
       platform: Capacitor.getPlatform(),
       isNative: Capacitor.isNativePlatform(),
     });
 
-    // Re-throw with enhanced context
-    throw new Error(`SQLite initialization failed: ${errorMessage}`);
+    // Provide specific guidance based on error type
+    let userMessage = 'SQLite initialization failed: ';
+
+    if (errorDetails.includes('safety level') || errorDetails.includes('inside a transaction')) {
+      userMessage +=
+        'Database configuration error (PRAGMA transaction conflict). Please force-close and restart the app. If the problem persists, reinstall to reset the database.';
+    } else if (errorDetails.includes('connection') || errorDetails.includes('already exists')) {
+      userMessage +=
+        'Connection state mismatch. Please force-close and restart the app to recover.';
+    } else if (errorDetails.includes('not implemented') || errorDetails.includes('not available')) {
+      userMessage += 'SQLite is not available on this platform. Please reinstall the app.';
+    } else if (errorDetails.includes('permission') || errorDetails.includes('access denied')) {
+      userMessage +=
+        'Cannot access app storage. Check Settings > [App Name] > Storage permissions.';
+    } else if (errorDetails.includes('corrupt') || errorDetails.includes('malformed')) {
+      userMessage += 'Database file is corrupted. Please reinstall the app to reset storage.';
+    } else {
+      // Generic fallback with technical details
+      userMessage += errorMessage;
+    }
+
+    throw new Error(userMessage);
   }
 }
 
 /**
  * Run database migrations idempotently.
  * Creates tables and indexes if they don't exist.
+ *
+ * CRITICAL FIX #5: Removed explicit BEGIN/COMMIT transaction wrapper.
+ * SQLite DDL statements (CREATE TABLE, CREATE INDEX) are atomic by default.
+ * The explicit transaction was causing potential conflicts with PRAGMA synchronous.
  */
 async function runMigrations(db: ChatDb): Promise<void> {
-  await db.execute('BEGIN;');
-
   // Conversations table
+  // Note: CREATE TABLE IF NOT EXISTS is atomic and doesn't need explicit transaction
   await db.execute(`
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
@@ -101,8 +160,6 @@ async function runMigrations(db: ChatDb): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_messages_conv_time
       ON messages(conversation_id, created_at);
   `);
-
-  await db.execute('COMMIT;');
 }
 
 /**
@@ -111,13 +168,15 @@ async function runMigrations(db: ChatDb): Promise<void> {
  *
  * TRUNCATE mode runs a checkpoint and truncates the -wal file,
  * making backups cleaner and more self-contained.
+ *
+ * FIX: Changed from query() to execute() for consistency with PRAGMA best practices.
  */
 export async function checkpointDb(db: ChatDb): Promise<void> {
   try {
-    await db.query('PRAGMA wal_checkpoint(TRUNCATE);');
-    console.log('SQLite WAL checkpoint completed');
+    await db.execute('PRAGMA wal_checkpoint(TRUNCATE);');
+    console.log('[ChatDb] SQLite WAL checkpoint completed');
   } catch (error) {
-    console.error('Failed to checkpoint WAL:', error);
+    console.error('[ChatDb] Failed to checkpoint WAL:', error);
   }
 }
 
@@ -128,9 +187,9 @@ export async function checkpointDb(db: ChatDb): Promise<void> {
 export async function vacuumDb(db: ChatDb): Promise<void> {
   try {
     await db.execute('VACUUM;');
-    console.log('SQLite VACUUM completed');
+    console.log('[ChatDb] SQLite VACUUM completed');
   } catch (error) {
-    console.error('Failed to vacuum database:', error);
+    console.error('[ChatDb] Failed to vacuum database:', error);
   }
 }
 
@@ -140,9 +199,9 @@ export async function vacuumDb(db: ChatDb): Promise<void> {
 export async function closeChatDb(db: ChatDb): Promise<void> {
   try {
     await db.close();
-    console.log('SQLite connection closed');
+    console.log('[ChatDb] SQLite connection closed');
   } catch (error) {
-    console.error('Failed to close database:', error);
+    console.error('[ChatDb] Failed to close database:', error);
   }
 }
 

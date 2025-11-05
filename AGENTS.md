@@ -39,7 +39,7 @@ pnpm cap:run:ios      # Run on iOS device/simulator
 - **SQLite with WAL**: Persistent conversation storage with Write-Ahead Logging
 
 #### SQLite Storage Architecture
-- **Database**: `@capacitor-community/sqlite` with WAL mode enabled
+- **Database**: `@capacitor-community/sqlite` v7.0.2 with WAL mode enabled
 - **iOS**: Stored in Application Support (included in iCloud Backup)
 - **Android**: Internal app storage (~25MB Auto Backup cap)
 - **Schema**: `conversations` + `messages` with foreign key cascade
@@ -50,6 +50,13 @@ pnpm cap:run:ios      # Run on iOS device/simulator
   - `src/hooks/useChatDb.ts` - React hook for lifecycle management
 - **Important**: No migration from pre-SQLite data (fresh start)
 - **Best practice**: Use `conversationStorage` API, not direct DB access
+
+**Critical SQLite Implementation Details** (fixes applied 2025-11-05):
+- **Connection Management**: MUST use `checkConnectionsConsistency()` + `isConnection()` before `createConnection()` to prevent "connection already exists" errors on app reload
+- **PRAGMA Methods**: ALL PRAGMA statements MUST use `execute()` (not `query()`) per official API docs
+- **PRAGMA Ordering**: MUST execute ALL PRAGMAs BEFORE any transactions to prevent "safety level may not be changed inside a transaction" error
+- **Migrations**: DDL statements (CREATE TABLE, CREATE INDEX) are atomic and do NOT need explicit BEGIN/COMMIT wrapper
+- **Connection Retrieval**: Use `retrieveConnection()` for existing connections instead of creating duplicate connections
 
 ### Testing Best Practices
 - **Use `getByRole()`**: Primary selector for accessibility
