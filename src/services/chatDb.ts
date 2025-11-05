@@ -50,39 +50,49 @@ export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb
     console.log('[ChatDb] Connection exists:', isConn);
 
     let db: SQLiteDBConnection;
+    let isNewConnection = false;
+
     if (retCC.result && isConn) {
       // Connection exists - retrieve it instead of creating new one
       console.log('[ChatDb] Retrieving existing connection...');
       db = await sqlite.retrieveConnection(dbName, readonly);
+      console.log('[ChatDb] Existing connection retrieved - skipping initialization');
     } else {
       // Create new connection
       console.log('[ChatDb] Creating new connection...');
       db = await sqlite.createConnection(dbName, !!opts?.passphrase, 'no-encryption', 1, readonly);
+      isNewConnection = true;
     }
 
-    // Open the connection
-    console.log('[ChatDb] Opening database connection...');
-    await db.open();
+    // CRITICAL FIX #6: Only open and configure PRAGMAs for NEW connections
+    // Retrieved connections are already open and configured
+    // Attempting to reconfigure PRAGMAs on an existing connection can cause
+    // "safety level may not be changed inside a transaction" if the connection is in use
+    if (isNewConnection) {
+      // Open the connection
+      console.log('[ChatDb] Opening database connection...');
+      await db.open();
 
-    // CRITICAL FIX #3: Use execute() for ALL PRAGMA statements (not query())
-    // CRITICAL FIX #4: Execute PRAGMAs individually BEFORE any transactions
-    // This prevents "safety level may not be changed inside a transaction" error
+      // CRITICAL FIX #3: Use execute() for ALL PRAGMA statements (not query())
+      // CRITICAL FIX #4: Execute PRAGMAs individually BEFORE any transactions
+      // This prevents "safety level may not be changed inside a transaction" error
 
-    console.log('[ChatDb] Setting PRAGMA journal_mode = WAL...');
-    await db.execute('PRAGMA journal_mode = WAL;');
+      console.log('[ChatDb] Setting PRAGMA journal_mode = WAL...');
+      await db.execute('PRAGMA journal_mode = WAL;');
 
-    console.log('[ChatDb] Setting PRAGMA foreign_keys = ON...');
-    await db.execute('PRAGMA foreign_keys = ON;');
+      console.log('[ChatDb] Setting PRAGMA foreign_keys = ON...');
+      await db.execute('PRAGMA foreign_keys = ON;');
 
-    console.log('[ChatDb] Setting PRAGMA synchronous = NORMAL...');
-    await db.execute('PRAGMA synchronous = NORMAL;');
+      console.log('[ChatDb] Setting PRAGMA synchronous = NORMAL...');
+      await db.execute('PRAGMA synchronous = NORMAL;');
 
-    console.log('[ChatDb] PRAGMAs configured successfully');
+      console.log('[ChatDb] PRAGMAs configured successfully');
 
-    // --- Migrations (idempotent) ---
-    console.log('[ChatDb] Running migrations...');
-    await runMigrations(db);
-    console.log('[ChatDb] Migrations completed');
+      // --- Migrations (idempotent) ---
+      console.log('[ChatDb] Running migrations...');
+      await runMigrations(db);
+      console.log('[ChatDb] Migrations completed');
+    }
 
     console.log('[ChatDb] Database initialized successfully');
     return db;
