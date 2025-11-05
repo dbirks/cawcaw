@@ -1,9 +1,9 @@
+import { Capacitor } from '@capacitor/core';
 import {
   CapacitorSQLite,
   SQLiteConnection,
   type SQLiteDBConnection,
 } from '@capacitor-community/sqlite';
-import { Capacitor } from '@capacitor/core';
 import { type ChatDbWeb, openChatDbWeb } from './chatDbWeb';
 
 export type ChatDb = SQLiteDBConnection | ChatDbWeb;

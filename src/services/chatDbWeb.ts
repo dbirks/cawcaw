@@ -71,7 +71,7 @@ class LocalStorageChatDb implements ChatDbWeb {
         string,
         string,
         number,
-        string | null
+        string | null,
       ];
       const msgs = this.messages.get(conversation_id) || [];
       msgs.push({ id, conversation_id, role, parts, created_at, provider });
