@@ -115,7 +115,7 @@ interface UIMessage {
   provider?: 'openai' | 'anthropic'; // Track which provider generated this message
 }
 
-export default function ChatView() {
+export default function ChatView({ initialConversationId }: { initialConversationId: string }) {
   // Existing state
   const [apiKey, setApiKey] = useState<string>('');
   const [anthropicApiKey, setAnthropicApiKey] = useState<string>('');
@@ -123,7 +123,7 @@ export default function ChatView() {
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(true);
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<UIMessage[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string>(initialConversationId);
   const [conversationTitle, setConversationTitle] = useState<string>('New Chat');
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
   const [editedTitle, setEditedTitle] = useState<string>('');
@@ -160,7 +160,7 @@ export default function ChatView() {
   }, [apiKey, anthropicApiKey]);
 
   useEffect(() => {
-    // Check if we have a stored API key and initialize MCP
+    // Load conversation data and initialize settings
     const initialize = async () => {
       try {
         // Load OpenAI API key
@@ -194,15 +194,14 @@ export default function ChatView() {
           setSttModel(sttModelResult.value);
         }
 
-        // Initialize conversation storage
-        await conversationStorage.initialize();
-
-        // Load current conversation
-        const currentConversation = await conversationStorage.getCurrentConversation();
+        // Load conversation data using the initialized conversation ID from App
+        console.log('[ChatView] Loading conversation data for ID:', initialConversationId);
+        const currentConversation =
+          await conversationStorage.getConversationById(initialConversationId);
         if (currentConversation) {
-          setCurrentConversationId(currentConversation.id);
           setMessages(currentConversation.messages);
           setConversationTitle(currentConversation.title);
+          console.log('[ChatView] Loaded conversation:', currentConversation.title);
         }
 
         // Initialize MCP servers and load data
@@ -226,7 +225,7 @@ export default function ChatView() {
     return () => {
       mcpManager.cleanup();
     };
-  }, []);
+  }, [initialConversationId]);
 
   // Update selected model when API keys change to ensure it's valid
   useEffect(() => {
@@ -790,17 +789,28 @@ export default function ChatView() {
   };
 
   const handleSaveTitle = async () => {
-    if (!currentConversationId) return;
+    console.log('[handleSaveTitle] Called', {
+      currentConversationId,
+      editedTitle,
+      conversationTitle,
+    });
+    if (!currentConversationId) {
+      console.log('[handleSaveTitle] No conversation ID, returning early');
+      return;
+    }
 
     const trimmed = editedTitle.trim();
     if (trimmed && trimmed !== conversationTitle) {
       try {
+        console.log('[handleSaveTitle] Updating title to:', trimmed);
         await conversationStorage.updateConversationTitle(currentConversationId, trimmed);
         setConversationTitle(trimmed);
+        console.log('[handleSaveTitle] Title updated successfully');
       } catch (error) {
         console.error('Failed to update title:', error);
       }
     }
+    console.log('[handleSaveTitle] Exiting edit mode');
     setIsEditingTitle(false);
   };
 
