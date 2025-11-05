@@ -94,7 +94,36 @@ class ConversationStorage {
           }
         } else {
           // DB failed to open - this is unrecoverable
-          throw new Error('Failed to open database. Please check app permissions and restart.');
+          // Extract error details for better user feedback
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorDetails = errorMessage.toLowerCase();
+
+          // Provide specific guidance based on error type
+          let userMessage = 'Failed to initialize the chat database. ';
+
+          if (errorDetails.includes('connection') || errorDetails.includes('already exists')) {
+            userMessage +=
+              'The database connection is in an invalid state. Please force-close and restart the app.';
+          } else if (
+            errorDetails.includes('not implemented') ||
+            errorDetails.includes('not available')
+          ) {
+            userMessage += 'SQLite is not available on this platform. Please reinstall the app.';
+          } else if (
+            errorDetails.includes('permission') ||
+            errorDetails.includes('access denied')
+          ) {
+            userMessage +=
+              'Cannot access app storage. Please check Settings > [App Name] > Storage permissions.';
+          } else if (errorDetails.includes('corrupt') || errorDetails.includes('malformed')) {
+            userMessage +=
+              'The database file is corrupted. Please reinstall the app to reset storage.';
+          } else {
+            // Generic fallback with technical details
+            userMessage += `Technical details: ${errorMessage}`;
+          }
+
+          throw new Error(userMessage);
         }
       }
     })();

@@ -21,36 +21,49 @@ export type ChatDb = SQLiteDBConnection | ChatDbWeb;
  * @returns Connected database instance
  */
 export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb> {
-  // Check if we're running on a native platform
-  const isNative = Capacitor.isNativePlatform();
+  try {
+    // Check if we're running on a native platform
+    const isNative = Capacitor.isNativePlatform();
 
-  if (!isNative) {
-    console.log('[ChatDb] Running on web, using localStorage fallback');
-    return await openChatDbWeb();
+    if (!isNative) {
+      console.log('[ChatDb] Running on web, using localStorage fallback');
+      return await openChatDbWeb();
+    }
+
+    const sqlite = new SQLiteConnection(CapacitorSQLite);
+    const dbName = 'chat.db';
+
+    // Create/open connection (encrypted if you set a passphrase)
+    const db = await sqlite.createConnection(dbName, !!opts?.passphrase, 'no-encryption', 1, false);
+
+    await db.open();
+
+    // --- Enable WAL mode for better concurrency and crash-safety ---
+    const walRes = await db.query('PRAGMA journal_mode = WAL;');
+    console.log('SQLite WAL mode enabled:', walRes.values);
+
+    // --- Pragmas that help mobile apps ---
+    await db.execute(`
+      PRAGMA foreign_keys = ON;
+      PRAGMA synchronous = NORMAL;
+    `);
+
+    // --- Migrations (idempotent) ---
+    await runMigrations(db);
+
+    return db;
+  } catch (error) {
+    // Enhance error with more context for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[ChatDb] Failed to open database:', {
+      error: errorMessage,
+      platform: Capacitor.getPlatform(),
+      isNative: Capacitor.isNativePlatform(),
+    });
+
+    // Re-throw with enhanced context
+    throw new Error(`SQLite initialization failed: ${errorMessage}`);
   }
-
-  const sqlite = new SQLiteConnection(CapacitorSQLite);
-  const dbName = 'chat.db';
-
-  // Create/open connection (encrypted if you set a passphrase)
-  const db = await sqlite.createConnection(dbName, !!opts?.passphrase, 'no-encryption', 1, false);
-
-  await db.open();
-
-  // --- Enable WAL mode for better concurrency and crash-safety ---
-  const walRes = await db.query('PRAGMA journal_mode = WAL;');
-  console.log('SQLite WAL mode enabled:', walRes.values);
-
-  // --- Pragmas that help mobile apps ---
-  await db.execute(`
-    PRAGMA foreign_keys = ON;
-    PRAGMA synchronous = NORMAL;
-  `);
-
-  // --- Migrations (idempotent) ---
-  await runMigrations(db);
-
-  return db;
 }
 
 /**
