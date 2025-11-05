@@ -73,24 +73,11 @@ export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb
       console.log('[ChatDb] Opening database connection...');
       await db.open();
 
-      // CRITICAL FIX #7: Check current journal_mode BEFORE attempting to change it
-      // WAL mode is PERSISTENT across connections and Android uses WAL2 by default
-      // Cannot change to WAL mode from within a transaction
-      console.log('[ChatDb] Checking current journal_mode...');
-      const journalModeResult = await db.query('PRAGMA journal_mode;');
-      const firstRow = journalModeResult.values?.[0] as Record<string, unknown> | undefined;
-      const currentMode = (firstRow?.journal_mode || firstRow?.['PRAGMA journal_mode'] || '')
-        .toString()
-        .toLowerCase();
-      console.log('[ChatDb] Current journal_mode:', currentMode);
-
-      // Only set WAL mode if not already in WAL or WAL2
-      if (currentMode !== 'wal' && currentMode !== 'wal2') {
-        console.log('[ChatDb] Setting PRAGMA journal_mode = WAL...');
-        await db.execute('PRAGMA journal_mode = WAL;');
-      } else {
-        console.log('[ChatDb] Already in WAL mode, skipping PRAGMA journal_mode');
-      }
+      // CRITICAL FIX #7: DO NOT set WAL mode - let the plugin handle it
+      // The Capacitor SQLite plugin automatically enables WAL mode on Android/iOS
+      // Attempting to set it manually causes "cannot change into wal mode from within a transaction"
+      // because db.open() may start an implicit transaction
+      console.log('[ChatDb] Skipping manual WAL mode configuration - handled by plugin');
 
       console.log('[ChatDb] Setting PRAGMA foreign_keys = ON...');
       await db.execute('PRAGMA foreign_keys = ON;');
