@@ -73,12 +73,24 @@ export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb
       console.log('[ChatDb] Opening database connection...');
       await db.open();
 
-      // CRITICAL FIX #3: Use execute() for ALL PRAGMA statements (not query())
-      // CRITICAL FIX #4: Execute PRAGMAs individually BEFORE any transactions
-      // This prevents "safety level may not be changed inside a transaction" error
+      // CRITICAL FIX #7: Check current journal_mode BEFORE attempting to change it
+      // WAL mode is PERSISTENT across connections and Android uses WAL2 by default
+      // Cannot change to WAL mode from within a transaction
+      console.log('[ChatDb] Checking current journal_mode...');
+      const journalModeResult = await db.query('PRAGMA journal_mode;');
+      const firstRow = journalModeResult.values?.[0] as Record<string, unknown> | undefined;
+      const currentMode = (firstRow?.journal_mode || firstRow?.['PRAGMA journal_mode'] || '')
+        .toString()
+        .toLowerCase();
+      console.log('[ChatDb] Current journal_mode:', currentMode);
 
-      console.log('[ChatDb] Setting PRAGMA journal_mode = WAL...');
-      await db.execute('PRAGMA journal_mode = WAL;');
+      // Only set WAL mode if not already in WAL or WAL2
+      if (currentMode !== 'wal' && currentMode !== 'wal2') {
+        console.log('[ChatDb] Setting PRAGMA journal_mode = WAL...');
+        await db.execute('PRAGMA journal_mode = WAL;');
+      } else {
+        console.log('[ChatDb] Already in WAL mode, skipping PRAGMA journal_mode');
+      }
 
       console.log('[ChatDb] Setting PRAGMA foreign_keys = ON...');
       await db.execute('PRAGMA foreign_keys = ON;');
