@@ -84,9 +84,17 @@ class ConversationStorage {
         }
       } catch (error) {
         console.error('Failed to initialize conversation storage:', error);
-        // Create a new conversation if initialization fails
+        // Try to recover: if DB opened but conversation creation failed, retry
         if (this.db) {
-          await this.createNewConversation();
+          try {
+            await this.createNewConversation();
+          } catch (recoveryError) {
+            console.error('Failed to recover from initialization error:', recoveryError);
+            throw new Error('Failed to initialize conversation storage. Please restart the app.');
+          }
+        } else {
+          // DB failed to open - this is unrecoverable
+          throw new Error('Failed to open database. Please check app permissions and restart.');
         }
       }
     })();
