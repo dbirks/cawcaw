@@ -819,9 +819,24 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     setEditedTitle('');
   };
 
+  const handleSettingsClose = async () => {
+    // Reload MCP servers when Settings closes in case they were added/modified
+    console.log('[ChatView] Settings closed, reloading MCP configurations...');
+    await mcpManager.loadConfigurations();
+    await mcpManager.connectToEnabledServers();
+
+    const servers = mcpManager.getServerConfigs();
+    const statuses = mcpManager.getServerStatuses();
+    console.log('[ChatView] MCP servers reloaded:', servers.length, servers);
+    setAvailableServers(servers);
+    setServerStatuses(statuses);
+
+    setShowSettings(false);
+  };
+
   // Show Settings screen
   if (showSettings) {
-    return <Settings onClose={() => setShowSettings(false)} />;
+    return <Settings onClose={handleSettingsClose} />;
   }
 
   // Show API Key input screen
