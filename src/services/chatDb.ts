@@ -3,8 +3,10 @@ import {
   SQLiteConnection,
   type SQLiteDBConnection,
 } from '@capacitor-community/sqlite';
+import { Capacitor } from '@capacitor/core';
+import { type ChatDbWeb, openChatDbWeb } from './chatDbWeb';
 
-export type ChatDb = SQLiteDBConnection;
+export type ChatDb = SQLiteDBConnection | ChatDbWeb;
 
 /**
  * Opens the chat database with WAL mode enabled.
@@ -13,11 +15,20 @@ export type ChatDb = SQLiteDBConnection;
  * Storage location:
  * - iOS: Application Support (backed up by iCloud Backup)
  * - Android: Internal app storage
+ * - Web (development): localStorage fallback
  *
  * @param opts - Optional configuration (encryption passphrase)
  * @returns Connected database instance
  */
 export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb> {
+  // Check if we're running on a native platform
+  const isNative = Capacitor.isNativePlatform();
+
+  if (!isNative) {
+    console.log('[ChatDb] Running on web, using localStorage fallback');
+    return await openChatDbWeb();
+  }
+
   const sqlite = new SQLiteConnection(CapacitorSQLite);
   const dbName = 'chat.db';
 
