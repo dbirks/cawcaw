@@ -176,16 +176,21 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           setAnthropicApiKey(anthropicResult.value);
         }
 
-        // Load provider preference
-        const providerResult = await SecureStoragePlugin.get({ key: 'selected_provider' });
-        if (providerResult?.value) {
-          setSelectedProvider(providerResult.value as 'openai' | 'anthropic');
-        }
-
-        // Load selected model
+        // Load selected model first
         const modelResult = await SecureStoragePlugin.get({ key: 'selected_model' });
         if (modelResult?.value) {
           setSelectedModel(modelResult.value);
+          // Auto-determine provider from model
+          const model = AVAILABLE_MODELS.find((m) => m.value === modelResult.value);
+          if (model) {
+            setSelectedProvider(model.provider);
+          }
+        }
+
+        // Load provider preference as fallback (for backwards compatibility)
+        const providerResult = await SecureStoragePlugin.get({ key: 'selected_provider' });
+        if (providerResult?.value && !modelResult?.value) {
+          setSelectedProvider(providerResult.value as 'openai' | 'anthropic');
         }
 
         // Load STT model preference
@@ -716,6 +721,17 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const handleModelSelect = async (modelId: string) => {
     setSelectedModel(modelId);
 
+    // Determine provider from selected model
+    const model = AVAILABLE_MODELS.find((m) => m.value === modelId);
+    if (model) {
+      setSelectedProvider(model.provider);
+      try {
+        await SecureStoragePlugin.set({ key: 'selected_provider', value: model.provider });
+      } catch (error) {
+        console.error('Failed to save selected provider:', error);
+      }
+    }
+
     // Save selected model to secure storage
     try {
       await SecureStoragePlugin.set({ key: 'selected_model', value: modelId });
@@ -911,12 +927,12 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 />
               </div>
             ) : (
-              <div className="flex items-center gap-1 flex-1 min-w-0">
+              <div className="flex items-center gap-1 flex-1 min-w-0 group">
                 <h1 className="text-xl font-semibold truncate">{conversationTitle}</h1>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
+                  className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
                   onClick={handleEditTitle}
                 >
                   <PencilIcon className="h-3.5 w-3.5" />
@@ -1053,7 +1069,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           >
             <PromptInputTextarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                // Reset error state when user starts typing
+                if (status === 'error') {
+                  setStatus('ready');
+                }
+              }}
               placeholder={
                 isRecording ? "🎤 Recording... Click 'Stop' to finish" : 'Type your message...'
               }
