@@ -561,6 +561,7 @@ class MCPManager {
   private clients: Map<string, MCPClient> = new Map();
   private serverConfigs: MCPServerConfig[] = [];
   private serverStatuses: Map<string, MCPServerStatus> = new Map();
+  private toolCache: Map<string, { serverId: string; originalName: string }> = new Map();
 
   constructor() {
     // Initialize with empty server configurations
@@ -841,6 +842,8 @@ class MCPManager {
   // Get tools from enabled servers for AI usage
   async getAllTools(): Promise<Record<string, MCPToolDefinition>> {
     const allTools: Record<string, MCPToolDefinition> = {};
+    // Clear and rebuild tool cache
+    this.toolCache.clear();
 
     for (const [serverId, client] of this.clients) {
       try {
@@ -858,6 +861,11 @@ class MCPManager {
               _mcpServerName: serverConfig.name,
               _mcpOriginalName: toolName,
             };
+            // Cache the mapping for fast tool execution lookup
+            this.toolCache.set(prefixedName, {
+              serverId,
+              originalName: toolName,
+            });
           }
         }
       } catch (error) {
@@ -870,27 +878,34 @@ class MCPManager {
 
   // Call a tool from MCP server
   async callTool(toolName: string, args: Record<string, unknown>): Promise<MCPToolResult> {
-    // Find which server has this tool
-    for (const [serverId, client] of this.clients) {
-      try {
-        const serverConfig = this.serverConfigs.find((s) => s.id === serverId);
-        if (!serverConfig?.enabled) continue;
+    // Use cached tool mapping for fast lookup
+    const toolInfo = this.toolCache.get(toolName);
 
-        const tools = await client.listTools();
-        const serverPrefix = `${serverConfig.name.replace(/\s+/g, '_')}_`;
-
-        if (toolName.startsWith(serverPrefix)) {
-          const originalToolName = toolName.replace(serverPrefix, '');
-          if (originalToolName in tools) {
-            return await client.callTool(originalToolName, args);
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to call tool ${toolName} from server ${serverId}:`, error);
-      }
+    if (!toolInfo) {
+      throw new Error(`Tool not found: ${toolName}`);
     }
 
-    throw new Error(`Tool not found: ${toolName}`);
+    const { serverId, originalName } = toolInfo;
+    const client = this.clients.get(serverId);
+
+    if (!client) {
+      throw new Error(`Server not connected for tool: ${toolName}`);
+    }
+
+    const serverConfig = this.serverConfigs.find((s) => s.id === serverId);
+    if (!serverConfig?.enabled) {
+      throw new Error(`Server disabled for tool: ${toolName}`);
+    }
+
+    try {
+      return await client.callTool(originalName, args);
+    } catch (error) {
+      console.error(
+        `Failed to call tool ${toolName} (${originalName}) from server ${serverId}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   // Get tool info for UI display
