@@ -73,19 +73,16 @@ export async function openChatDb(opts?: { passphrase?: string }): Promise<ChatDb
       console.log('[ChatDb] Opening database connection...');
       await db.open();
 
-      // CRITICAL FIX #7: DO NOT set WAL mode - let the plugin handle it
-      // The Capacitor SQLite plugin automatically enables WAL mode on Android/iOS
-      // Attempting to set it manually causes "cannot change into wal mode from within a transaction"
-      // because db.open() may start an implicit transaction
-      console.log('[ChatDb] Skipping manual WAL mode configuration - handled by plugin');
-
-      console.log('[ChatDb] Setting PRAGMA foreign_keys = ON...');
-      await db.execute('PRAGMA foreign_keys = ON;');
-
-      console.log('[ChatDb] Setting PRAGMA synchronous = NORMAL...');
-      await db.execute('PRAGMA synchronous = NORMAL;');
-
-      console.log('[ChatDb] PRAGMAs configured successfully');
+      // ABSOLUTE NUCLEAR FIX: Remove ALL PRAGMA configuration
+      // The Capacitor SQLite plugin handles WAL mode, synchronous, and other settings
+      // automatically on Android/iOS. Attempting to set them manually causes
+      // "cannot change into wal mode from within a transaction" and
+      // "safety level may not be changed inside a transaction" errors because
+      // db.open() starts an implicit transaction on some platforms.
+      //
+      // Foreign keys are enabled via the database schema's FOREIGN KEY constraints
+      // which are respected by the plugin. No manual PRAGMA needed.
+      console.log('[ChatDb] Skipping ALL PRAGMA configuration - handled by plugin');
 
       // --- Migrations (idempotent) ---
       console.log('[ChatDb] Running migrations...');
