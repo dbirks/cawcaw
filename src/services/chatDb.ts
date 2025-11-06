@@ -340,14 +340,22 @@ export async function deleteConversation(db: ChatDb, conversationId: string): Pr
   await db.run(`DELETE FROM conversations WHERE id = ?`, [conversationId]);
 }
 
-// Transaction lock to prevent concurrent transaction errors
+// Transaction lock to prevent concurrent operation errors
 let updateMessagesLock: Promise<void> = Promise.resolve();
 
 /**
  * Update all messages for a conversation (used for bulk updates).
  *
- * Uses a lock to serialize transactions and prevent "cannot start a transaction
- * within a transaction" errors when multiple tool calls complete simultaneously.
+ * Uses a lock to serialize operations and prevent concurrent write conflicts.
+ *
+ * IMPORTANT: Does NOT use explicit BEGIN/COMMIT transactions to avoid
+ * "cannot start a transaction within a transaction" errors in WAL mode.
+ * WAL mode provides atomicity for individual operations, and the lock
+ * ensures operations are serialized correctly.
+ *
+ * Reference: Capacitor SQLite GitHub issue #215 - recommends running
+ * db.execute and db.run commands without explicit transaction wrappers
+ * when using WAL mode.
  */
 export async function updateMessages(
   db: ChatDb,
@@ -360,48 +368,34 @@ export async function updateMessages(
     provider?: string;
   }>
 ): Promise<void> {
-  // Serialize all updateMessages calls to prevent concurrent transaction conflicts
+  // Serialize all updateMessages calls to prevent concurrent write conflicts
   updateMessagesLock = updateMessagesLock.then(async () => {
-    try {
-      await db.execute('BEGIN;');
+    // Delete existing messages for this conversation
+    await db.run(`DELETE FROM messages WHERE conversation_id = ?`, [conversationId]);
 
-      // Delete existing messages for this conversation
-      await db.run(`DELETE FROM messages WHERE conversation_id = ?`, [conversationId]);
-
-      // Insert new messages
-      for (const msg of messages) {
-        await db.run(
-          `INSERT INTO messages (id, conversation_id, role, parts, created_at, provider)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            msg.id,
-            conversationId,
-            msg.role,
-            JSON.stringify(msg.parts),
-            msg.timestamp,
-            msg.provider ?? null,
-          ]
-        );
-      }
-
-      // Update conversation's updated_at timestamp
-      const latestTimestamp =
-        messages.length > 0 ? Math.max(...messages.map((m) => m.timestamp)) : Date.now();
-      await db.run(`UPDATE conversations SET updated_at = ? WHERE id = ?`, [
-        latestTimestamp,
-        conversationId,
-      ]);
-
-      await db.execute('COMMIT;');
-    } catch (error) {
-      // Rollback on error
-      try {
-        await db.execute('ROLLBACK;');
-      } catch (rollbackError) {
-        console.error('[ChatDb] Failed to rollback transaction:', rollbackError);
-      }
-      throw error;
+    // Insert new messages
+    for (const msg of messages) {
+      await db.run(
+        `INSERT INTO messages (id, conversation_id, role, parts, created_at, provider)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          msg.id,
+          conversationId,
+          msg.role,
+          JSON.stringify(msg.parts),
+          msg.timestamp,
+          msg.provider ?? null,
+        ]
+      );
     }
+
+    // Update conversation's updated_at timestamp
+    const latestTimestamp =
+      messages.length > 0 ? Math.max(...messages.map((m) => m.timestamp)) : Date.now();
+    await db.run(`UPDATE conversations SET updated_at = ? WHERE id = ?`, [
+      latestTimestamp,
+      conversationId,
+    ]);
   });
 
   return updateMessagesLock;

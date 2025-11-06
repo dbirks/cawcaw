@@ -57,6 +57,7 @@ pnpm cap:run:ios      # Run on iOS device/simulator
 - **PRAGMA Ordering**: MUST execute ALL PRAGMAs BEFORE any transactions to prevent "safety level may not be changed inside a transaction" error
 - **Migrations**: DDL statements (CREATE TABLE, CREATE INDEX) are atomic and do NOT need explicit BEGIN/COMMIT wrapper
 - **Connection Retrieval**: Use `retrieveConnection()` for existing connections instead of creating duplicate connections
+- **Transaction Handling** (fix applied 2025-11-06): DO NOT use explicit `BEGIN`/`COMMIT` in WAL mode to avoid "cannot start a transaction within a transaction" errors. WAL mode provides atomicity for individual operations. Use locks to serialize concurrent operations instead. Reference: Capacitor SQLite GitHub issue #215.
 
 ### Testing Best Practices
 - **Use `getByRole()`**: Primary selector for accessibility
