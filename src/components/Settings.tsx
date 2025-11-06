@@ -609,7 +609,7 @@ export default function Settings({ onClose }: SettingsProps) {
         <div className="flex items-center justify-between mb-4 sm:mb-6 pt-4 pb-4 safe-top safe-x">
           <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
           <Button variant="ghost" onClick={onClose} size="icon">
-            <X className="h-6 w-6" />
+            <X className="h-8 w-8" />
           </Button>
         </div>
 
