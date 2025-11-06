@@ -439,7 +439,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         }
 
         // Wait before retrying (exponential backoff: 100ms, 200ms, 400ms)
-        await new Promise((resolve) => setTimeout(resolve, 100 * Math.pow(2, attempt - 1)));
+        await new Promise((resolve) => setTimeout(resolve, 100 * 2 ** (attempt - 1)));
       }
     }
   };
@@ -1285,18 +1285,18 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                      className="h-9 gap-1.5 text-muted-foreground hover:text-foreground relative"
                     >
+                      <McpIcon size={14} className="shrink-0" />
+                      <span className="text-xs font-medium">MCP</span>
                       {(() => {
                         const enabledCount = availableServers.filter((s) => s.enabled).length;
                         return enabledCount > 0 ? (
-                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-semibold border border-current rounded-full shrink-0">
+                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold border border-current rounded-md shrink-0 ml-1">
                             {enabledCount}
                           </span>
                         ) : null;
                       })()}
-                      <McpIcon size={14} className="shrink-0" />
-                      <span className="text-xs font-medium">MCP</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="start">
