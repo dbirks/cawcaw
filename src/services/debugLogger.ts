@@ -2,7 +2,7 @@
 export interface DebugLogEntry {
   timestamp: number;
   level: 'info' | 'warn' | 'error';
-  category: 'oauth' | 'mcp' | 'general' | 'audio';
+  category: 'oauth' | 'mcp' | 'general' | 'audio' | 'chat';
   message: string;
   data?: unknown;
 }
@@ -14,7 +14,7 @@ class DebugLogger {
 
   log(
     level: 'info' | 'warn' | 'error',
-    category: 'oauth' | 'mcp' | 'general' | 'audio',
+    category: 'oauth' | 'mcp' | 'general' | 'audio' | 'chat',
     message: string,
     data?: unknown
   ) {
@@ -48,15 +48,15 @@ class DebugLogger {
     });
   }
 
-  info(category: 'oauth' | 'mcp' | 'general' | 'audio', message: string, data?: unknown) {
+  info(category: 'oauth' | 'mcp' | 'general' | 'audio' | 'chat', message: string, data?: unknown) {
     this.log('info', category, message, data);
   }
 
-  warn(category: 'oauth' | 'mcp' | 'general' | 'audio', message: string, data?: unknown) {
+  warn(category: 'oauth' | 'mcp' | 'general' | 'audio' | 'chat', message: string, data?: unknown) {
     this.log('warn', category, message, data);
   }
 
-  error(category: 'oauth' | 'mcp' | 'general' | 'audio', message: string, data?: unknown) {
+  error(category: 'oauth' | 'mcp' | 'general' | 'audio' | 'chat', message: string, data?: unknown) {
     this.log('error', category, message, data);
   }
 
@@ -64,7 +64,7 @@ class DebugLogger {
     return [...this.logs];
   }
 
-  getLogsByCategory(category: 'oauth' | 'mcp' | 'general' | 'audio'): DebugLogEntry[] {
+  getLogsByCategory(category: 'oauth' | 'mcp' | 'general' | 'audio' | 'chat'): DebugLogEntry[] {
     return this.logs.filter((log) => log.category === category);
   }
 

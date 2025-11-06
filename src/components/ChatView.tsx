@@ -429,14 +429,27 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
 
+    debugLogger.info('chat', '💬 Starting message send', {
+      contentLength: content.trim().length,
+      selectedProvider,
+      selectedModel,
+      currentConversationId,
+    });
+
     // Check if we have the appropriate API key for the selected provider
     const currentApiKey = selectedProvider === 'openai' ? apiKey : anthropicApiKey;
     if (!currentApiKey) {
+      debugLogger.error('chat', '❌ No API key available', {
+        selectedProvider,
+        hasOpenAIKey: !!apiKey,
+        hasAnthropicKey: !!anthropicApiKey,
+      });
       console.error(`No API key available for provider: ${selectedProvider}`);
       return;
     }
 
     const trimmedContent = content.trim();
+    debugLogger.info('chat', '✅ API key validated', { provider: selectedProvider });
 
     // Check for /mcp command - handle various forms
     if (trimmedContent.toLowerCase().startsWith('/mcp')) {
@@ -463,14 +476,26 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     setStatus('submitted');
 
     try {
+      debugLogger.info('chat', '🔧 Creating provider client', {
+        provider: selectedProvider,
+        model: selectedModel,
+      });
+
       // Create the appropriate provider client
       const providerClient =
         selectedProvider === 'openai'
           ? createOpenAI({ apiKey: currentApiKey })
           : createAnthropic({ apiKey: currentApiKey });
 
+      debugLogger.info('chat', '✅ Provider client created', { provider: selectedProvider });
+
       // Get tools from MCP manager
+      debugLogger.info('chat', '🔨 Fetching MCP tools');
       const mcpTools = await mcpManager.getAllTools();
+      debugLogger.info('chat', '📦 MCP tools retrieved', {
+        toolCount: Object.keys(mcpTools).length,
+        toolNames: Object.keys(mcpTools),
+      });
       // biome-ignore lint/suspicious/noExplicitAny: AI SDK tools require flexible typing
       const tools: Record<string, any> = {};
 
@@ -517,8 +542,20 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         content: msg.parts.find((p) => p.type === 'text')?.text || '',
       }));
 
+      debugLogger.info('chat', '📝 Formatted messages for AI', {
+        messageCount: formattedMessages.length,
+        toolCount: Object.keys(tools).length,
+      });
+
       setStatus('streaming');
 
+      debugLogger.info('chat', '🚀 Calling generateText API', {
+        provider: selectedProvider,
+        model: selectedModel,
+        hasTools: Object.keys(tools).length > 0,
+      });
+
+      const startTime = Date.now();
       const result = await generateText({
         model: providerClient(selectedModel),
         messages: formattedMessages,
@@ -529,6 +566,16 @@ export default function ChatView({ initialConversationId }: { initialConversatio
             reasoningSummary: 'detailed', // Enable reasoning display for thinking models like o3-mini
           },
         },
+      });
+      const duration = Date.now() - startTime;
+
+      debugLogger.info('chat', '✅ AI response received', {
+        duration: `${duration}ms`,
+        hasText: !!result.text,
+        textLength: result.text?.length || 0,
+        hasReasoning: !!result.reasoning && result.reasoning.length > 0,
+        hasSteps: !!result.steps && result.steps.length > 0,
+        stepCount: result.steps?.length || 0,
       });
 
       // Create assistant message with parts
@@ -583,16 +630,33 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         provider: selectedProvider, // Track which provider generated this message
       };
 
+      debugLogger.info('chat', '💾 Saving assistant message', {
+        provider: selectedProvider,
+        partsCount: assistantParts.length,
+        messageId: assistantMessage.id,
+      });
+
       setMessages((prev) => {
         const newMessages = [...prev, assistantMessage];
         // Save to conversation storage
         conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
+          debugLogger.error('chat', '❌ Failed to save message to storage', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
           console.error('Failed to save message:', error);
         });
         return newMessages;
       });
       setStatus('ready');
+      debugLogger.info('chat', '✅ Chat message flow completed successfully');
     } catch (error) {
+      debugLogger.error('chat', '❌ Chat error occurred', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : undefined,
+        stack: error instanceof Error ? error.stack : undefined,
+        selectedProvider,
+        selectedModel,
+      });
       console.error('Chat error:', error);
 
       const errorMessage: UIMessage = {
