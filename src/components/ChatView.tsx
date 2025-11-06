@@ -927,15 +927,16 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 />
               </div>
             ) : (
-              <div className="flex items-center gap-1 flex-1 min-w-0 group">
+              <div className="flex items-center gap-1 flex-1 min-w-0">
                 <h1 className="text-xl font-semibold truncate">{conversationTitle}</h1>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground active:text-foreground"
                   onClick={handleEditTitle}
+                  title="Edit title"
                 >
-                  <PencilIcon className="h-3.5 w-3.5" />
+                  <PencilIcon className="h-4 w-4" />
                 </Button>
               </div>
             )}
