@@ -335,9 +335,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     };
     setMessages((prev) => {
       const newMessages = [...prev, userMessage];
-      // Save to conversation storage
-      conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
-        console.error('Failed to save message:', error);
+      // Save to conversation storage with retry logic
+      saveMessagesToStorage(newMessages).catch((error) => {
+        console.error('Failed to save user message after all retries:', error);
       });
       return newMessages;
     });
@@ -409,6 +409,41 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     }
   };
 
+  /**
+   * Save messages to storage with retry logic.
+   * Ensures messages are persisted even if initial save fails.
+   */
+  const saveMessagesToStorage = async (messages: UIMessage[], retries = 3): Promise<void> => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await conversationStorage.updateMessages(messages as StoredMessage[]);
+        return; // Success!
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[Save Attempt ${attempt}/${retries}] Failed to save messages:`, errorMsg);
+        debugLogger.error('chat', `❌ Save attempt ${attempt}/${retries} failed`, {
+          error: errorMsg,
+          messageCount: messages.length,
+        });
+
+        // If this was the last attempt, log critical error
+        if (attempt === retries) {
+          console.error('CRITICAL: All save attempts exhausted. Messages may be lost!');
+          debugLogger.error('chat', '🚨 CRITICAL: All save attempts exhausted', {
+            error: errorMsg,
+            messageCount: messages.length,
+            lastMessageId: messages[messages.length - 1]?.id,
+          });
+          // Still throw so caller knows it failed
+          throw error;
+        }
+
+        // Wait before retrying (exponential backoff: 100ms, 200ms, 400ms)
+        await new Promise((resolve) => setTimeout(resolve, 100 * Math.pow(2, attempt - 1)));
+      }
+    }
+  };
+
   const addSystemMessage = (content: string) => {
     const systemMessage: UIMessage = {
       id: Date.now().toString(),
@@ -418,9 +453,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     };
     setMessages((prev) => {
       const newMessages = [...prev, systemMessage];
-      // Save to conversation storage
-      conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
-        console.error('Failed to save message:', error);
+      // Save to conversation storage with retry logic
+      saveMessagesToStorage(newMessages).catch((error) => {
+        console.error('Failed to save system message after all retries:', error);
       });
       return newMessages;
     });
@@ -467,9 +502,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
     setMessages((prev) => {
       const newMessages = [...prev, userMessage];
-      // Save to conversation storage
-      conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
-        console.error('Failed to save message:', error);
+      // Save to conversation storage with retry logic
+      saveMessagesToStorage(newMessages).catch((error) => {
+        console.error('Failed to save user message after all retries:', error);
       });
       return newMessages;
     });
@@ -638,12 +673,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
       setMessages((prev) => {
         const newMessages = [...prev, assistantMessage];
-        // Save to conversation storage
-        conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
-          debugLogger.error('chat', '❌ Failed to save message to storage', {
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-          console.error('Failed to save message:', error);
+        // Save to conversation storage with retry logic
+        saveMessagesToStorage(newMessages).catch((error) => {
+          console.error('Failed to save assistant message after all retries:', error);
         });
         return newMessages;
       });
@@ -673,9 +705,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
       setMessages((prev) => {
         const newMessages = [...prev, errorMessage];
-        // Save to conversation storage
-        conversationStorage.updateMessages(newMessages as StoredMessage[]).catch((error) => {
-          console.error('Failed to save message:', error);
+        // Save to conversation storage with retry logic
+        saveMessagesToStorage(newMessages).catch((error) => {
+          console.error('Failed to save error message after all retries:', error);
         });
         return newMessages;
       });
@@ -1255,15 +1287,16 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                       size="sm"
                       className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
                     >
+                      {(() => {
+                        const enabledCount = availableServers.filter((s) => s.enabled).length;
+                        return enabledCount > 0 ? (
+                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-semibold border border-current rounded-full shrink-0">
+                            {enabledCount}
+                          </span>
+                        ) : null;
+                      })()}
                       <McpIcon size={14} className="shrink-0" />
-                      <span className="text-xs font-medium">
-                        {(() => {
-                          const enabledCount = availableServers.filter((s) => s.enabled).length;
-                          return enabledCount === 0
-                            ? 'MCP'
-                            : `${enabledCount} ${enabledCount === 1 ? 'MCP Server' : 'MCP Servers'}`;
-                        })()}
-                      </span>
+                      <span className="text-xs font-medium">MCP</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="start">
