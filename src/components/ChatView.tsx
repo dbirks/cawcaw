@@ -1287,15 +1287,16 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                       size="sm"
                       className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
                     >
+                      {(() => {
+                        const enabledCount = availableServers.filter((s) => s.enabled).length;
+                        return enabledCount > 0 ? (
+                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-semibold border border-current rounded-full shrink-0">
+                            {enabledCount}
+                          </span>
+                        ) : null;
+                      })()}
                       <McpIcon size={14} className="shrink-0" />
-                      <span className="text-xs font-medium">
-                        {(() => {
-                          const enabledCount = availableServers.filter((s) => s.enabled).length;
-                          return enabledCount === 0
-                            ? 'MCP'
-                            : `${enabledCount} ${enabledCount === 1 ? 'MCP Server' : 'MCP Servers'}`;
-                        })()}
-                      </span>
+                      <span className="text-xs font-medium">MCP</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="start">
