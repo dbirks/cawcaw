@@ -50,6 +50,7 @@ import {
   conversationStorage,
   type Message as StoredMessage,
 } from '@/services/conversationStorage';
+import { debugLogger } from '@/services/debugLogger';
 import { mcpManager } from '@/services/mcpManager';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Settings from './Settings';
@@ -625,67 +626,121 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const handleVoiceInput = async () => {
     // If already recording, stop the current recording
     if (isRecording && currentRecording) {
+      debugLogger.info('audio', '⏹️ Stopping recording (user clicked stop button)');
       currentRecording.mediaRecorder.stop();
       return;
     }
 
+    debugLogger.info('audio', '🎤 Starting voice input', {
+      sttModel,
+      hasApiKey: !!apiKey,
+      currentProvider: selectedProvider,
+    });
+
     try {
       // Request microphone permission and start recording
+      debugLogger.info('audio', '🔑 Requesting microphone permission...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      debugLogger.info('audio', '✅ Microphone permission granted', {
+        audioTracks: stream.getAudioTracks().length,
+        trackSettings: stream.getAudioTracks()[0]?.getSettings(),
+      });
 
       // Create MediaRecorder to capture audio
       const mediaRecorder = new MediaRecorder(stream);
       const audioChunks: Blob[] = [];
+      debugLogger.info('audio', '🎙️ MediaRecorder created', {
+        mimeType: mediaRecorder.mimeType,
+        state: mediaRecorder.state,
+      });
 
       // Collect audio data
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunks.push(event.data);
+          debugLogger.info('audio', '📊 Audio chunk received', {
+            chunkSize: event.data.size,
+            totalChunks: audioChunks.length,
+          });
         }
       };
 
       // Handle recording completion
       mediaRecorder.onstop = async () => {
+        debugLogger.info('audio', '🛑 Recording stopped, processing audio...');
         setIsRecording(false);
         setCurrentRecording(null);
         try {
           // Create audio blob from chunks
           const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          debugLogger.info('audio', '🎵 Audio blob created', {
+            size: audioBlob.size,
+            type: audioBlob.type,
+            chunks: audioChunks.length,
+          });
 
           // Convert to ArrayBuffer for transcription
           const audioData = new Uint8Array(await audioBlob.arrayBuffer());
+          debugLogger.info('audio', '🔄 Converted to ArrayBuffer', {
+            byteLength: audioData.byteLength,
+          });
 
           // Set processing status
           setStatus('submitted');
 
           // Transcribe using OpenAI Whisper (always use OpenAI for transcription)
           if (!apiKey) {
-            console.error('No OpenAI API key available for transcription');
+            debugLogger.error('audio', '❌ No OpenAI API key available for transcription');
             setStatus('error');
             return;
           }
 
+          debugLogger.info('audio', '🚀 Calling transcription API', {
+            model: sttModel,
+            audioSize: audioData.byteLength,
+            provider: 'openai',
+          });
+
           const openai = createOpenAI({ apiKey });
+          const startTime = Date.now();
           const transcript = await transcribe({
             model: openai.transcription(sttModel), // Use selected STT model from settings
             audio: audioData,
           });
+          const duration = Date.now() - startTime;
+
+          debugLogger.info('audio', '✅ Transcription received', {
+            duration: `${duration}ms`,
+            textLength: transcript.text?.length || 0,
+            hasText: !!transcript.text?.trim(),
+          });
 
           const transcribedText = transcript.text?.trim();
           if (transcribedText) {
+            debugLogger.info('audio', '📤 Sending transcribed message', {
+              textPreview:
+                transcribedText.substring(0, 50) + (transcribedText.length > 50 ? '...' : ''),
+              fullLength: transcribedText.length,
+            });
             // Send the transcribed message
             await sendMessage(transcribedText);
+            debugLogger.info('audio', '✅ Message sent successfully');
           } else {
+            debugLogger.warn('audio', '⚠️ Transcription returned empty text');
             setStatus('error');
           }
         } catch (error) {
-          console.error('Transcription error:', error);
+          debugLogger.error('audio', '❌ Transcription error', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+          });
           setStatus('error');
         } finally {
           // Stop all tracks to release microphone
           stream.getTracks().forEach((track) => {
             track.stop();
           });
+          debugLogger.info('audio', '🔌 Microphone released');
         }
       };
 
@@ -693,8 +748,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
       mediaRecorder.start();
       setIsRecording(true);
       setCurrentRecording({ mediaRecorder, stream });
+      debugLogger.info('audio', '▶️ Recording started successfully');
     } catch (error) {
-      console.error('Voice input error:', error);
+      debugLogger.error('audio', '❌ Voice input error', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : undefined,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       setIsRecording(false);
       setCurrentRecording(null);
       alert('Microphone access denied or not available');

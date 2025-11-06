@@ -112,7 +112,9 @@ export default function Settings({ onClose }: SettingsProps) {
 
   // Debug logs state
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
-  const [debugFilter, setDebugFilter] = useState<'all' | 'oauth' | 'mcp' | 'general'>('all');
+  const [debugFilter, setDebugFilter] = useState<'all' | 'oauth' | 'mcp' | 'general' | 'audio'>(
+    'all'
+  );
   const debugFilterId = useId();
 
   // API Key state
@@ -1674,6 +1676,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             className="px-2 py-1 text-sm border rounded bg-background"
                           >
                             <option value="all">All Logs</option>
+                            <option value="audio">Audio Only</option>
                             <option value="oauth">OAuth Only</option>
                             <option value="mcp">MCP Only</option>
                             <option value="general">General Only</option>
@@ -1739,11 +1742,13 @@ export default function Settings({ onClose }: SettingsProps) {
                                   </span>
                                   <span
                                     className={`px-1.5 py-0.5 text-xs rounded font-medium ${
-                                      log.category === 'oauth'
-                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                                        : log.category === 'mcp'
-                                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
+                                      log.category === 'audio'
+                                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                                        : log.category === 'oauth'
+                                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                                          : log.category === 'mcp'
+                                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                            : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
                                     }`}
                                   >
                                     {log.category.toUpperCase()}
@@ -1775,7 +1780,8 @@ export default function Settings({ onClose }: SettingsProps) {
                         <div>Total logs: {debugLogs.length}</div>
                         <div>Filtered logs: {getFilteredLogs().length}</div>
                         <div>
-                          Categories: OAuth authentication, MCP server connections, general app logs
+                          Categories: Audio transcription, OAuth authentication, MCP server
+                          connections, general app logs
                         </div>
                       </div>
                     </CardContent>
