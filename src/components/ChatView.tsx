@@ -1260,8 +1260,8 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                         {(() => {
                           const enabledCount = availableServers.filter((s) => s.enabled).length;
                           return enabledCount === 0
-                            ? 'Tools'
-                            : `${enabledCount} ${enabledCount === 1 ? 'Tool' : 'Tools'}`;
+                            ? 'MCP'
+                            : `${enabledCount} ${enabledCount === 1 ? 'MCP Server' : 'MCP Servers'}`;
                         })()}
                       </span>
                     </Button>
