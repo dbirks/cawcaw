@@ -1253,25 +1253,31 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                   </PromptInputModelSelectTrigger>
                   <PromptInputModelSelectContent>
                     {availableModels.filter((m) => m.provider === 'openai').length > 0 && (
-                      <SelectGroup className="bg-slate-500/5">
+                      <SelectGroup>
                         <SelectLabel>OpenAI Models</SelectLabel>
                         {availableModels
                           .filter((m) => m.provider === 'openai')
                           .map((model) => (
                             <PromptInputModelSelectItem key={model.value} value={model.value}>
-                              {model.label}
+                              <div className="flex items-center gap-2">
+                                <OpenAIIcon size={14} />
+                                <span>{model.label}</span>
+                              </div>
                             </PromptInputModelSelectItem>
                           ))}
                       </SelectGroup>
                     )}
                     {availableModels.filter((m) => m.provider === 'anthropic').length > 0 && (
-                      <SelectGroup className="bg-[#C15F3C]/5">
+                      <SelectGroup>
                         <SelectLabel>Anthropic Models</SelectLabel>
                         {availableModels
                           .filter((m) => m.provider === 'anthropic')
                           .map((model) => (
                             <PromptInputModelSelectItem key={model.value} value={model.value}>
-                              {model.label}
+                              <div className="flex items-center gap-2">
+                                <AnthropicIcon size={14} />
+                                <span>{model.label}</span>
+                              </div>
                             </PromptInputModelSelectItem>
                           ))}
                       </SelectGroup>
