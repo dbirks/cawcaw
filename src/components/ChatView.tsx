@@ -1240,9 +1240,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 disabled={isRecording || status === 'streaming'}
                 className={cn('min-h-[48px]', isRecording && 'bg-red-50 dark:bg-red-950/20')}
               />
-              <PromptInputToolbar className="flex items-center justify-between gap-2 p-2">
+              <PromptInputToolbar className="flex items-center justify-between gap-2 p-2 min-w-0">
                 {/* Left side: Contextual controls */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-1 overflow-hidden min-w-0">
                   {/* Model selector - always visible with label */}
                   <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
                     <PromptInputModelSelectTrigger className="h-9 gap-1.5 max-w-[200px]">
@@ -1351,7 +1351,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 </div>
 
                 {/* Right side: Input actions */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   {/* Voice input - moved next to submit */}
                   <Button
                     type="button"
