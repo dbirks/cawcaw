@@ -1292,7 +1292,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                       {(() => {
                         const enabledCount = availableServers.filter((s) => s.enabled).length;
                         return enabledCount > 0 ? (
-                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold border border-current rounded-md shrink-0 ml-1">
+                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold border border-current rounded shrink-0 ml-1">
                             {enabledCount}
                           </span>
                         ) : null;

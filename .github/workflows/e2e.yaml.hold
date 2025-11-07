@@ -37,7 +37,7 @@ jobs:
     - name: 🔍 Run code quality checks
       run: |
         echo "Running Biome checks before e2e tests..."
-        pnpm exec biome ci src/
+        pnpm ci
         echo "✅ Code quality verified"
 
     - name: 🏗️ Build application
@@ -49,7 +49,7 @@ jobs:
     - name: 🎭 Install Playwright browsers
       run: |
         echo "Installing Playwright browsers..."
-        pnpm exec playwright install --with-deps chromium
+        pnpm test:install
         echo "✅ Playwright browsers installed"
 
     - name: 🚀 Start dev server
@@ -115,7 +115,7 @@ jobs:
         if [ -f "playwright-report/index.html" ]; then
           echo "### Test Report Generated" >> $GITHUB_STEP_SUMMARY
           echo "- 📊 Detailed HTML report available in artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- 🎭 Playwright version: $(pnpm exec playwright --version)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎭 Playwright version: $(pnpm test:version)" >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
