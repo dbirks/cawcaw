@@ -169,7 +169,10 @@ export default function Sidebar({
         <DrawerContent className="w-80 h-full flex flex-col lg:hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b safe-top">
-            <h2 className="text-lg font-semibold">caw caw</h2>
+            <div className="flex items-center gap-2">
+              <img src="/icon-clear.jpeg" alt="cawcaw icon" className="h-8 w-8 rounded" />
+              <h2 className="text-lg font-semibold">cawcaw</h2>
+            </div>
             <DrawerClose asChild>
               <Button variant="ghost" size="icon" className="lg:hidden">
                 <PanelLeftClose className="h-7 w-7" />
