@@ -2,7 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { BotIcon, Loader2Icon, MicIcon, MicOffIcon, PencilIcon, User } from 'lucide-react';
+import { Loader2Icon, MicIcon, MicOffIcon, PencilIcon, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -1245,7 +1245,11 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 {/* Model selector - always visible with label */}
                 <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
                   <PromptInputModelSelectTrigger className="h-9 gap-1.5">
-                    <BotIcon size={14} className="shrink-0" />
+                    {selectedProvider === 'anthropic' ? (
+                      <AnthropicIcon size={14} className="shrink-0" />
+                    ) : (
+                      <OpenAIIcon size={14} className="shrink-0" />
+                    )}
                     <span className="text-xs font-medium">
                       <span className="hidden sm:inline">Model: </span>
                       <PromptInputModelSelectValue placeholder="Select model" />
@@ -1254,30 +1258,30 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                   <PromptInputModelSelectContent>
                     {availableModels.filter((m) => m.provider === 'openai').length > 0 && (
                       <SelectGroup>
-                        <SelectLabel>OpenAI Models</SelectLabel>
+                        <SelectLabel className="flex items-center gap-2">
+                          <OpenAIIcon size={14} />
+                          <span>OpenAI Models</span>
+                        </SelectLabel>
                         {availableModels
                           .filter((m) => m.provider === 'openai')
                           .map((model) => (
                             <PromptInputModelSelectItem key={model.value} value={model.value}>
-                              <div className="flex items-center gap-2">
-                                <OpenAIIcon size={14} />
-                                <span>{model.label}</span>
-                              </div>
+                              {model.label}
                             </PromptInputModelSelectItem>
                           ))}
                       </SelectGroup>
                     )}
                     {availableModels.filter((m) => m.provider === 'anthropic').length > 0 && (
                       <SelectGroup>
-                        <SelectLabel>Anthropic Models</SelectLabel>
+                        <SelectLabel className="flex items-center gap-2">
+                          <AnthropicIcon size={14} />
+                          <span>Anthropic Models</span>
+                        </SelectLabel>
                         {availableModels
                           .filter((m) => m.provider === 'anthropic')
                           .map((model) => (
                             <PromptInputModelSelectItem key={model.value} value={model.value}>
-                              <div className="flex items-center gap-2">
-                                <AnthropicIcon size={14} />
-                                <span>{model.label}</span>
-                              </div>
+                              {model.label}
                             </PromptInputModelSelectItem>
                           ))}
                       </SelectGroup>
