@@ -1648,149 +1648,150 @@ export default function Settings({ onClose }: SettingsProps) {
           </TabsContent>
 
           {/* Debug Tab */}
-          <TabsContent value="debug" className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 min-h-0">
-              <ScrollArea className="h-full">
-                <div className="pr-4 safe-x safe-bottom">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Bug className="h-5 w-5" />
-                        Debug Logs
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        View OAuth authentication and MCP server connection logs for troubleshooting
-                      </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Debug Controls */}
-                      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <label htmlFor={debugFilterId} className="text-sm font-medium">
-                            Filter:
-                          </label>
-                          <select
-                            id={debugFilterId}
-                            value={debugFilter}
-                            onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
-                            className="px-2 py-1 text-sm border rounded bg-background"
-                          >
-                            <option value="all">All Logs</option>
-                            <option value="chat">Chat Only</option>
-                            <option value="audio">Audio Only</option>
-                            <option value="oauth">OAuth Only</option>
-                            <option value="mcp">MCP Only</option>
-                            <option value="general">General Only</option>
-                          </select>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCopyLogs}
-                            className="flex items-center gap-1"
-                          >
-                            <Copy className="h-4 w-4" />
-                            Copy
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleClearLogs}
-                            className="flex items-center gap-1"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Clear
-                          </Button>
-                        </div>
-                      </div>
+          <TabsContent
+            value="debug"
+            className="flex-1 flex flex-col overflow-hidden safe-x safe-bottom"
+          >
+            <div className="flex flex-col gap-3 h-full">
+              {/* Header */}
+              <div className="px-1 sm:px-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Bug className="h-5 w-5" />
+                  <h2 className="text-lg font-semibold">Debug Logs</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  View OAuth authentication and MCP server connection logs for troubleshooting
+                </p>
+              </div>
 
-                      {/* Debug Log Display */}
-                      <div className="bg-muted/30 rounded-md p-3 min-h-[300px] max-h-[500px] overflow-y-auto font-mono text-xs">
-                        {getFilteredLogs().length === 0 ? (
-                          <div className="text-muted-foreground text-center py-8">
-                            {debugFilter === 'all'
-                              ? 'No debug logs yet. Try OAuth authentication or MCP server operations to see logs here.'
-                              : `No ${debugFilter} logs found.`}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {getFilteredLogs().map((log, index) => (
-                              <div
-                                key={`${log.timestamp}-${index}`}
-                                className={`p-2 rounded border-l-2 ${
+              {/* Debug Controls */}
+              <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between px-1 sm:px-4">
+                <div className="flex items-center gap-2">
+                  <label htmlFor={debugFilterId} className="text-sm font-medium">
+                    Filter:
+                  </label>
+                  <select
+                    id={debugFilterId}
+                    value={debugFilter}
+                    onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
+                    className="px-2 py-1 text-sm border rounded bg-background"
+                  >
+                    <option value="all">All Logs</option>
+                    <option value="chat">Chat Only</option>
+                    <option value="audio">Audio Only</option>
+                    <option value="oauth">OAuth Only</option>
+                    <option value="mcp">MCP Only</option>
+                    <option value="general">General Only</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyLogs}
+                    className="flex items-center gap-1"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearLogs}
+                    className="flex items-center gap-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Clear
+                  </Button>
+                </div>
+              </div>
+
+              {/* Debug Log Display - Flex-grow scrollable area */}
+              <div className="flex-1 min-h-0 px-1 sm:px-4">
+                <ScrollArea className="h-full">
+                  <div className="bg-muted/30 rounded-md p-3 font-mono text-xs">
+                    {getFilteredLogs().length === 0 ? (
+                      <div className="text-muted-foreground text-center py-8">
+                        {debugFilter === 'all'
+                          ? 'No debug logs yet. Try OAuth authentication or MCP server operations to see logs here.'
+                          : `No ${debugFilter} logs found.`}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {getFilteredLogs().map((log, index) => (
+                          <div
+                            key={`${log.timestamp}-${index}`}
+                            className={`p-2 rounded border-l-2 ${
+                              log.level === 'error'
+                                ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20'
+                                : log.level === 'warn'
+                                  ? 'border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20'
+                                  : 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-muted-foreground">
+                                {new Date(log.timestamp).toLocaleTimeString()}
+                              </span>
+                              <span
+                                className={`px-1.5 py-0.5 text-xs rounded font-medium ${
                                   log.level === 'error'
-                                    ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
                                     : log.level === 'warn'
-                                      ? 'border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20'
-                                      : 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
+                                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                                 }`}
                               >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-muted-foreground">
-                                    {new Date(log.timestamp).toLocaleTimeString()}
-                                  </span>
-                                  <span
-                                    className={`px-1.5 py-0.5 text-xs rounded font-medium ${
-                                      log.level === 'error'
-                                        ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                                        : log.level === 'warn'
-                                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                    }`}
-                                  >
-                                    {log.level.toUpperCase()}
-                                  </span>
-                                  <span
-                                    className={`px-1.5 py-0.5 text-xs rounded font-medium ${
-                                      log.category === 'chat'
-                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                        : log.category === 'audio'
-                                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                                          : log.category === 'oauth'
-                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                                            : log.category === 'mcp'
-                                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                              : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
-                                    }`}
-                                  >
-                                    {log.category.toUpperCase()}
-                                  </span>
-                                </div>
-                                <div className="text-foreground whitespace-pre-wrap break-all">
-                                  {log.message}
-                                </div>
-                                {log.data != null && (
-                                  <details className="mt-2">
-                                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                                      Show data
-                                    </summary>
-                                    <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-all">
-                                      {typeof log.data === 'string'
-                                        ? log.data
-                                        : JSON.stringify(log.data, null, 2)}
-                                    </pre>
-                                  </details>
-                                )}
-                              </div>
-                            ))}
+                                {log.level.toUpperCase()}
+                              </span>
+                              <span
+                                className={`px-1.5 py-0.5 text-xs rounded font-medium ${
+                                  log.category === 'chat'
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                    : log.category === 'audio'
+                                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                                      : log.category === 'oauth'
+                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                                        : log.category === 'mcp'
+                                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
+                                }`}
+                              >
+                                {log.category.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="text-foreground whitespace-pre-wrap break-all">
+                              {log.message}
+                            </div>
+                            {log.data != null && (
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                  Show data
+                                </summary>
+                                <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                                  {typeof log.data === 'string'
+                                    ? log.data
+                                    : JSON.stringify(log.data, null, 2)}
+                                </pre>
+                              </details>
+                            )}
                           </div>
-                        )}
+                        ))}
                       </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
 
-                      {/* Debug Info */}
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <div>Total logs: {debugLogs.length}</div>
-                        <div>Filtered logs: {getFilteredLogs().length}</div>
-                        <div>
-                          Categories: Audio transcription, OAuth authentication, MCP server
-                          connections, general app logs
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* Debug Info Footer */}
+              <div className="text-xs text-muted-foreground space-y-1 px-1 sm:px-4 pb-2">
+                <div>Total logs: {debugLogs.length}</div>
+                <div>Filtered logs: {getFilteredLogs().length}</div>
+                <div>
+                  Categories: Audio transcription, OAuth authentication, MCP server connections,
+                  general app logs
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
