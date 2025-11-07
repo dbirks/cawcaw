@@ -1245,15 +1245,17 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 <div className="flex items-center gap-1">
                   {/* Model selector - always visible with label */}
                   <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
-                    <PromptInputModelSelectTrigger className="h-9 gap-1.5">
+                    <PromptInputModelSelectTrigger className="h-9 gap-1.5 max-w-[200px]">
                       {selectedProvider === 'anthropic' ? (
                         <AnthropicIcon size={14} className="shrink-0" />
                       ) : (
                         <OpenAIIcon size={14} className="shrink-0" />
                       )}
-                      <span className="text-xs font-medium">
+                      <span className="text-xs font-medium truncate min-w-0">
                         <span className="hidden sm:inline">Model: </span>
-                        <PromptInputModelSelectValue placeholder="Select model" />
+                        <span className="truncate">
+                          <PromptInputModelSelectValue placeholder="Select model" />
+                        </span>
                       </span>
                     </PromptInputModelSelectTrigger>
                     <PromptInputModelSelectContent>
@@ -1296,10 +1298,10 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-9 gap-1.5 text-muted-foreground hover:text-foreground relative"
+                        className="h-9 gap-1.5 text-muted-foreground hover:text-foreground relative max-w-[120px]"
                       >
                         <McpIcon size={14} className="shrink-0" />
-                        <span className="text-xs font-medium">MCP</span>
+                        <span className="text-xs font-medium truncate">MCP</span>
                         {(() => {
                           const enabledCount = availableServers.filter((s) => s.enabled).length;
                           return enabledCount > 0 ? (
