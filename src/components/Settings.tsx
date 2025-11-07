@@ -115,7 +115,11 @@ export default function Settings({ onClose }: SettingsProps) {
   const [debugFilter, setDebugFilter] = useState<
     'all' | 'oauth' | 'mcp' | 'general' | 'audio' | 'chat'
   >('all');
+  const [debugLevelFilter, setDebugLevelFilter] = useState<'all' | 'info' | 'warn' | 'error'>(
+    'all'
+  );
   const debugFilterId = useId();
+  const debugLevelFilterId = useId();
 
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
@@ -348,8 +352,19 @@ export default function Settings({ onClose }: SettingsProps) {
 
   // Debug Functions
   const getFilteredLogs = () => {
-    if (debugFilter === 'all') return debugLogs;
-    return debugLogs.filter((log) => log.category === debugFilter);
+    let filtered = debugLogs;
+
+    // Filter by category
+    if (debugFilter !== 'all') {
+      filtered = filtered.filter((log) => log.category === debugFilter);
+    }
+
+    // Filter by level
+    if (debugLevelFilter !== 'all') {
+      filtered = filtered.filter((log) => log.level === debugLevelFilter);
+    }
+
+    return filtered;
   };
 
   const handleCopyLogs = async () => {
@@ -1666,23 +1681,43 @@ export default function Settings({ onClose }: SettingsProps) {
 
               {/* Debug Controls */}
               <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between px-1 sm:px-4">
-                <div className="flex items-center gap-2">
-                  <label htmlFor={debugFilterId} className="text-sm font-medium">
-                    Filter:
-                  </label>
-                  <select
-                    id={debugFilterId}
-                    value={debugFilter}
-                    onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
-                    className="px-2 py-1 text-sm border rounded bg-background"
-                  >
-                    <option value="all">All Logs</option>
-                    <option value="chat">Chat Only</option>
-                    <option value="audio">Audio Only</option>
-                    <option value="oauth">OAuth Only</option>
-                    <option value="mcp">MCP Only</option>
-                    <option value="general">General Only</option>
-                  </select>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor={debugFilterId} className="text-sm font-medium">
+                      Category:
+                    </label>
+                    <select
+                      id={debugFilterId}
+                      value={debugFilter}
+                      onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
+                      className="px-2 py-1 text-sm border rounded bg-background"
+                    >
+                      <option value="all">All</option>
+                      <option value="chat">Chat</option>
+                      <option value="audio">Audio</option>
+                      <option value="oauth">OAuth</option>
+                      <option value="mcp">MCP</option>
+                      <option value="general">General</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor={debugLevelFilterId} className="text-sm font-medium">
+                      Level:
+                    </label>
+                    <select
+                      id={debugLevelFilterId}
+                      value={debugLevelFilter}
+                      onChange={(e) =>
+                        setDebugLevelFilter(e.target.value as typeof debugLevelFilter)
+                      }
+                      className="px-2 py-1 text-sm border rounded bg-background"
+                    >
+                      <option value="all">All</option>
+                      <option value="info">Info</option>
+                      <option value="warn">Warn</option>
+                      <option value="error">Error</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
