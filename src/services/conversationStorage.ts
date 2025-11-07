@@ -271,10 +271,13 @@ class ConversationStorage {
     const messageRows = await dbGetMessages(db, conversationId);
     if (messageRows.length === 0) return;
 
+    console.log('[Title Generation] Starting title generation for conversation:', conversationId);
+
     try {
       // Get title model preference (defaults to 'same' which means use current provider)
       const titleModelResult = await SecureStoragePlugin.get({ key: 'title_model' });
       const titleModel = titleModelResult?.value || 'same';
+      console.log('[Title Generation] Using title model preference:', titleModel);
 
       // Determine which provider and model to use
       let providerType: 'openai' | 'anthropic';
@@ -337,12 +340,19 @@ class ConversationStorage {
         .filter((text) => text.trim())
         .join('\n');
 
-      if (!contextText.trim()) return;
+      if (!contextText.trim()) {
+        console.log('[Title Generation] No context text found, skipping');
+        return;
+      }
+
+      console.log('[Title Generation] Using provider:', providerType, 'model:', modelName);
+      console.log('[Title Generation] Context text preview:', contextText.substring(0, 100));
 
       // Create the appropriate provider client
       const providerClient =
         providerType === 'openai' ? createOpenAI({ apiKey }) : createAnthropic({ apiKey });
 
+      console.log('[Title Generation] Calling AI model to generate title...');
       const result = await generateText({
         model: providerClient(modelName),
         messages: [
@@ -359,12 +369,22 @@ class ConversationStorage {
       });
 
       const title = result.text.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
+      console.log('[Title Generation] Generated title:', title);
 
       // Update the conversation title in database
       await dbUpdateConversationTitle(db, conversationId, title);
+      console.log('[Title Generation] Successfully updated conversation title');
     } catch (error) {
-      console.error('Failed to generate title:', error);
+      console.error('[Title Generation] Failed to generate title:', error);
+      if (error instanceof Error) {
+        console.error('[Title Generation] Error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        });
+      }
       // Fallback: use first few words of first message
+      console.log('[Title Generation] Using fallback: first 5 words of first message');
       const firstUserMessage = messageRows.find((m) => m.role === 'user');
       if (firstUserMessage) {
         try {
@@ -373,10 +393,14 @@ class ConversationStorage {
           if (textPart?.text) {
             const words = textPart.text.split(' ').slice(0, 5).join(' ');
             const fallbackTitle = words + (textPart.text.split(' ').length > 5 ? '...' : '');
+            console.log('[Title Generation] Fallback title:', fallbackTitle);
             await dbUpdateConversationTitle(db, conversationId, fallbackTitle);
           }
         } catch (parseError) {
-          console.error('Failed to parse message parts for fallback title:', parseError);
+          console.error(
+            '[Title Generation] Failed to parse message parts for fallback title:',
+            parseError
+          );
         }
       }
     }
