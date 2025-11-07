@@ -228,6 +228,21 @@ The Settings component uses a tabbed interface:
 - **iOS Deployment**: Automated TestFlight uploads with Fastlane
 - **Certificate Management**: Uses Fastlane Match for iOS signing
 - **Build Process**: Fails fast on code quality issues
+- **Monitoring Workflow**: After pushing, always watch GitHub Actions until TestFlight deployment completes
+  ```bash
+  # Get the latest run
+  gh run list --limit 1
+
+  # Watch specific run by ID (from list output)
+  gh run watch <run-id> --exit-status
+
+  # The workflow includes these key steps:
+  # - Code quality checks (Biome)
+  # - Capacitor app build
+  # - iOS certificate generation
+  # - Xcode build
+  # - TestFlight upload
+  ```
 
 ### iOS Bundle Identifier Updates
 When changing bundle identifier:
@@ -255,25 +270,38 @@ Always use conventional commit messages when making changes:
 - `chore:` for maintenance tasks
 - `ci:` for CI/CD pipeline changes
 
-Keep commit messages short and descriptive (under 50 characters for the subject line).
+**Important commit message rules:**
+- **Capitalize the first word** of the commit message after the type prefix
+- Example: `fix: Add overflow scrolling to Response component` (correct)
+- Example: `fix: add overflow scrolling to Response component` (incorrect)
+- Keep commit messages short and descriptive (under 50 characters for the subject line)
 
 ### Development & Testing Workflow
 **IMPORTANT: Commit after EVERY chunk of work. Do not accumulate uncommitted changes.**
 
 1. **Work in chunks**: Complete one logical unit of work at a time
 2. **Commit immediately**: After each chunk is complete and working, commit it right away
-3. **Code quality checks**: Always run `pnpm lint` before committing
-4. **Local testing**: Test with Playwright MCP locally after major UI changes
-5. **Commit small**: Make focused commits with clear conventional messages
-6. **Use Tailwind**: Always prefer Tailwind CSS classes over custom CSS - we have the full Tailwind v4 utility system available
-7. **Example workflow**:
+3. **Code quality checks**: Always run `pnpm check && pnpm build` before committing
+4. **Push by default**: After committing, push changes immediately unless user explicitly asks not to
+5. **Watch GitHub Actions**: After pushing, monitor GitHub Actions workflow until TestFlight deployment completes
+6. **Local testing**: Test with Playwright MCP locally after major UI changes
+7. **Commit small**: Make focused commits with clear conventional messages (capitalize first word)
+8. **Use Tailwind**: Always prefer Tailwind CSS classes over custom CSS - we have the full Tailwind v4 utility system available
+9. **Example workflow**:
    ```bash
    # After completing each feature/fix chunk
-   pnpm lint
+   pnpm check && pnpm build
    # Test with Playwright if UI changes
    git add .
-   git commit -m "fix: resolve theme initialization on app startup"
+   git commit -m "fix: Resolve theme initialization on app startup"
    # IMMEDIATELY commit, don't wait to accumulate more changes
+
+   # Push by default
+   git push
+
+   # Watch GitHub Actions until TestFlight deployment completes
+   gh run list --limit 1  # Get the latest run ID
+   gh run watch <run-id> --exit-status
    ```
 
 ### Testing with Playwright MCP Tools (Ad-Hoc Testing)
