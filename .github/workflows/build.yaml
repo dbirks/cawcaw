@@ -61,7 +61,7 @@ jobs:
       run: |
         echo "Running comprehensive Biome CI checks (linting, formatting, imports)..."
         echo "⚠️  This will FAIL LOUDLY if any code quality issues are found!"
-        pnpm ci
+        pnpm biome:ci
         echo "✅ All code quality checks passed - no linting, formatting, or import issues found!"
         
     - name: 🏗️ Build Capacitor app
