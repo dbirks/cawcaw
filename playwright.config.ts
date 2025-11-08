@@ -37,13 +37,17 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: "Mobile Chrome",
+      name: "iPhone 16",
       use: {
-        viewport: { width: 393, height: 852 }, // iPhone 15 dimensions
-        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/116.0.0.0 Mobile/15E148 Safari/604.1',
+        // iPhone 16/15/14 Pro viewport dimensions (393x852)
+        // Not yet in Playwright's device registry, so manually configured
+        viewport: { width: 393, height: 852 },
+        userAgent:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
         deviceScaleFactor: 3,
         isMobile: true,
         hasTouch: true,
+        // Mobile-specific browser arguments for consistent testing
         launchOptions: {
           args: [
             "--disable-web-security",
@@ -52,6 +56,22 @@ export default defineConfig({
             "--no-sandbox",
           ],
         },
+      },
+    },
+
+    // Desktop Chrome for comparison testing
+    {
+      name: "Desktop Chrome",
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+    },
+
+    // Standard mobile device for broader coverage
+    {
+      name: "iPhone 13 Pro",
+      use: {
+        ...devices["iPhone 13 Pro"],
       },
     },
   ],

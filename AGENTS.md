@@ -11,7 +11,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm dev              # Start development server
 pnpm build            # Build for production
 pnpm check            # Run all code quality checks
-pnpm test             # Run E2E tests
+pnpm test             # Run all E2E tests
+pnpm test:headed      # Run E2E tests with visible browser
+pnpm test:ui          # Open Playwright UI for interactive testing
+pnpm test:debug       # Run tests in debug mode
 ```
 
 ### Mobile Development
@@ -59,10 +62,43 @@ pnpm cap:run:ios      # Run on iOS device/simulator
 - **Connection Retrieval**: Use `retrieveConnection()` for existing connections instead of creating duplicate connections
 - **Transaction Handling** (fix applied 2025-11-06): DO NOT use explicit `BEGIN`/`COMMIT` in WAL mode to avoid "cannot start a transaction within a transaction" errors. WAL mode provides atomicity for individual operations. Use locks to serialize concurrent operations instead. Reference: Capacitor SQLite GitHub issue #215.
 
-### Testing Best Practices
+### Testing Architecture (Playwright E2E)
+
+**Setup & Configuration**:
+- **Test framework**: Playwright v1.55+ with TypeScript
+- **Test location**: `tests/e2e/` directory
+- **Configuration**: `playwright.config.ts` with multi-device support
+- **Browser**: Chromium (install with `pnpm test:install`)
+
+**Device Emulation Projects**:
+1. **iPhone 16** (393x852) - Primary mobile testing viewport
+   - Custom configuration (not yet in Playwright registry)
+   - Matches iPhone 15/14 Pro dimensions
+   - Full touch and mobile emulation enabled
+2. **Desktop Chrome** - Desktop viewport testing
+3. **iPhone 13 Pro** - Additional mobile coverage using built-in descriptor
+
+**Mobile Overflow Testing** (`tests/e2e/mobile-overflow.spec.ts`):
+- Validates no horizontal scroll on mobile viewports
+- Tests wide content: markdown tables, code blocks, long text
+- Verifies `overflow-y-auto overflow-x-hidden` CSS properties
+- Uses `page.evaluate()` for precise scroll measurements
+- Auto-screenshots on failure for debugging
+
+**Best Practices**:
 - **Use `getByRole()`**: Primary selector for accessibility
 - **Mobile selectors**: Account for `hidden sm:inline` patterns
 - **Strict mode**: Use `exact: true` when multiple elements match
 - **API key automation**: Tests use `TEST_OPENAI_API_KEY` env var
+- **Skip gracefully**: Tests skip if app is on API key setup screen
+- **Visual debugging**: Screenshots and videos captured on failure
+- **Trace on retry**: Automatic trace collection for failed tests
+
+**Running Specific Tests**:
+```bash
+pnpm test mobile-overflow.spec.ts                    # Run overflow tests
+pnpm test --project="iPhone 16"                      # Run on specific device
+pnpm test mobile-overflow.spec.ts --project="iPhone 16"  # Combined
+```
 
 For complete documentation, see [agents.md](./agents.md).
