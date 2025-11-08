@@ -1100,7 +1100,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         </div>
 
         {/* Main Conversation - scrollable area */}
-        <div ref={conversationRef} className="flex-1 overflow-auto">
+        <div ref={conversationRef} className="flex-1 overflow-y-auto overflow-x-hidden">
           <Conversation>
             <div className="w-full max-w-4xl mx-auto px-4 safe-x">
               <ConversationContent className="h-full">
