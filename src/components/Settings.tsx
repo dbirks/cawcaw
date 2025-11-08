@@ -668,7 +668,11 @@ export default function Settings({ onClose }: SettingsProps) {
         {/* Header with back button for detail views */}
         <div className="flex items-center gap-3 mb-4 sm:mb-6 pt-4 pb-4 safe-top safe-x">
           {currentView !== 'list' && (
-            <Button variant="ghost" onClick={() => setCurrentView('list')} className="h-14 w-14 p-0">
+            <Button
+              variant="ghost"
+              onClick={() => setCurrentView('list')}
+              className="h-14 w-14 p-0"
+            >
               <ChevronLeft className="size-8" />
             </Button>
           )}
