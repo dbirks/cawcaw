@@ -211,18 +211,26 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         }
 
         // Initialize MCP servers and load data
-        console.log('[ChatView] Loading MCP configurations...');
+        debugLogger.info('mcp', '🔄 Loading MCP configurations on startup');
         await mcpManager.loadConfigurations();
         await mcpManager.connectToEnabledServers();
 
         // Load server data for compact selector
         const servers = mcpManager.getServerConfigs();
         const statuses = mcpManager.getServerStatuses();
-        console.log('[ChatView] MCP servers loaded:', servers.length, servers);
+        debugLogger.info('mcp', '✅ MCP servers initialized', {
+          totalServers: servers.length,
+          enabledServers: servers.filter((s) => s.enabled).length,
+          connectedServers: Array.from(statuses.values()).filter((s) => s.connected).length,
+        });
         setAvailableServers(servers);
         setServerStatuses(statuses);
       } catch (error) {
-        console.log('Initialization error:', error);
+        debugLogger.error('mcp', '❌ Failed to initialize MCP servers', {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        console.error('Initialization error:', error);
       }
     };
     initialize();

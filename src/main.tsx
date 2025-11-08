@@ -16,6 +16,23 @@ if (Capacitor.isNativePlatform()) {
   StatusBar.setOverlaysWebView({ overlay: true }).catch(console.error);
 }
 
+// Reconnect MCP servers when app resumes from background
+CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
+  if (isActive) {
+    debugLogger.info('mcp', '🔄 App resumed - reconnecting MCP servers');
+    try {
+      await mcpManager.loadConfigurations();
+      await mcpManager.connectToEnabledServers();
+      debugLogger.info('mcp', '✅ MCP servers reconnected successfully');
+    } catch (error) {
+      debugLogger.error('mcp', '❌ Failed to reconnect MCP servers on app resume', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+  }
+});
+
 // Handle OAuth redirect callbacks from custom URL scheme
 CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
   debugLogger.info('oauth', '📱 Received app URL open event', {

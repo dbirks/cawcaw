@@ -832,6 +832,12 @@ class MCPManager {
     const enabledServers = this.serverConfigs.filter((s) => s.enabled);
     const connectionPromises = enabledServers.map((server) =>
       this.connectToServer(server.id).catch((error) => {
+        debugLogger.error('mcp', `❌ Failed to connect to MCP server: ${server.name}`, {
+          serverId: server.id,
+          serverUrl: server.url,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         console.error(`Failed to connect to ${server.name}:`, error);
       })
     );
