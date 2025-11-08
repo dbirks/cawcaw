@@ -118,7 +118,7 @@ const SETTINGS_ITEMS = [
   },
   {
     id: 'tools' as const,
-    label: 'Tools & MCP',
+    label: 'MCP Servers',
     icon: Wrench,
     description: 'Manage Model Context Protocol servers',
   },
@@ -668,8 +668,8 @@ export default function Settings({ onClose }: SettingsProps) {
               ? 'Settings'
               : SETTINGS_ITEMS.find((item) => item.id === currentView)?.label || 'Settings'}
           </h1>
-          <Button variant="ghost" onClick={onClose} size="icon">
-            <X className="h-8 w-8" />
+          <Button variant="ghost" onClick={onClose} size="icon" className="h-12 w-12">
+            <X className="h-6 w-6" />
           </Button>
         </div>
 
@@ -1557,11 +1557,15 @@ export default function Settings({ onClose }: SettingsProps) {
                             const status = serverStatuses.get(server.id);
                             return (
                               <Card key={server.id}>
-                                <CardContent className="p-3 sm:p-4">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-lg flex items-center">
+                                    {server.name}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 sm:p-4 pt-0">
                                   <div className="flex flex-col gap-3 sm:gap-4">
                                     <div className="flex-1 min-w-0">
                                       <div className="mb-3">
-                                        <h3 className="font-medium mb-2">{server.name}</h3>
                                         <div className="flex flex-wrap gap-2">
                                           {status?.connected ? (
                                             <Badge
@@ -1697,7 +1701,7 @@ export default function Settings({ onClose }: SettingsProps) {
             {currentView === 'debug' && (
               <div className="flex flex-col gap-3 h-full">
                 {/* Header */}
-                <div className="px-1 sm:px-4">
+                <div className="px-4 sm:px-4 safe-x">
                   <div className="flex items-center gap-2 mb-1">
                     <Bug className="h-5 w-5" />
                     <h2 className="text-lg font-semibold">Debug Logs</h2>
@@ -1708,7 +1712,7 @@ export default function Settings({ onClose }: SettingsProps) {
                 </div>
 
                 {/* Debug Controls */}
-                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between px-1 sm:px-4">
+                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between px-4 sm:px-4 safe-x">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-2">
                       <label htmlFor={debugFilterId} className="text-sm font-medium">
@@ -1770,7 +1774,7 @@ export default function Settings({ onClose }: SettingsProps) {
                 </div>
 
                 {/* Debug Log Display - Flex-grow scrollable area */}
-                <div className="flex-1 min-h-0 px-1 sm:px-4">
+                <div className="flex-1 min-h-0 px-4 sm:px-4 safe-x">
                   <ScrollArea className="h-full">
                     <div className="bg-muted/30 rounded-md p-3 font-mono text-xs">
                       {getFilteredLogs().length === 0 ? (
@@ -1847,7 +1851,7 @@ export default function Settings({ onClose }: SettingsProps) {
                 </div>
 
                 {/* Debug Info Footer */}
-                <div className="text-xs text-muted-foreground space-y-1 px-1 sm:px-4 pb-2 safe-bottom safe-x">
+                <div className="text-xs text-muted-foreground space-y-1 px-4 sm:px-4 pb-2 safe-bottom safe-x">
                   <div>Total logs: {debugLogs.length}</div>
                   <div>Filtered logs: {getFilteredLogs().length}</div>
                   <div>
