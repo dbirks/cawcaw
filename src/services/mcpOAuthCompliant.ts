@@ -499,11 +499,14 @@ export class MCPOAuthManagerCompliant {
   }
 
   // Clean up temporary OAuth flow storage
+  // Note: We preserve discovery_, client_, and resource_ data as they are needed for token refresh
   private async cleanupTemporaryStorage(serverId: string): Promise<void> {
     await Promise.all([
       SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}verifier_${serverId}` }),
       SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}state_${serverId}` }),
-      SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}resource_${serverId}` }),
+      // DO NOT remove resource_ data - it's required for token refresh (contains mcpScope)
+      // DO NOT remove discovery_ data - it's required for token refresh (contains tokenEndpoint)
+      // DO NOT remove client_ data - it's required for token refresh (contains clientId)
     ]);
   }
 
@@ -544,11 +547,13 @@ export class MCPOAuthManagerCompliant {
   }
 
   // Clear OAuth tokens and discovery data for server
+  // This should only be called when user explicitly disconnects/removes server
   async clearOAuthTokens(serverId: string): Promise<void> {
     await Promise.all([
       SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}tokens_${serverId}` }),
       SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
       SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
+      SecureStoragePlugin.remove({ key: `${OAUTH_STORAGE_PREFIX}resource_${serverId}` }),
     ]);
   }
 
