@@ -85,38 +85,47 @@ test.describe("Mobile Overflow Prevention", () => {
 			return;
 		}
 
-		// Inject a wide markdown table
+		// Inject a realistic wide markdown table with 7 columns
+		// Uses all the overflow fix classes: min-w-0, overflow-x-hidden, table wrapper with overflow-x-auto
 		const wideTableMessage = `
       <div class="group flex w-full items-end justify-end gap-2 py-4 is-assistant flex-row-reverse justify-end">
-        <div class="flex flex-col gap-2 overflow-x-hidden rounded-lg px-4 py-3 text-foreground text-sm group-[.is-assistant]:bg-secondary group-[.is-assistant]:text-foreground max-w-[min(80%,42rem)]">
-          <div class="is-user:dark">
-            <table>
-              <thead>
-                <tr>
-                  <th>Column 1 with very long header text</th>
-                  <th>Column 2 with very long header text</th>
-                  <th>Column 3 with very long header text</th>
-                  <th>Column 4 with very long header text</th>
-                  <th>Column 5 with very long header text</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Very long content in cell 1</td>
-                  <td>Very long content in cell 2</td>
-                  <td>Very long content in cell 3</td>
-                  <td>Very long content in cell 4</td>
-                  <td>Very long content in cell 5</td>
-                </tr>
-                <tr>
-                  <td>Row 2 cell 1</td>
-                  <td>Row 2 cell 2</td>
-                  <td>Row 2 cell 3</td>
-                  <td>Row 2 cell 4</td>
-                  <td>Row 2 cell 5</td>
-                </tr>
-              </tbody>
-            </table>
+        <div class="flex flex-col gap-2 overflow-x-hidden rounded-lg px-4 py-3 text-foreground text-sm min-w-0 bg-secondary">
+          <div class="is-user:dark w-full max-w-full min-w-0">
+            <div class="size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto">
+              <table class="w-full" style="border-collapse: collapse;">
+                <thead>
+                  <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Feature Name</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Description</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Status</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Priority</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Assigned To</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Due Date</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Dependencies</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">User Authentication System</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Implement OAuth 2.0 with multiple providers</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">In Progress</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">High</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Engineering Team A</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">2025-11-15</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Database Schema v2.0</td>
+                  </tr>
+                  <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Real-time Notifications</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">WebSocket-based push notification system</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Planning</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Medium</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Engineering Team B</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">2025-12-01</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">User Authentication System</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

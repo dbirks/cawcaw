@@ -10,7 +10,12 @@ export const Response = memo(
   ({ className, ...props }: ResponseProps) => (
     <Streamdown
       className={cn(
-        'size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_table]:w-full',
+        'size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+        // Table wrapper: overflow-x-auto allows horizontal scroll within message bubble
+        // max-w-full prevents table from expanding parent containers
+        '[&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto',
+        // Table styling: w-full for proper layout, but contained by max-w-full
+        '[&_table_table]:w-full',
         className
       )}
       {...props}
