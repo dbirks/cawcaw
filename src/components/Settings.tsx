@@ -8,6 +8,7 @@ import {
   Clock,
   Copy,
   Edit,
+  Github,
   Info,
   Lock,
   Mic,
@@ -101,7 +102,7 @@ const AVAILABLE_STT_MODELS = [
 ] as const;
 
 // Settings navigation
-type SettingsView = 'list' | 'llm' | 'audio' | 'tools' | 'appearance' | 'debug';
+type SettingsView = 'list' | 'llm' | 'audio' | 'tools' | 'appearance' | 'debug' | 'about';
 
 const SETTINGS_ITEMS = [
   {
@@ -112,9 +113,9 @@ const SETTINGS_ITEMS = [
   },
   {
     id: 'audio' as const,
-    label: 'Speech & Audio',
+    label: 'Audio Transcription',
     icon: Mic,
-    description: 'Voice transcription settings',
+    description: 'Speech to text settings',
   },
   {
     id: 'tools' as const,
@@ -133,6 +134,12 @@ const SETTINGS_ITEMS = [
     label: 'Debug',
     icon: Bug,
     description: 'View logs and troubleshoot issues',
+  },
+  {
+    id: 'about' as const,
+    label: 'About',
+    icon: Info,
+    description: 'App information and credits',
   },
 ] as const;
 
@@ -882,7 +889,7 @@ export default function Settings({ onClose }: SettingsProps) {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Mic className="h-5 w-5" />
-                          Speech-to-Text (STT) Configuration
+                          Speech to Text Settings
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">
                           Configure the model used for voice transcription when using the microphone
@@ -1859,6 +1866,146 @@ export default function Settings({ onClose }: SettingsProps) {
                     general app logs
                   </div>
                 </div>
+              </div>
+            )}
+
+            {currentView === 'about' && (
+              <div className="flex-1 min-h-0">
+                <ScrollArea className="h-full">
+                  <div className="pr-4 safe-x safe-bottom space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Info className="h-5 w-5" />
+                          App Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* App Name */}
+                        <div>
+                          <h3 className="text-lg font-semibold mb-1">cawcaw</h3>
+                          <p className="text-sm text-muted-foreground">
+                            A powerful AI chat application with multi-provider support
+                          </p>
+                        </div>
+
+                        {/* Version Info */}
+                        <div className="space-y-2 border-t pt-4">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Version:</span>
+                            <span className="font-mono">{__APP_VERSION__}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Build:</span>
+                            <span className="font-mono text-xs">{__BUILD_NUMBER__}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Commit:</span>
+                            <span className="font-mono text-xs">{__COMMIT_HASH__}</span>
+                          </div>
+                        </div>
+
+                        {/* GitHub Link */}
+                        <div className="border-t pt-4">
+                          <a
+                            href="https://github.com/dbirks/cawcaw"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-500 hover:underline"
+                          >
+                            <Github className="h-5 w-5" />
+                            <span>View on GitHub</span>
+                          </a>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Built With Card */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Built With</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          This application is powered by modern web technologies:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <a
+                            href="https://sdk.vercel.ai/docs/introduction"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                          >
+                            Vercel AI SDK
+                          </a>
+                          <a
+                            href="https://www.ai-elements.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                          >
+                            AI Elements
+                          </a>
+                          <a
+                            href="https://ui.shadcn.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                          >
+                            shadcn/ui
+                          </a>
+                          <a
+                            href="https://vite.dev/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                          >
+                            Vite
+                          </a>
+                          <a
+                            href="https://capacitorjs.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                          >
+                            Capacitor
+                          </a>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Help Card */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Need Help?</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          Interested in learning more about this app or need assistance? Feel free
+                          to reach out through{' '}
+                          <a
+                            href="https://github.com/dbirks/cawcaw/issues"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:underline"
+                          >
+                            GitHub Issues
+                          </a>{' '}
+                          or check the{' '}
+                          <a
+                            href="https://github.com/dbirks/cawcaw#readme"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:underline"
+                          >
+                            README
+                          </a>{' '}
+                          for more information.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </ScrollArea>
               </div>
             )}
           </div>

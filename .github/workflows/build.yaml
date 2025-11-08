@@ -69,6 +69,8 @@ jobs:
         echo "Building React app..."
         pnpm build
         echo "✅ React build complete"
+      env:
+        BUILD_NUMBER: ${{ steps.build_number.outputs.build_number }}
         
     - name: 💎 Setup Ruby
       uses: ruby/setup-ruby@v1
