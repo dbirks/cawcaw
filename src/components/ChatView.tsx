@@ -1101,115 +1101,117 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
         {/* Main Conversation - scrollable area */}
         <div ref={conversationRef} className="flex-1 overflow-auto">
-          <Conversation className="px-4">
-            <ConversationContent className="safe-x h-full">
-              {messages.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  <p>Start a conversation with AI</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <Message key={message.id} from={message.role}>
-                      <MessageContent>
-                        {message.parts.map((part, idx) => {
-                          if (part.type === 'text') {
-                            return <Response key={`text-${idx}`}>{part.text || ''}</Response>;
-                          } else if (part.type.startsWith('tool-')) {
-                            return (
-                              <Tool key={`tool-${idx}`} defaultOpen={false}>
-                                <ToolHeader
-                                  type={part.type as `tool-${string}`}
-                                  state={part.state || 'input-available'}
-                                />
-                                <ToolContent>
-                                  <ToolInput input={part.input} toolType={part.type} />
-                                  {(part.state === 'input-streaming' ||
-                                    part.state === 'input-available') && (
-                                    <div className="p-4">
-                                      <LoadingMessage />
-                                    </div>
-                                  )}
-                                  {part.state === 'output-available' && (
-                                    <ToolOutput
-                                      output={
-                                        <Response>
-                                          {typeof part.output === 'object' && part.output !== null
-                                            ? JSON.stringify(part.output, null, 2)
-                                            : String(part.output || '')}
-                                        </Response>
-                                      }
-                                      errorText={part.errorText}
-                                    />
-                                  )}
-                                </ToolContent>
-                              </Tool>
-                            );
-                          } else if (part.type === 'reasoning') {
-                            return (
-                              <Reasoning key={`reasoning-${idx}`} defaultOpen={false}>
-                                <ReasoningTrigger />
-                                <ReasoningContent>{part.text || ''}</ReasoningContent>
-                              </Reasoning>
-                            );
-                          }
-                          return null;
-                        })}
-                      </MessageContent>
-                      {message.role === 'assistant' ? (
+          <Conversation>
+            <div className="w-full max-w-4xl mx-auto px-4 safe-x">
+              <ConversationContent className="h-full">
+                {messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>Start a conversation with AI</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((message) => (
+                      <Message key={message.id} from={message.role}>
+                        <MessageContent>
+                          {message.parts.map((part, idx) => {
+                            if (part.type === 'text') {
+                              return <Response key={`text-${idx}`}>{part.text || ''}</Response>;
+                            } else if (part.type.startsWith('tool-')) {
+                              return (
+                                <Tool key={`tool-${idx}`} defaultOpen={false}>
+                                  <ToolHeader
+                                    type={part.type as `tool-${string}`}
+                                    state={part.state || 'input-available'}
+                                  />
+                                  <ToolContent>
+                                    <ToolInput input={part.input} toolType={part.type} />
+                                    {(part.state === 'input-streaming' ||
+                                      part.state === 'input-available') && (
+                                      <div className="p-4">
+                                        <LoadingMessage />
+                                      </div>
+                                    )}
+                                    {part.state === 'output-available' && (
+                                      <ToolOutput
+                                        output={
+                                          <Response>
+                                            {typeof part.output === 'object' && part.output !== null
+                                              ? JSON.stringify(part.output, null, 2)
+                                              : String(part.output || '')}
+                                          </Response>
+                                        }
+                                        errorText={part.errorText}
+                                      />
+                                    )}
+                                  </ToolContent>
+                                </Tool>
+                              );
+                            } else if (part.type === 'reasoning') {
+                              return (
+                                <Reasoning key={`reasoning-${idx}`} defaultOpen={false}>
+                                  <ReasoningTrigger />
+                                  <ReasoningContent>{part.text || ''}</ReasoningContent>
+                                </Reasoning>
+                              );
+                            }
+                            return null;
+                          })}
+                        </MessageContent>
+                        {message.role === 'assistant' ? (
+                          <Avatar className="size-8 ring ring-1 ring-border">
+                            <AvatarFallback
+                              className={
+                                message.provider === 'anthropic'
+                                  ? 'bg-[#C15F3C] text-white'
+                                  : 'bg-black text-white dark:bg-white dark:text-black'
+                              }
+                            >
+                              {message.provider === 'anthropic' ? (
+                                <AnthropicIcon size={16} />
+                              ) : (
+                                <OpenAIIcon size={16} />
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <Avatar className="size-8 ring ring-1 ring-border">
+                            <AvatarFallback className="bg-primary text-primary-foreground">
+                              <User size={16} />
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                      </Message>
+                    ))}
+
+                    {/* AI thinking indicator when streaming */}
+                    {status === 'streaming' && (
+                      <Message from="assistant">
+                        <MessageContent>
+                          <div className="p-3">
+                            <LoadingMessage />
+                          </div>
+                        </MessageContent>
                         <Avatar className="size-8 ring ring-1 ring-border">
                           <AvatarFallback
                             className={
-                              message.provider === 'anthropic'
+                              selectedProvider === 'anthropic'
                                 ? 'bg-[#C15F3C] text-white'
                                 : 'bg-black text-white dark:bg-white dark:text-black'
                             }
                           >
-                            {message.provider === 'anthropic' ? (
+                            {selectedProvider === 'anthropic' ? (
                               <AnthropicIcon size={16} />
                             ) : (
                               <OpenAIIcon size={16} />
                             )}
                           </AvatarFallback>
                         </Avatar>
-                      ) : (
-                        <Avatar className="size-8 ring ring-1 ring-border">
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            <User size={16} />
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </Message>
-                  ))}
-
-                  {/* AI thinking indicator when streaming */}
-                  {status === 'streaming' && (
-                    <Message from="assistant">
-                      <MessageContent>
-                        <div className="p-3">
-                          <LoadingMessage />
-                        </div>
-                      </MessageContent>
-                      <Avatar className="size-8 ring ring-1 ring-border">
-                        <AvatarFallback
-                          className={
-                            selectedProvider === 'anthropic'
-                              ? 'bg-[#C15F3C] text-white'
-                              : 'bg-black text-white dark:bg-white dark:text-black'
-                          }
-                        >
-                          {selectedProvider === 'anthropic' ? (
-                            <AnthropicIcon size={16} />
-                          ) : (
-                            <OpenAIIcon size={16} />
-                          )}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Message>
-                  )}
-                </div>
-              )}
-            </ConversationContent>
+                      </Message>
+                    )}
+                  </div>
+                )}
+              </ConversationContent>
+            </div>
             <ConversationScrollButton />
           </Conversation>
         </div>
