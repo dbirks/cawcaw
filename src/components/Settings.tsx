@@ -1,5 +1,6 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
+  BookOpen,
   Brain,
   Bug,
   ChevronDown,
@@ -9,6 +10,7 @@ import {
   Copy,
   Edit,
   Github,
+  Hammer,
   Info,
   Lock,
   Mic,
@@ -666,8 +668,8 @@ export default function Settings({ onClose }: SettingsProps) {
         {/* Header with back button for detail views */}
         <div className="flex items-center gap-3 mb-4 sm:mb-6 pt-4 pb-4 safe-top safe-x">
           {currentView !== 'list' && (
-            <Button variant="ghost" size="icon" onClick={() => setCurrentView('list')}>
-              <ChevronLeft className="h-8 w-8" />
+            <Button variant="ghost" onClick={() => setCurrentView('list')} className="h-14 w-14 p-0">
+              <ChevronLeft className="size-8" />
             </Button>
           )}
           <h1 className="text-xl sm:text-2xl font-bold flex-1">
@@ -675,8 +677,8 @@ export default function Settings({ onClose }: SettingsProps) {
               ? 'Settings'
               : SETTINGS_ITEMS.find((item) => item.id === currentView)?.label || 'Settings'}
           </h1>
-          <Button variant="ghost" onClick={onClose} size="icon" className="h-12 w-12">
-            <X className="h-6 w-6" />
+          <Button variant="ghost" onClick={onClose} className="h-14 w-14 p-0">
+            <X className="size-8" />
           </Button>
         </div>
 
@@ -1883,10 +1885,8 @@ export default function Settings({ onClose }: SettingsProps) {
                       <CardContent className="space-y-4">
                         {/* App Name */}
                         <div>
-                          <h3 className="text-lg font-semibold mb-1">cawcaw</h3>
-                          <p className="text-sm text-muted-foreground">
-                            A powerful AI chat application with multi-provider support
-                          </p>
+                          <h3 className="text-lg font-semibold">cawcaw</h3>
+                          <hr className="mt-2" />
                         </div>
 
                         {/* Version Info */}
@@ -1923,18 +1923,19 @@ export default function Settings({ onClose }: SettingsProps) {
                     {/* Built With Card */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Built With</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                          <Hammer className="h-5 w-5" />
+                          Built With
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          This application is powered by modern web technologies:
-                        </p>
+                        <p className="text-sm text-muted-foreground mb-3">powered by:</p>
                         <div className="flex flex-wrap gap-2">
                           <a
                             href="https://sdk.vercel.ai/docs/introduction"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-sm text-blue-600 dark:text-blue-400 transition-colors"
                           >
                             Vercel AI SDK
                           </a>
@@ -1942,7 +1943,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             href="https://www.ai-elements.com/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-sm text-blue-600 dark:text-blue-400 transition-colors"
                           >
                             AI Elements
                           </a>
@@ -1950,7 +1951,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             href="https://ui.shadcn.com/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-sm text-blue-600 dark:text-blue-400 transition-colors"
                           >
                             shadcn/ui
                           </a>
@@ -1958,7 +1959,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             href="https://vite.dev/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-sm text-blue-600 dark:text-blue-400 transition-colors"
                           >
                             Vite
                           </a>
@@ -1966,7 +1967,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             href="https://capacitorjs.com/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-sm text-blue-600 dark:text-blue-400 transition-colors"
                           >
                             Capacitor
                           </a>
@@ -1977,30 +1978,42 @@ export default function Settings({ onClose }: SettingsProps) {
                     {/* Help Card */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Need Help?</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                          <BookOpen className="h-5 w-5" />
+                          To learn more
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-muted-foreground">
-                          Interested in learning more about this app or need assistance? Feel free
-                          to reach out through{' '}
+                          If you encounter any issues or find bugs, please visit the{' '}
+                          <a
+                            href="https://github.com/dbirks/cawcaw"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            GitHub repository
+                          </a>{' '}
+                          and submit a ticket in{' '}
                           <a
                             href="https://github.com/dbirks/cawcaw/issues"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                           >
-                            GitHub Issues
-                          </a>{' '}
-                          or check the{' '}
+                            Issues
+                          </a>
+                          . The{' '}
                           <a
                             href="https://github.com/dbirks/cawcaw#readme"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                           >
                             README
                           </a>{' '}
-                          for more information.
+                          has more information about the app and instructions on how to build it
+                          locally if you want to.
                         </p>
                       </CardContent>
                     </Card>
