@@ -135,13 +135,13 @@ const SETTINGS_ITEMS = [
     id: 'debug' as const,
     label: 'Debug',
     icon: Bug,
-    description: 'View logs and troubleshoot issues',
+    description: 'View logs and troubleshoot',
   },
   {
     id: 'about' as const,
     label: 'About',
     icon: Info,
-    description: 'App information and credits',
+    description: 'Version numbers and repository link',
   },
 ] as const;
 
