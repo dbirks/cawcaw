@@ -1,9 +1,11 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { Loader2Icon, MicIcon, MicOffIcon, PencilIcon, User } from 'lucide-react';
+import { Loader2Icon, MicIcon, PencilIcon, Square, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LiveAudioVisualizer } from 'react-audio-visualize';
 import { z } from 'zod';
 // AI Elements imports
 import {
@@ -739,6 +741,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     // If already recording, stop the current recording
     if (isRecording && currentRecording) {
       debugLogger.info('audio', '⏹️ Stopping recording (user clicked stop button)');
+      // Haptic feedback for stopping
+      try {
+        await Haptics.impact({ style: ImpactStyle.Medium });
+      } catch (error) {
+        // Haptics may not be available on all platforms
+        console.debug('Haptics not available:', error);
+      }
       currentRecording.mediaRecorder.stop();
       return;
     }
@@ -757,6 +766,14 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         audioTracks: stream.getAudioTracks().length,
         trackSettings: stream.getAudioTracks()[0]?.getSettings(),
       });
+
+      // Haptic feedback for starting recording
+      try {
+        await Haptics.impact({ style: ImpactStyle.Light });
+      } catch (error) {
+        // Haptics may not be available on all platforms
+        console.debug('Haptics not available:', error);
+      }
 
       // Create MediaRecorder to capture audio
       const mediaRecorder = new MediaRecorder(stream);
@@ -1252,9 +1269,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                     setStatus('ready');
                   }
                 }}
-                placeholder={
-                  isRecording ? "🎤 Recording... Click 'Stop' to finish" : 'Type your message...'
-                }
+                placeholder={isRecording ? 'Recording...' : 'Type your message...'}
                 disabled={isRecording || status === 'streaming'}
                 className={cn('min-h-[48px]', isRecording && 'bg-red-50 dark:bg-red-950/20')}
               />
@@ -1369,37 +1384,58 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 </div>
 
                 {/* Right side: Input actions */}
-                <div className="flex items-center gap-1 shrink-0">
-                  {/* Voice input - moved next to submit */}
-                  <Button
-                    type="button"
-                    variant={isRecording ? 'destructive' : 'ghost'}
-                    size="icon"
-                    className={cn(
-                      'h-9 w-9 shrink-0 transition-all',
-                      isRecording && 'animate-pulse'
-                    )}
-                    onClick={handleVoiceInput}
-                    disabled={status === 'submitted' && !isRecording}
-                    title={isRecording ? 'Stop recording' : 'Start voice input'}
-                  >
-                    {isRecording ? (
-                      <MicOffIcon size={16} />
-                    ) : status === 'submitted' && !isRecording ? (
-                      <Loader2Icon size={16} className="animate-spin" />
-                    ) : (
-                      <MicIcon size={16} />
-                    )}
-                  </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Voice input with waveform visualization */}
+                  {isRecording && currentRecording ? (
+                    <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/20 px-3 py-1.5 rounded-lg">
+                      <LiveAudioVisualizer
+                        mediaRecorder={currentRecording.mediaRecorder}
+                        width={120}
+                        height={32}
+                        barColor="rgb(239 68 68)"
+                        gap={2}
+                        barWidth={3}
+                        smoothingTimeConstant={0.4}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={handleVoiceInput}
+                        title="Stop recording"
+                      >
+                        <Square size={14} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        onClick={handleVoiceInput}
+                        disabled={status === 'submitted' || status === 'streaming'}
+                        title="Start voice input"
+                      >
+                        {status === 'submitted' ? (
+                          <Loader2Icon size={16} className="animate-spin" />
+                        ) : (
+                          <MicIcon size={16} />
+                        )}
+                      </Button>
 
-                  {/* Submit button - prominent style */}
-                  <PromptInputSubmit
-                    disabled={!input.trim() || status === 'streaming'}
-                    status={status}
-                    variant="default"
-                    size="icon"
-                    className="h-9 w-9 shrink-0 bg-primary hover:bg-primary/90"
-                  />
+                      {/* Submit button - prominent style */}
+                      <PromptInputSubmit
+                        disabled={!input.trim() || status === 'streaming'}
+                        status={status}
+                        variant="default"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 bg-primary hover:bg-primary/90"
+                      />
+                    </>
+                  )}
                 </div>
               </PromptInputToolbar>
             </PromptInput>

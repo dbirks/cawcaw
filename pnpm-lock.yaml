@@ -32,6 +32,9 @@ importers:
       '@capacitor/core':
         specifier: ^7.4.2
         version: 7.4.2
+      '@capacitor/haptics':
+        specifier: ^7.0.2
+        version: 7.0.2(@capacitor/core@7.4.2)
       '@capacitor/ios':
         specifier: ^7.4.2
         version: 7.4.2(@capacitor/core@7.4.2)
@@ -113,6 +116,9 @@ importers:
       react:
         specifier: ^19.2.0
         version: 19.2.0
+      react-audio-visualize:
+        specifier: ^1.2.0
+        version: 1.2.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react-dom:
         specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
@@ -420,6 +426,11 @@ packages:
 
   '@capacitor/core@7.4.2':
     resolution: {integrity: sha512-akCf9A1FUR8AWTtmgGjHEq6LmGsjA2U7igaJ9PxiCBfyxKqlDbuGHrlNdpvHEjV5tUPH3KYtkze6gtFcNKPU9A==}
+
+  '@capacitor/haptics@7.0.2':
+    resolution: {integrity: sha512-vqfeEM6s2zMgLjpITCTUIy7P/hadq/Gr5E/RClFgMJPB41Y5FsqOKD+j85/uwh8N2cf/aWaPeXUmjnTzJbEB2g==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   '@capacitor/ios@7.4.2':
     resolution: {integrity: sha512-Edd4aZ6IJi4O/7dJIsSIuuo6LXvVVP5V++0Vs1w5bWOGbGhWZXLF0lt0KGFgSUxTuyL6xURGUygkD6dCp35QAQ==}
@@ -2945,6 +2956,12 @@ packages:
     resolution: {integrity: sha512-RmkhL8CAyCRPXCE28MMH0z2PNWQBNk2Q09ZdxM9IOOXwxwZbN+qbWaatPkdkWIKL2ZVDImrN/pK5HTRz2PcS4g==}
     engines: {node: '>= 0.8'}
 
+  react-audio-visualize@1.2.0:
+    resolution: {integrity: sha512-rfO5nmT0fp23gjU0y2WQT6+ZOq2ZsuPTMphchwX1PCz1Di4oaIr6x7JZII8MLrbHdG7UB0OHfGONTIsWdh67kQ==}
+    peerDependencies:
+      react: '>=16.2.0'
+      react-dom: '>=16.2.0'
+
   react-dom@19.2.0:
     resolution: {integrity: sha512-UlbRu4cAiGaIewkPyiRGJk0imDN2T3JjieT6spoL2UeSf5od4n5LB/mQ4ejmxhCFT1tYe8IvaFulzynWovsEFQ==}
     peerDependencies:
@@ -3799,6 +3816,10 @@ snapshots:
   '@capacitor/core@7.4.2':
     dependencies:
       tslib: 2.8.1
+
+  '@capacitor/haptics@7.0.2(@capacitor/core@7.4.2)':
+    dependencies:
+      '@capacitor/core': 7.4.2
 
   '@capacitor/ios@7.4.2(@capacitor/core@7.4.2)':
     dependencies:
@@ -6602,6 +6623,11 @@ snapshots:
       http-errors: 2.0.0
       iconv-lite: 0.6.3
       unpipe: 1.0.0
+
+  react-audio-visualize@1.2.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
 
   react-dom@19.2.0(react@19.2.0):
     dependencies:
