@@ -1944,7 +1944,7 @@ export default function Settings({ onClose }: SettingsProps) {
                             Vercel AI SDK
                           </a>
                           <a
-                            href="https://www.ai-elements.com/"
+                            href="https://ai-sdk.dev/elements/overview"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-sm text-blue-600 dark:text-blue-400 transition-colors"

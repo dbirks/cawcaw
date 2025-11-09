@@ -144,6 +144,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     mediaRecorder: MediaRecorder;
     stream: MediaStream;
   } | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false); // Track initialization completion
 
   // Ref for auto-scrolling to latest messages
   const conversationRef = useRef<HTMLDivElement>(null);
@@ -231,6 +232,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           stack: error instanceof Error ? error.stack : undefined,
         });
         console.error('Initialization error:', error);
+      } finally {
+        // Mark initialization as complete after all settings are loaded
+        setIsInitialized(true);
       }
     };
     initialize();
@@ -242,7 +246,11 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   }, [initialConversationId]);
 
   // Update selected model when API keys change to ensure it's valid
+  // Only run this after initialization is complete to avoid overwriting saved model preference
   useEffect(() => {
+    // Don't run until initialization is complete (saved model has been loaded from storage)
+    if (!isInitialized) return;
+
     // Check if current selected model is still available
     const isCurrentModelAvailable = availableModels.some((m) => m.value === selectedModel);
 
@@ -272,7 +280,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         console.error('Failed to save default model:', err);
       });
     }
-  }, [apiKey, anthropicApiKey, availableModels, selectedModel]);
+  }, [isInitialized, apiKey, anthropicApiKey, availableModels, selectedModel]);
 
   const saveApiKey = async () => {
     if (tempApiKey.trim()) {
