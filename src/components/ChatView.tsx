@@ -873,11 +873,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         }
       };
 
-      // Start recording until manually stopped
-      mediaRecorder.start();
+      // Start recording with timeslice to ensure continuous data collection
+      // A timeslice of 1000ms ensures ondataavailable fires every second,
+      // preventing browser from prematurely stopping the recording
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setCurrentRecording({ mediaRecorder, stream });
-      debugLogger.info('audio', '▶️ Recording started successfully');
+      debugLogger.info('audio', '▶️ Recording started successfully with 1s timeslice');
     } catch (error) {
       debugLogger.error('audio', '❌ Voice input error', {
         error: error instanceof Error ? error.message : 'Unknown error',
