@@ -5,7 +5,6 @@ import { generateText, stepCountIs, tool, experimental_transcribe as transcribe 
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { Loader2Icon, MicIcon, PencilIcon, Square, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LiveAudioVisualizer } from 'react-audio-visualize';
 import { z } from 'zod';
 // AI Elements imports
 import {
@@ -43,6 +42,7 @@ import { LoadingMessage } from '@/components/ui/bouncing-dots';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { LiveAudioVisualizer } from '@/components/ui/LiveAudioVisualizer';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SelectGroup, SelectLabel } from '@/components/ui/select';
 
@@ -1395,7 +1395,6 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                         barColor="rgb(239 68 68)"
                         gap={2}
                         barWidth={3}
-                        smoothingTimeConstant={0.4}
                       />
                       <Button
                         type="button"
