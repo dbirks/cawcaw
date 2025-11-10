@@ -105,7 +105,10 @@ platform :ios do
       distribute_external: is_external_release,
       groups: is_external_release ? ["Pre-release"] : nil,
       changelog: is_external_release ? "New version released: #{ENV['GITHUB_REF_NAME']}" : "Internal build from GitHub Actions",
-      notify_external_testers: is_external_release
+      notify_external_testers: is_external_release,
+      # Beta App Description required for external testing (Apple review)
+      beta_app_description: is_external_release ? "CawCaw is an AI chat application that lets you have conversations with multiple AI models including OpenAI and Anthropic. The app provides a clean, mobile-first interface for AI interactions with support for Model Context Protocol (MCP) tools and persistent conversation storage." : nil,
+      beta_app_feedback_email: is_external_release ? "david@dbirks.com" : nil
     )
   end
 

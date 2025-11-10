@@ -287,6 +287,24 @@ upload_to_testflight(
 - Internal builds use `skip_submission: true` (auto-available to internal testers)
 - External builds use `skip_submission: false` (submitted to external group)
 
+**Beta App Description & Feedback Email (Required for External Testing):**
+Apple requires additional metadata when submitting builds for external testing (Apple review). These parameters must be included:
+
+```ruby
+upload_to_testflight(
+  # ... other parameters ...
+  beta_app_description: "Your app description for Apple's review team",
+  beta_app_feedback_email: "feedback@example.com"
+)
+```
+
+**Critical details:**
+- `beta_app_description`: Required for external testing - describes what the app does for Apple's review process (NOT the same as changelog)
+- `beta_app_feedback_email`: Email address where testers can send feedback
+- Both parameters should be conditional: only set when `is_external_release` is true
+- Error if missing: "Beta App Description is missing. - Beta App Description is required to submit a build for external testing."
+- Internal builds don't need these parameters (no Apple review required)
+
 #### Build Number Collision Prevention
 The workflow generates build numbers with seconds (`%Y%m%d%H%M%S`) to prevent conflicts when:
 1. Release-please merges to main → triggers build
@@ -316,9 +334,10 @@ Uses timestamp-based build numbers instead of querying TestFlight:
 #### Common Issues & Solutions
 1. **"Redundant Binary Upload" error**: Build numbers colliding - add seconds to timestamp
 2. **External builds not distributed**: Check `skip_submission` is `false` for tagged releases
-3. **Group not found**: Verify "Pre-release" group exists in App Store Connect
-4. **Build stuck in processing**: Apple's processing can take 10-30 minutes, workflow waits automatically
-5. **Certificate mismatch**: Run `bundle exec fastlane certificates_distribution` with `MATCH_FORCE_WRITE=true`
+3. **"Beta App Description is missing" error**: Add `beta_app_description` and `beta_app_feedback_email` parameters for external releases
+4. **Group not found**: Verify "Pre-release" group exists in App Store Connect
+5. **Build stuck in processing**: Apple's processing can take 10-30 minutes, workflow waits automatically
+6. **Certificate mismatch**: Run `bundle exec fastlane certificates_distribution` with `MATCH_FORCE_WRITE=true`
 
 #### Monitoring Deployments
 ```bash
