@@ -28,4 +28,5 @@ ios/.bundle/
 android/
 test-results
 playwright-report
+.playwright-mcp/
 
