@@ -123,16 +123,16 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0(prop-types@15.8.1)(react@19.2.0)
       react-markdown:
-        specifier: ^10.1.0
+        specifier: 10.1.0
         version: 10.1.0(@types/react@19.2.2)(react@19.2.0)
       react-syntax-highlighter:
         specifier: ^15.6.1
         version: 15.6.1(react@19.2.0)
       rehype-katex:
-        specifier: ^7.0.1
+        specifier: 7.0.1
         version: 7.0.1
       remark-math:
-        specifier: ^6.0.0
+        specifier: 6.0.0
         version: 6.0.0
       streamdown:
         specifier: ^1.4.0
