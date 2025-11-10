@@ -101,7 +101,7 @@ platform :ios do
     upload_to_testflight(
       ipa: "./App.ipa",
       skip_waiting_for_build_processing: false,  # Always wait for processing completion
-      skip_submission: true,  # Always true; distribution controlled by distribute_external
+      skip_submission: !is_external_release,  # Submit for external, skip for internal
       distribute_external: is_external_release,
       groups: is_external_release ? ["Pre-release"] : nil,
       changelog: is_external_release ? "New version released: #{ENV['GITHUB_REF_NAME']}" : "Internal build from GitHub Actions",

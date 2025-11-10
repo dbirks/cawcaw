@@ -244,6 +244,93 @@ The Settings component uses a tabbed interface:
   # - TestFlight upload
   ```
 
+### TestFlight Deployment & Fastlane Configuration
+
+#### Build Distribution Strategy
+The project uses a dual-build approach for TestFlight distribution:
+
+**Internal Builds (main branch pushes):**
+- Build number: Timestamp-based `YYYYMMDDHHmmSS` format (e.g., `20251110143045`)
+- Distribution: Automatically available to internal testers in TestFlight
+- No Apple review required
+- Used for development/staging testing
+
+**External Builds (v* tag pushes):**
+- Build number: Same timestamp format (seconds prevent collisions)
+- Distribution: Submitted to "Pre-release" external tester group
+- Requires Apple review (12-48 hours typically)
+- Triggered by release-please when creating version tags
+- Used for beta testing with external users
+
+#### Critical Fastlane Configuration (`ios/fastlane/Fastfile`)
+
+**The `skip_submission` Parameter Issue:**
+This is a common source of confusion in Fastlane's `upload_to_testflight`:
+
+```ruby
+# CORRECT configuration for external distribution:
+upload_to_testflight(
+  ipa: "./App.ipa",
+  skip_waiting_for_build_processing: false,  # Wait for Apple to process
+  skip_submission: !is_external_release,     # Submit for external, skip for internal
+  distribute_external: is_external_release,
+  groups: is_external_release ? ["Pre-release"] : nil,
+  changelog: "...",
+  notify_external_testers: is_external_release
+)
+```
+
+**Key insights:**
+- `skip_submission: true` → Upload only, NO distribution to any testers
+- `skip_submission: false` → Upload AND submit to specified groups
+- `distribute_external` only works when `skip_submission: false`
+- Internal builds use `skip_submission: true` (auto-available to internal testers)
+- External builds use `skip_submission: false` (submitted to external group)
+
+#### Build Number Collision Prevention
+The workflow generates build numbers with seconds (`%Y%m%d%H%M%S`) to prevent conflicts when:
+1. Release-please merges to main → triggers build
+2. Release-please creates tag → triggers another build (same minute)
+
+Without seconds, both builds would have identical build numbers, causing Apple to reject the second upload.
+
+#### TestFlight Group Configuration
+External builds are distributed to a group named **"Pre-release"** (exact case):
+- Must exist in App Store Connect before deployment
+- Can be renamed, but Fastfile must match the exact name
+- Supports multiple groups by adding to the array: `["Pre-release", "Beta Users"]`
+
+#### Fastlane Match Certificate Management
+- Uses git-based storage for certificates and provisioning profiles
+- Readonly mode in CI prevents accidental certificate regeneration
+- `MATCH_FORCE_WRITE=true` can force certificate regeneration if needed
+- SSH deploy key authentication for private certificate repo
+
+#### Build Number Strategy
+Uses timestamp-based build numbers instead of querying TestFlight:
+- More reliable than `latest_testflight_build_number` (which can fail)
+- Format: `YYYYMMDDHHmmSS` (14 digits)
+- Always monotonically increasing
+- No API calls needed to determine next build number
+
+#### Common Issues & Solutions
+1. **"Redundant Binary Upload" error**: Build numbers colliding - add seconds to timestamp
+2. **External builds not distributed**: Check `skip_submission` is `false` for tagged releases
+3. **Group not found**: Verify "Pre-release" group exists in App Store Connect
+4. **Build stuck in processing**: Apple's processing can take 10-30 minutes, workflow waits automatically
+5. **Certificate mismatch**: Run `bundle exec fastlane certificates_distribution` with `MATCH_FORCE_WRITE=true`
+
+#### Monitoring Deployments
+```bash
+# Watch specific build workflow
+gh run list --workflow=build.yaml --limit 5
+gh run watch <run-id> --exit-status
+
+# Check build status in App Store Connect
+# Internal builds: Available immediately after processing
+# External builds: Available after Apple review (12-48 hours)
+```
+
 ### iOS Bundle Identifier Updates
 When changing bundle identifier:
 - Update `ios/App/App.xcodeproj/project.pbxproj` (PRODUCT_BUNDLE_IDENTIFIER)
