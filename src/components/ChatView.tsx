@@ -1271,7 +1271,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 }}
                 placeholder={isRecording ? 'Recording...' : 'Type your message...'}
                 disabled={isRecording || status === 'streaming'}
-                className={cn('min-h-[48px]', isRecording && 'bg-red-50 dark:bg-red-950/20')}
+                className="min-h-[48px]"
               />
               <PromptInputToolbar className="flex items-center justify-between gap-2 p-2 min-w-0">
                 {/* When recording: show full-width waveform that blocks other UI */}
