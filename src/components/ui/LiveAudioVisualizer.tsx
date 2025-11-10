@@ -84,12 +84,5 @@ export function LiveAudioVisualizer({
     };
   }, [mediaRecorder, width, height, barColor, gap, barWidth]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      className="rounded"
-    />
-  );
+  return <canvas ref={canvasRef} width={width} height={height} className="rounded" />;
 }
