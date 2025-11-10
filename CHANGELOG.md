@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3](https://github.com/dbirks/cawcaw/compare/v0.1.2...v0.1.3) (2025-11-10)
+
+
+### Bug Fixes
+
+* Add beta app description for external TestFlight distribution ([64e5199](https://github.com/dbirks/cawcaw/commit/64e5199e4f51e04e2f0a6dd953e970b67bf2bfbc))
+
+
+### Documentation
+
+* Consolidate documentation into AGENTS.md ([2528dfa](https://github.com/dbirks/cawcaw/commit/2528dfa69e675e724cf023e8dc2c56f3c6f2bc4e))
+
 ## [0.1.2](https://github.com/dbirks/cawcaw/compare/v0.1.1...v0.1.2) (2025-11-10)
 
 
