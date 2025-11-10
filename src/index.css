@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+/* Jua font - embedded locally for Capacitor compatibility */
+@font-face {
+  font-family: 'Jua';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Jua-Regular.ttf') format('truetype');
+}
 
 @custom-variant dark (&:is(.dark *));
 

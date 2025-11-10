@@ -3,7 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { ArrowUpCircle, Loader2Icon, MicIcon, PencilIcon, User } from 'lucide-react';
+import { ArrowUpIcon, Loader2Icon, MicIcon, PencilIcon, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -1279,21 +1279,21 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                   <div className="flex items-center justify-center gap-3 flex-1">
                     <LiveAudioVisualizer
                       mediaRecorder={currentRecording.mediaRecorder}
-                      width={200}
+                      width={320}
                       height={40}
-                      barColor="currentColor"
-                      gap={2}
-                      barWidth={3}
+                      barColor="rgb(239 68 68)"
+                      gap={3}
+                      barWidth={4}
                     />
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="default"
                       size="icon"
-                      className="h-9 w-9 shrink-0"
+                      className="h-9 w-9 shrink-0 rounded-full bg-primary hover:bg-primary/90"
                       onClick={handleVoiceInput}
                       title="Send recording"
                     >
-                      <ArrowUpCircle size={20} />
+                      <ArrowUpIcon className="size-4" />
                     </Button>
                   </div>
                 ) : (
@@ -1312,10 +1312,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                             <OpenAIIcon size={14} className="shrink-0" />
                           )}
                           <span className="hidden sm:inline text-xs font-medium truncate min-w-0">
-                            <span>Model: </span>
-                            <span className="truncate">
-                              <PromptInputModelSelectValue placeholder="Select model" />
-                            </span>
+                            <PromptInputModelSelectValue placeholder="Select model" />
                           </span>
                         </PromptInputModelSelectTrigger>
                         <PromptInputModelSelectContent>
