@@ -1276,26 +1276,33 @@ export default function ChatView({ initialConversationId }: { initialConversatio
               <PromptInputToolbar className="flex items-center justify-between gap-2 p-2 min-w-0">
                 {/* When recording: show full-width waveform that blocks other UI */}
                 {isRecording && currentRecording ? (
-                  <div className="flex items-center justify-center gap-3 flex-1">
-                    <LiveAudioVisualizer
-                      mediaRecorder={currentRecording.mediaRecorder}
-                      width={320}
-                      height={40}
-                      barColor="rgb(239 68 68)"
-                      gap={3}
-                      barWidth={4}
-                    />
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 rounded-full bg-primary hover:bg-primary/90"
-                      onClick={handleVoiceInput}
-                      title="Send recording"
-                    >
-                      <ArrowUpIcon className="size-4" />
-                    </Button>
-                  </div>
+                  <>
+                    {/* Left side: Audio waveform */}
+                    <div className="flex items-center flex-1 overflow-hidden min-w-0">
+                      <LiveAudioVisualizer
+                        mediaRecorder={currentRecording.mediaRecorder}
+                        width={320}
+                        height={40}
+                        barColor="rgb(239 68 68)"
+                        gap={3}
+                        barWidth={4}
+                      />
+                    </div>
+
+                    {/* Right side: Submit button */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 rounded-full bg-primary hover:bg-primary/90"
+                        onClick={handleVoiceInput}
+                        title="Send recording"
+                      >
+                        <ArrowUpIcon className="size-4" />
+                      </Button>
+                    </div>
+                  </>
                 ) : (
                   <>
                     {/* Left side: Contextual controls */}
