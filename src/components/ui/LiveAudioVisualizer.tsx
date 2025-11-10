@@ -18,9 +18,9 @@ export function LiveAudioVisualizer({
   barWidth = 3,
 }: LiveAudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
-  const analyserRef = useRef<AnalyserNode>();
-  const dataArrayRef = useRef<Uint8Array>();
+  const animationRef = useRef<number | undefined>(undefined);
+  const analyserRef = useRef<AnalyserNode | undefined>(undefined);
+  const dataArrayRef = useRef<Uint8Array | undefined>(undefined);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,7 +53,7 @@ export function LiveAudioVisualizer({
     const draw = () => {
       if (!analyserRef.current || !dataArrayRef.current || !ctx) return;
 
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+      analyserRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array<ArrayBuffer>);
 
       // Clear canvas
       ctx.clearRect(0, 0, width, height);
