@@ -1,4 +1,4 @@
-# caw caw
+# cawcaw
 
 A cross-platform AI chat client that works with OpenAI and Anthropic APIs. Runs as a web app or native iOS app using your own API keys. Supports the Model Context Protocol (MCP) for connecting AI models to external tools.
 
@@ -18,14 +18,7 @@ The app is built with React and Capacitor 7, which means it runs in a browser or
 
 ## Installation
 
-Requirements:
-- Node.js v18+
-- pnpm package manager
-- For iOS development: macOS with Xcode
-
 ```bash
-git clone https://github.com/dbirks/cawcaw.git
-cd cawcaw
 pnpm install
 pnpm dev
 ```
@@ -113,19 +106,6 @@ The app uses different storage mechanisms depending on platform:
 **Web**: IndexedDB fallback (not yet implemented)
 
 Storage layer is abstracted through `conversationStorage.ts` so the UI doesn't need to know which backend is in use.
-
-## Contributing
-
-Fork the repo and make a branch. Run `pnpm check` and `pnpm test` before submitting. Use conventional commits:
-
-- `feat:` - new features
-- `fix:` - bug fixes
-- `docs:` - documentation
-- `test:` - tests
-- `refactor:` - code changes without behavior changes
-- `chore:` - maintenance tasks
-
-TypeScript should be strict (avoid `any`). Test UI changes on iOS if possible.
 
 ## License
 
