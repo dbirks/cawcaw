@@ -1,74 +1,28 @@
 {
   extends: [
-    "config:recommended",
-    ":disableRateLimiting",
-
-    // Group all minor and patch changes into one PR
-    "group:allNonMajor",
+    'config:recommended',
+    ':disableRateLimiting',
+    'group:allNonMajor',
   ],
-
-  // Pin dependencies to exact versions (no ^ or ~)
-  // Must be in packageRules to override config:recommended preset
   packageRules: [
     {
-      matchPackagePatterns: ["*"],
-      rangeStrategy: "pin"
+      rangeStrategy: 'pin',
+      matchPackageNames: [
+        '*',
+      ],
     },
-    // Keep peerDependencies and engines as ranges for compatibility
     {
-      matchDepTypes: ["engines", "peerDependencies"],
-      rangeStrategy: "auto"
-    }
+      matchDepTypes: [
+        'engines',
+        'peerDependencies',
+      ],
+      rangeStrategy: 'auto',
+    },
   ],
-
-  // Enable lockfile maintenance for pnpm-lock.yaml updates
-  // This refreshes the lockfile to update transitive dependencies
   lockFileMaintenance: {
     enabled: true,
   },
-
-  // Wait for manual approval via Dependency Dashboard issue
   dependencyDashboardApproval: true,
-
-  timezone: "America/New_York",
-
-  // // Package-specific rules for mobile app dependencies
-  // packageRules: [
-  //   {
-  //     // Group Capacitor packages together for coordinated updates
-  //     groupName: "capacitor",
-  //     matchPackageNames: ["@capacitor/cli", "@capacitor/core", "@capacitor/*"],
-  //     matchUpdateTypes: ["major", "minor", "patch"],
-  //   },
-  //   {
-  //     // Group React ecosystem updates together
-  //     groupName: "react",
-  //     matchPackageNames: ["/react/", "react-dom"],
-  //     matchUpdateTypes: ["major"],
-  //     dependencyDashboardApproval: true,
-  //   },
-  //   {
-  //     // Group Biome linting/formatting updates
-  //     groupName: "biome",
-  //     matchPackageNames: ["@biomejs/biome"],
-  //     matchUpdateTypes: ["major"],
-  //     dependencyDashboardApproval: true,
-  //   },
-  //   {
-  //     // Group Vercel AI SDK updates
-  //     groupName: "ai-sdk",
-  //     matchPackageNames: ["ai", "@ai-sdk/*"],
-  //     matchUpdateTypes: ["major"],
-  //     dependencyDashboardApproval: true,
-  //   },
-  //   {
-  //     // Group Tailwind CSS updates
-  //     groupName: "tailwindcss",
-  //     matchPackageNames: ["tailwindcss", "@tailwindcss/*"],
-  //     matchUpdateTypes: ["major"],
-  //     dependencyDashboardApproval: true,
-  //   },
-  // ],
-
-  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  timezone: 'America/New_York',
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
 }
