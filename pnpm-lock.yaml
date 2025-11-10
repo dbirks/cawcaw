@@ -18,8 +18,8 @@ importers:
         specifier: 3.0.0-beta.95
         version: 3.0.0-beta.95(react@19.2.0)(zod@4.1.12)
       '@capacitor-community/safe-area':
-        specifier: 7.0.0-alpha.1
-        version: 7.0.0-alpha.1(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0
       '@capacitor-community/sqlite':
         specifier: 7.0.2
         version: 7.0.2(@capacitor/core@7.4.4)
@@ -395,11 +395,8 @@ packages:
   '@braintree/sanitize-url@7.1.1':
     resolution: {integrity: sha512-i1L7noDNxtFyL5DmZafWy1wRVhGehQmzZaz1HiN5e7iylJMSZR7ekOV7NsIqa5qBldlLrsKv4HbgFUVlQrz8Mw==}
 
-  '@capacitor-community/safe-area@7.0.0-alpha.1':
-    resolution: {integrity: sha512-N6ktkRiofqrt+N/vQzh4jcWY8IzJ4TVw1tKAPssvbddWFTyZzXzSdBeX/l/nracJF0PZqmLdA7JYTBfnOxXQYw==}
-    deprecated: 'The Chromium team promised the bug has been fixed as of Chromium M140. Now it''s up to the Capacitor team to correctly implement this and provide some documentation around it. See the following issue for more info: https://github.com/ionic-team/capacitor/issues/8121'
-    peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+  '@capacitor-community/safe-area@8.0.0':
+    resolution: {integrity: sha512-URpU0Sr+v+3Ttq9SbfGwVKbGIM7wWcAo/zXQRvpCtgaASwXUWzn5+JQchuQkARcPSgVMfqyd/RZZCFxP1OD99Q==}
 
   '@capacitor-community/sqlite@7.0.2':
     resolution: {integrity: sha512-TkxvuLgVCSmme/NSUEE2xopTVMwMqdT6+zH9pH8g76DMdi2z+ZsPEATQnJchGw4YAhhiQ8vTYxIP9se3/zkhGg==}
@@ -3777,9 +3774,7 @@ snapshots:
 
   '@braintree/sanitize-url@7.1.1': {}
 
-  '@capacitor-community/safe-area@7.0.0-alpha.1(@capacitor/core@7.4.4)':
-    dependencies:
-      '@capacitor/core': 7.4.4
+  '@capacitor-community/safe-area@8.0.0': {}
 
   '@capacitor-community/sqlite@7.0.2(@capacitor/core@7.4.4)':
     dependencies:
