@@ -95,13 +95,15 @@ platform :ios do
     # Determine if this is a tagged release for external testing
     is_external_release = ENV['GITHUB_REF'] && ENV['GITHUB_REF'].start_with?('refs/tags/v')
 
-    # Modern minimal TestFlight upload - let Fastlane handle the complexity
+    # Upload to TestFlight with proper external/internal distribution
+    # - Internal builds (main branch): uploaded and available to internal testers
+    # - External builds (v* tags): uploaded and distributed to Pre-Release group
     upload_to_testflight(
       ipa: "./App.ipa",
-      skip_waiting_for_build_processing: is_external_release ? false : true,
-      skip_submission: is_external_release ? false : true,
+      skip_waiting_for_build_processing: false,  # Always wait for processing completion
+      skip_submission: true,  # Always true; distribution controlled by distribute_external
       distribute_external: is_external_release,
-      groups: is_external_release ? ["External Testers"] : nil,
+      groups: is_external_release ? ["Pre-release"] : nil,
       changelog: is_external_release ? "New version released: #{ENV['GITHUB_REF_NAME']}" : "Internal build from GitHub Actions",
       notify_external_testers: is_external_release
     )
