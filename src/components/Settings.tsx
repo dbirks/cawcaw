@@ -1609,7 +1609,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                                 OAuth Connected
                                               </Badge>
                                             ) : server.requiresAuth ? (
-                                              <Badge variant="destructive" className="text-xs">
+                                              <Badge variant="destructive" className="text-xs bg-transparent">
                                                 <Lock className="h-3 w-3 mr-1" />
                                                 OAuth Required
                                               </Badge>
