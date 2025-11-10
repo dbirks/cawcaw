@@ -335,9 +335,10 @@ Uses timestamp-based build numbers instead of querying TestFlight:
 1. **"Redundant Binary Upload" error**: Build numbers colliding - add seconds to timestamp
 2. **External builds not distributed**: Check `skip_submission` is `false` for tagged releases
 3. **"Beta App Description is missing" error**: Add `beta_app_description` and `beta_app_feedback_email` parameters for external releases
-4. **Group not found**: Verify "Pre-release" group exists in App Store Connect
-5. **Build stuck in processing**: Apple's processing can take 10-30 minutes, workflow waits automatically
-6. **Certificate mismatch**: Run `bundle exec fastlane certificates_distribution` with `MATCH_FORCE_WRITE=true`
+4. **"Upload limit reached" error (409)**: Apple enforces daily upload limits (~10-15 builds per day). Wait 24 hours before retrying. Error message: "The upload limit for your application has been reached. Please wait 1 day and try again."
+5. **Group not found**: Verify "Pre-release" group exists in App Store Connect
+6. **Build stuck in processing**: Apple's processing can take 10-30 minutes, workflow waits automatically
+7. **Certificate mismatch**: Run `bundle exec fastlane certificates_distribution` with `MATCH_FORCE_WRITE=true`
 
 #### Monitoring Deployments
 ```bash
