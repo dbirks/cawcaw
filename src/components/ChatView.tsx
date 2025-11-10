@@ -3,7 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { Loader2Icon, MicIcon, PencilIcon, Square, User } from 'lucide-react';
+import { ArrowUpCircle, Loader2Icon, MicIcon, PencilIcon, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -1274,141 +1274,144 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 className={cn('min-h-[48px]', isRecording && 'bg-red-50 dark:bg-red-950/20')}
               />
               <PromptInputToolbar className="flex items-center justify-between gap-2 p-2 min-w-0">
-                {/* Left side: Contextual controls */}
-                <div className="flex items-center gap-1 flex-1 overflow-hidden min-w-0">
-                  {/* Model selector - always visible with label */}
-                  <PromptInputModelSelect value={selectedModel} onValueChange={handleModelSelect}>
-                    <PromptInputModelSelectTrigger className="h-9 gap-1.5 max-w-[200px]">
-                      {selectedProvider === 'anthropic' ? (
-                        <AnthropicIcon size={14} className="shrink-0" />
-                      ) : (
-                        <OpenAIIcon size={14} className="shrink-0" />
-                      )}
-                      <span className="text-xs font-medium truncate min-w-0">
-                        <span className="hidden sm:inline">Model: </span>
-                        <span className="truncate">
-                          <PromptInputModelSelectValue placeholder="Select model" />
-                        </span>
-                      </span>
-                    </PromptInputModelSelectTrigger>
-                    <PromptInputModelSelectContent>
-                      {availableModels.filter((m) => m.provider === 'openai').length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel className="flex items-center gap-2">
-                            <OpenAIIcon size={14} />
-                            <span>OpenAI Models</span>
-                          </SelectLabel>
-                          {availableModels
-                            .filter((m) => m.provider === 'openai')
-                            .map((model) => (
-                              <PromptInputModelSelectItem key={model.value} value={model.value}>
-                                {model.label}
-                              </PromptInputModelSelectItem>
-                            ))}
-                        </SelectGroup>
-                      )}
-                      {availableModels.filter((m) => m.provider === 'anthropic').length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel className="flex items-center gap-2">
-                            <AnthropicIcon size={14} />
-                            <span>Anthropic Models</span>
-                          </SelectLabel>
-                          {availableModels
-                            .filter((m) => m.provider === 'anthropic')
-                            .map((model) => (
-                              <PromptInputModelSelectItem key={model.value} value={model.value}>
-                                {model.label}
-                              </PromptInputModelSelectItem>
-                            ))}
-                        </SelectGroup>
-                      )}
-                    </PromptInputModelSelectContent>
-                  </PromptInputModelSelect>
-
-                  {/* MCP Tools - with clear label */}
-                  <Popover open={mcpPopoverOpen} onOpenChange={setMcpPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-9 gap-1.5 text-muted-foreground hover:text-foreground relative max-w-[120px]"
+                {/* When recording: show full-width waveform that blocks other UI */}
+                {isRecording && currentRecording ? (
+                  <div className="flex items-center justify-center gap-3 flex-1">
+                    <LiveAudioVisualizer
+                      mediaRecorder={currentRecording.mediaRecorder}
+                      width={200}
+                      height={40}
+                      barColor="currentColor"
+                      gap={2}
+                      barWidth={3}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={handleVoiceInput}
+                      title="Send recording"
+                    >
+                      <ArrowUpCircle size={20} />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Left side: Contextual controls */}
+                    <div className="flex items-center gap-1 flex-1 overflow-hidden min-w-0">
+                      {/* Model selector - icon only on mobile, full text on desktop */}
+                      <PromptInputModelSelect
+                        value={selectedModel}
+                        onValueChange={handleModelSelect}
                       >
-                        <McpIcon size={14} className="shrink-0" />
-                        <span className="text-xs font-medium truncate">MCP</span>
-                        {(() => {
-                          const enabledCount = availableServers.filter((s) => s.enabled).length;
-                          return enabledCount > 0 ? (
-                            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold border border-current rounded shrink-0 ml-1">
-                              {enabledCount}
+                        <PromptInputModelSelectTrigger className="h-9 gap-1.5 sm:max-w-[200px]">
+                          {selectedProvider === 'anthropic' ? (
+                            <AnthropicIcon size={14} className="shrink-0" />
+                          ) : (
+                            <OpenAIIcon size={14} className="shrink-0" />
+                          )}
+                          <span className="hidden sm:inline text-xs font-medium truncate min-w-0">
+                            <span>Model: </span>
+                            <span className="truncate">
+                              <PromptInputModelSelectValue placeholder="Select model" />
                             </span>
-                          ) : null;
-                        })()}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-0" align="start">
-                      <div className="p-1">
-                        {availableServers.length === 0 ? (
-                          <div className="px-3 py-2 text-sm text-muted-foreground">
-                            No MCP servers configured. Add servers in Settings.
-                          </div>
-                        ) : (
-                          availableServers.map((server) => {
-                            const serverStatus = serverStatuses.get(server.id);
-                            return (
-                              <button
-                                key={server.id}
-                                type="button"
-                                className="flex items-center justify-between w-full cursor-pointer rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground border-none bg-transparent transition-colors"
-                                onClick={() => toggleServerEnabled(server.id)}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{server.name}</span>
-                                  {!serverStatus?.connected && (
-                                    <span className="text-xs text-muted-foreground">
-                                      {serverStatus?.error ? '⚠️ Error' : '○ Disconnected'}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex size-4 items-center justify-center">
-                                  {server.enabled && (
-                                    <div className="size-2 rounded-full bg-primary" />
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                          </span>
+                        </PromptInputModelSelectTrigger>
+                        <PromptInputModelSelectContent>
+                          {availableModels.filter((m) => m.provider === 'openai').length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="flex items-center gap-2">
+                                <OpenAIIcon size={14} />
+                                <span>OpenAI Models</span>
+                              </SelectLabel>
+                              {availableModels
+                                .filter((m) => m.provider === 'openai')
+                                .map((model) => (
+                                  <PromptInputModelSelectItem key={model.value} value={model.value}>
+                                    {model.label}
+                                  </PromptInputModelSelectItem>
+                                ))}
+                            </SelectGroup>
+                          )}
+                          {availableModels.filter((m) => m.provider === 'anthropic').length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="flex items-center gap-2">
+                                <AnthropicIcon size={14} />
+                                <span>Anthropic Models</span>
+                              </SelectLabel>
+                              {availableModels
+                                .filter((m) => m.provider === 'anthropic')
+                                .map((model) => (
+                                  <PromptInputModelSelectItem key={model.value} value={model.value}>
+                                    {model.label}
+                                  </PromptInputModelSelectItem>
+                                ))}
+                            </SelectGroup>
+                          )}
+                        </PromptInputModelSelectContent>
+                      </PromptInputModelSelect>
 
-                {/* Right side: Input actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {/* Voice input with waveform visualization */}
-                  {isRecording && currentRecording ? (
-                    <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/20 px-3 py-1.5 rounded-lg">
-                      <LiveAudioVisualizer
-                        mediaRecorder={currentRecording.mediaRecorder}
-                        width={120}
-                        height={32}
-                        barColor="rgb(239 68 68)"
-                        gap={2}
-                        barWidth={3}
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={handleVoiceInput}
-                        title="Stop recording"
-                      >
-                        <Square size={14} />
-                      </Button>
+                      {/* MCP Tools - with clear label */}
+                      <Popover open={mcpPopoverOpen} onOpenChange={setMcpPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 gap-1.5 text-muted-foreground hover:text-foreground relative max-w-[120px]"
+                          >
+                            <McpIcon size={14} className="shrink-0" />
+                            <span className="text-xs font-medium truncate">MCP</span>
+                            {(() => {
+                              const enabledCount = availableServers.filter((s) => s.enabled).length;
+                              return enabledCount > 0 ? (
+                                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold border border-current rounded shrink-0 ml-1">
+                                  {enabledCount}
+                                </span>
+                              ) : null;
+                            })()}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-0" align="start">
+                          <div className="p-1">
+                            {availableServers.length === 0 ? (
+                              <div className="px-3 py-2 text-sm text-muted-foreground">
+                                No MCP servers configured. Add servers in Settings.
+                              </div>
+                            ) : (
+                              availableServers.map((server) => {
+                                const serverStatus = serverStatuses.get(server.id);
+                                return (
+                                  <button
+                                    key={server.id}
+                                    type="button"
+                                    className="flex items-center justify-between w-full cursor-pointer rounded-sm px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground border-none bg-transparent transition-colors"
+                                    onClick={() => toggleServerEnabled(server.id)}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{server.name}</span>
+                                      {!serverStatus?.connected && (
+                                        <span className="text-xs text-muted-foreground">
+                                          {serverStatus?.error ? '⚠️ Error' : '○ Disconnected'}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex size-4 items-center justify-center">
+                                      {server.enabled && (
+                                        <div className="size-2 rounded-full bg-primary" />
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                  ) : (
-                    <>
+
+                    {/* Right side: Input actions */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
                         type="button"
                         variant="ghost"
@@ -1433,9 +1436,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                         size="icon"
                         className="h-9 w-9 shrink-0 bg-primary hover:bg-primary/90"
                       />
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </>
+                )}
               </PromptInputToolbar>
             </PromptInput>
           </div>
