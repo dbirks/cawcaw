@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/dbirks/cawcaw/compare/v0.1.1...v0.1.2) (2025-11-10)
+
+
+### Bug Fixes
+
+* Enable external TestFlight distribution for tagged releases ([6a41ebf](https://github.com/dbirks/cawcaw/commit/6a41ebf0b600c38996809cb1ba0fcd42a120d1fc))
+
 ## [0.1.1](https://github.com/dbirks/cawcaw/compare/v0.1.0...v0.1.1) (2025-11-10)
 
 
