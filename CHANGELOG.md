@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.4](https://github.com/dbirks/cawcaw/compare/v0.1.3...v0.1.4) (2025-11-11)
+
+
+### Bug Fixes
+
+* Make chat auto-scroll to bottom when new messages arrive ([950e2ee](https://github.com/dbirks/cawcaw/commit/950e2ee3e8bc7f83c2eee989df078f76842032b3))
+* Prevent voice recording from stopping after 10-15 seconds ([562cbe7](https://github.com/dbirks/cawcaw/commit/562cbe769ea47832239b34f25df94968cc91be84))
+
+
+### Documentation
+
+* Add Apple TestFlight upload rate limit to common issues ([ecbed27](https://github.com/dbirks/cawcaw/commit/ecbed27814dab00e9e277e4219ec59ec20102b29))
+
 ## [0.1.3](https://github.com/dbirks/cawcaw/compare/v0.1.2...v0.1.3) (2025-11-10)
 
 
