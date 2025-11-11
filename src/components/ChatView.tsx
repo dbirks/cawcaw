@@ -4,7 +4,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { ArrowUpIcon, Loader2Icon, MicIcon, PencilIcon, User } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
 import {
@@ -940,20 +940,16 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   };
 
   // Auto-scroll to bottom when new messages arrive or AI starts thinking
-  const scrollToBottom = useCallback(() => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally want to scroll when messages or status changes
+  useEffect(() => {
     if (conversationRef.current) {
+      // Scroll when:
+      // 1. New messages are added (messages array changes)
+      // 2. AI starts streaming (status becomes 'streaming')
+      // 3. AI finishes streaming (status becomes 'ready')
       conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
     }
-  }, []);
-
-  // Scroll to bottom when messages change or status changes
-  useEffect(() => {
-    // Scroll when:
-    // 1. New messages are added
-    // 2. AI starts streaming (status becomes 'streaming')
-    // 3. AI finishes streaming (status becomes 'ready')
-    scrollToBottom();
-  }, [scrollToBottom]);
+  }, [messages, status]);
 
   // Poll for title updates (in case it's generated in the background)
   useEffect(() => {
