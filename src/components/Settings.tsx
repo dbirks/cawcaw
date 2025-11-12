@@ -818,12 +818,12 @@ export default function Settings({ onClose }: SettingsProps) {
                           <p className="text-xs text-muted-foreground mt-2">
                             Get your API key from{' '}
                             <a
-                              href="https://console.anthropic.com"
+                              href="https://platform.claude.com"
                               className="text-[#C15F3C] hover:underline"
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              Anthropic Console
+                              Claude Console
                             </a>
                           </p>
                         </div>
