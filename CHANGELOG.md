@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/dbirks/cawcaw/compare/v0.1.4...v0.1.5) (2025-11-12)
+
+
+### Documentation
+
+* Update Anthropic Console references to Claude Console ([160ecf4](https://github.com/dbirks/cawcaw/commit/160ecf46e6ce136871574b0a6c6ca4f8721eb333))
+
 ## [0.1.4](https://github.com/dbirks/cawcaw/compare/v0.1.3...v0.1.4) (2025-11-11)
 
 
