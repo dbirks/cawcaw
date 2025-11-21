@@ -779,10 +779,52 @@ class MCPManager {
       }
 
       // Create appropriate MCP client
-      const client = new HTTPMCPClient(config.url, config.transportType, oauthTokens);
+      let client = new HTTPMCPClient(config.url, config.transportType, oauthTokens);
 
       // Test the connection by listing tools
-      const tools = await client.listTools();
+      let tools: Record<string, MCPToolDefinition>;
+      try {
+        tools = await client.listTools();
+      } catch (listToolsError) {
+        // Strategy 2: Reactive 401 handling - detect expired tokens and refresh
+        const errorMessage =
+          listToolsError instanceof Error ? listToolsError.message : String(listToolsError);
+
+        if (errorMessage.includes('401') && config.requiresAuth && oauthTokens?.refreshToken) {
+          debugLogger.info('oauth', '🔄 Detected 401 error, attempting token refresh', {
+            serverId,
+            serverName: config.name,
+          });
+
+          try {
+            // Force refresh the token
+            const refreshedTokens = await getOAuthManager().refreshTokenIfNeeded(
+              serverId,
+              oauthTokens
+            );
+
+            // Retry connection with refreshed tokens
+            await client.close();
+            client = new HTTPMCPClient(config.url, config.transportType, refreshedTokens);
+            tools = await client.listTools();
+
+            debugLogger.info('oauth', '✅ Successfully reconnected after token refresh', {
+              serverId,
+              serverName: config.name,
+            });
+          } catch (refreshError) {
+            debugLogger.error('oauth', '❌ Token refresh failed after 401', {
+              serverId,
+              refreshError:
+                refreshError instanceof Error ? refreshError.message : String(refreshError),
+            });
+            throw refreshError;
+          }
+        } else {
+          // Not a 401 or no refresh token available, re-throw original error
+          throw listToolsError;
+        }
+      }
 
       this.clients.set(serverId, client);
       this.serverStatuses.set(serverId, {

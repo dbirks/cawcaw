@@ -646,7 +646,13 @@ export class MCPOAuthManagerCompliant {
 
   // Check if access token is expired
   private isTokenExpired(tokens: MCPOAuthTokens): boolean {
-    if (!tokens.tokenExpiresAt) return false;
+    if (!tokens.tokenExpiresAt) {
+      // Conservative: If no expiration provided by server, assume token needs refresh
+      // This prevents using potentially expired tokens when expires_in is missing
+      // MCP spec recommends short-lived tokens, so proactive refresh is safer
+      debugLogger.info('oauth', '⚠️ Token has no expiration info, treating as expired for safety');
+      return true;
+    }
     // Consider token expired if it expires within the next 5 minutes
     return Date.now() > tokens.tokenExpiresAt - 300000;
   }
