@@ -238,6 +238,14 @@ class ConversationStorage {
       throw new Error('No current conversation');
     }
 
+    console.log('[Title Check] Checking if we should generate title', {
+      conversationId: conversation.id,
+      currentTitle: conversation.title,
+      newMessagesCount: messages.length,
+      existingMessagesCount: conversation.messages.length,
+      shouldGenerate: messages.length > 0 && conversation.title === 'New Conversation',
+    });
+
     const db = this.ensureInitialized();
     await dbUpdateMessages(
       db,
@@ -254,12 +262,28 @@ class ConversationStorage {
     // Auto-generate title if this is the first update with messages
     if (messages.length > 0 && conversation.title === 'New Conversation') {
       const firstUserMessage = messages.find((m) => m.role === 'user');
+      console.log('[Title Check] Title condition met', {
+        hasUserMessage: !!firstUserMessage,
+        userMessagePreview: firstUserMessage
+          ? JSON.stringify(firstUserMessage).substring(0, 100)
+          : 'none',
+      });
       if (firstUserMessage) {
         // Don't await this - let it run in background
+        console.log('[Title Check] Triggering title generation for:', conversation.id);
         this.generateConversationTitle(conversation.id).catch((error) => {
           console.error('Failed to generate conversation title:', error);
         });
       }
+    } else {
+      console.log('[Title Check] NOT generating title', {
+        reason:
+          messages.length === 0
+            ? 'No messages'
+            : conversation.title !== 'New Conversation'
+              ? `Title already set to: "${conversation.title}"`
+              : 'Unknown reason',
+      });
     }
   }
 
