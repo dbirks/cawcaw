@@ -283,7 +283,7 @@ export class MCPOAuthManagerCompliant {
       }
     }
 
-    // Step 2: Perform dynamic client registration
+    // Step 2: Perform dynamic client registration with scopes
     const clientCredentials = await this.registerClient(discovery, serverUrl);
     const clientId = clientCredentials.clientId;
 
@@ -399,8 +399,13 @@ export class MCPOAuthManagerCompliant {
     const url = new URL(serverUrl);
     const appName = `cawcaw MCP Client for ${url.hostname}`;
 
+    // Build scope string for registration (RFC 7591 Section 2)
+    // Include all scopes we intend to use during authorization
+    const supportedScopes = discovery.supportedScopes || [];
+    const scopeString = supportedScopes.length > 0 ? supportedScopes.join(' ') : undefined;
+
     // Build client registration request (RFC 7591)
-    const registrationRequest = {
+    const registrationRequest: Record<string, unknown> = {
       client_name: appName,
       client_uri: 'https://cawcaw.app', // RFC 7591: client_uri MUST be http/https
       redirect_uris: [this.getRedirectUri()],
@@ -410,6 +415,16 @@ export class MCPOAuthManagerCompliant {
       application_type: 'native',
       logo_uri: 'https://raw.githubusercontent.com/dbirks/capacitor-ai-app/main/ios-icon.png',
     };
+
+    // Add scope parameter if server advertises scopes (RFC 7591 Section 2)
+    // CRITICAL: Must declare scopes during registration for strict OAuth servers
+    if (scopeString) {
+      registrationRequest.scope = scopeString;
+      debugLogger.info('oauth', '✅ Including scopes in client registration', {
+        scopes: supportedScopes,
+        scopeString,
+      });
+    }
 
     debugLogger.info('oauth', '📋 Client registration request:', registrationRequest);
 
