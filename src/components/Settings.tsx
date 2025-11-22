@@ -1577,71 +1577,68 @@ export default function Settings({ onClose }: SettingsProps) {
                                 </CardHeader>
                                 <CardContent className="p-3 sm:p-4 pt-0">
                                   <div className="flex flex-col gap-3 sm:gap-4">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="mb-3">
-                                        <div className="flex flex-wrap gap-2">
-                                          {status?.connected ? (
+                                    <div className="flex flex-row gap-3 justify-between items-start">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-muted-foreground mb-2 break-all">
+                                          {server.url}
+                                        </p>
+                                        {server.description && (
+                                          <p className="text-sm text-muted-foreground mb-2">
+                                            {server.description}
+                                          </p>
+                                        )}
+                                        {status?.toolCount !== undefined && (
+                                          <p className="text-xs text-muted-foreground">
+                                            {status.toolCount} tools available
+                                          </p>
+                                        )}
+                                        {status?.error && (
+                                          <p className="text-xs text-red-500 mt-1 break-words">
+                                            Error: {status.error}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col gap-2 items-end">
+                                        {status?.connected ? (
+                                          <Badge variant="default" className="bg-green-500 text-xs">
+                                            <Wifi className="h-3 w-3 mr-1" />
+                                            Connected
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className="text-xs">
+                                            <WifiOff className="h-3 w-3 mr-1" />
+                                            Disconnected
+                                          </Badge>
+                                        )}
+                                        <Badge variant="outline" className="text-xs">
+                                          {server.transportType === 'http-streamable'
+                                            ? 'HTTP-STREAMABLE'
+                                            : server.transportType.toUpperCase()}
+                                        </Badge>
+                                        {(server.requiresAuth || server.oauthDiscovery) &&
+                                          (oauthStatuses.get(server.id) ? (
                                             <Badge
                                               variant="default"
-                                              className="bg-green-500 text-xs"
+                                              className="bg-blue-500 text-xs"
                                             >
-                                              <Wifi className="h-3 w-3 mr-1" />
-                                              Connected
+                                              <Unlock className="h-3 w-3 mr-1" />
+                                              OAuth Connected
+                                            </Badge>
+                                          ) : server.requiresAuth ? (
+                                            <Badge
+                                              variant="destructive"
+                                              className="text-xs bg-transparent"
+                                            >
+                                              <Lock className="h-3 w-3 mr-1" />
+                                              OAuth Required
                                             </Badge>
                                           ) : (
-                                            <Badge variant="secondary" className="text-xs">
-                                              <WifiOff className="h-3 w-3 mr-1" />
-                                              Disconnected
+                                            <Badge variant="outline" className="text-xs">
+                                              <Unlock className="h-3 w-3 mr-1" />
+                                              OAuth Available
                                             </Badge>
-                                          )}
-                                          <Badge variant="outline" className="text-xs">
-                                            {server.transportType === 'http-streamable'
-                                              ? 'HTTP-STREAMABLE'
-                                              : server.transportType.toUpperCase()}
-                                          </Badge>
-                                          {(server.requiresAuth || server.oauthDiscovery) &&
-                                            (oauthStatuses.get(server.id) ? (
-                                              <Badge
-                                                variant="default"
-                                                className="bg-blue-500 text-xs"
-                                              >
-                                                <Unlock className="h-3 w-3 mr-1" />
-                                                OAuth Connected
-                                              </Badge>
-                                            ) : server.requiresAuth ? (
-                                              <Badge
-                                                variant="destructive"
-                                                className="text-xs bg-transparent"
-                                              >
-                                                <Lock className="h-3 w-3 mr-1" />
-                                                OAuth Required
-                                              </Badge>
-                                            ) : (
-                                              <Badge variant="outline" className="text-xs">
-                                                <Unlock className="h-3 w-3 mr-1" />
-                                                OAuth Available
-                                              </Badge>
-                                            ))}
-                                        </div>
+                                          ))}
                                       </div>
-                                      <p className="text-sm text-muted-foreground mb-2 break-all">
-                                        {server.url}
-                                      </p>
-                                      {server.description && (
-                                        <p className="text-sm text-muted-foreground mb-2">
-                                          {server.description}
-                                        </p>
-                                      )}
-                                      {status?.toolCount !== undefined && (
-                                        <p className="text-xs text-muted-foreground">
-                                          {status.toolCount} tools available
-                                        </p>
-                                      )}
-                                      {status?.error && (
-                                        <p className="text-xs text-red-500 mt-1 break-words">
-                                          Error: {status.error}
-                                        </p>
-                                      )}
                                     </div>
                                     <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 border-t border-border/50">
                                       <div className="flex items-center gap-2">
