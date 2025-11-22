@@ -319,9 +319,42 @@ export class MCPOAuthManagerCompliant {
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('redirect_uri', this.getRedirectUri());
 
-    // Use server's advertised scopes, fallback to MCP-compliant format
-    const scopeToUse = discovery.supportedScopes?.[0] || mcpScope;
-    authUrl.searchParams.set('scope', scopeToUse);
+    // Build scope request - CRITICAL for refresh token support
+    // OAuth 2.0/2.1 spec: offline_access scope is required to get refresh tokens
+    const requestedScopes: string[] = [];
+    const supportedScopes = discovery.supportedScopes || [];
+
+    // Always include MCP access scope (first priority from server, or our generated one)
+    const mcpAccessScope =
+      supportedScopes.find((s) => s.includes('MCP.Access') || s.includes('mcp:access')) || mcpScope;
+    requestedScopes.push(mcpAccessScope);
+
+    // Add offline_access if server supports it (enables refresh tokens)
+    if (supportedScopes.includes('offline_access')) {
+      requestedScopes.push('offline_access');
+      debugLogger.info('oauth', '✅ Including offline_access scope for refresh token support');
+    } else {
+      debugLogger.warn(
+        'oauth',
+        '⚠️ Server does not advertise offline_access scope - refresh tokens may not be available'
+      );
+    }
+
+    // Add other useful scopes if available (openid, profile)
+    for (const scope of ['openid', 'profile']) {
+      if (supportedScopes.includes(scope) && !requestedScopes.includes(scope)) {
+        requestedScopes.push(scope);
+      }
+    }
+
+    const scopeString = requestedScopes.join(' ');
+    authUrl.searchParams.set('scope', scopeString);
+
+    debugLogger.info('oauth', '📋 OAuth scope request', {
+      requestedScopes,
+      scopeString,
+      serverSupportedScopes: supportedScopes,
+    });
 
     // Add resource identifier (RFC 8707)
     authUrl.searchParams.set('resource', serverUrl);
@@ -342,6 +375,7 @@ export class MCPOAuthManagerCompliant {
       resourceIdentifier,
       mcpScope,
       clientId,
+      requestedScopes,
     });
 
     return authUrl.toString();
