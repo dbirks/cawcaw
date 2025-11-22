@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.0](https://github.com/dbirks/cawcaw/compare/v0.1.4...v0.2.0) (2025-11-22)
+
+
+### Features
+
+* Add Streamdown Tailwind CSS source directive ([95f2912](https://github.com/dbirks/cawcaw/commit/95f29120055de7bc3576760929f163490cb24844))
+
+
+### Bug Fixes
+
+* Add scope parameter to dynamic client registration (RFC 7591) ([abd13fd](https://github.com/dbirks/cawcaw/commit/abd13fddaa7280ca1e86c2855a2891737c27f41c))
+* **deps:** update all non-major dependencies ([#22](https://github.com/dbirks/cawcaw/issues/22)) ([7b16653](https://github.com/dbirks/cawcaw/commit/7b1665366f377f6b9cf43e762b371aacdab7870c))
+* Implement force refresh and comprehensive OAuth token logging ([79a7c3c](https://github.com/dbirks/cawcaw/commit/79a7c3cc883d782dec746f80daf7a387f2b7c92d))
+* Implement proactive and reactive OAuth token refresh strategies ([366dfdc](https://github.com/dbirks/cawcaw/commit/366dfdc9499c35c54f8941b8c20fc0476aad5f09))
+* Request offline_access scope to enable refresh token support ([3fbc994](https://github.com/dbirks/cawcaw/commit/3fbc994e3095efb827da1f704a5819fa0821b838))
+
+
+### Documentation
+
+* Update Anthropic Console references to Claude Console ([160ecf4](https://github.com/dbirks/cawcaw/commit/160ecf46e6ce136871574b0a6c6ca4f8721eb333))
+
+
+### Code Refactoring
+
+* Move MCP server badges to vertical stack on right side ([c074ed5](https://github.com/dbirks/cawcaw/commit/c074ed576a08c92da3334a60273a39025c59c841))
+
 ## [0.1.4](https://github.com/dbirks/cawcaw/compare/v0.1.3...v0.1.4) (2025-11-11)
 
 
