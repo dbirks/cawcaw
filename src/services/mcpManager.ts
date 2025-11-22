@@ -797,10 +797,11 @@ class MCPManager {
           });
 
           try {
-            // Force refresh the token
+            // Force refresh the token (bypass expiry check since we got 401)
             const refreshedTokens = await getOAuthManager().refreshTokenIfNeeded(
               serverId,
-              oauthTokens
+              oauthTokens,
+              true // forceRefresh = true
             );
 
             // Retry connection with refreshed tokens

@@ -490,11 +490,33 @@ export class MCPOAuthManagerCompliant {
       clientId,
     };
 
+    // Log token details (without exposing actual token values)
+    debugLogger.info('oauth', '✅ MCP OAuth 2.1 token exchange successful', {
+      serverId,
+      hasAccessToken: !!tokens.accessToken,
+      hasRefreshToken: !!tokens.refreshToken,
+      hasExpiry: !!tokens.tokenExpiresAt,
+      expiresAt: tokens.tokenExpiresAt
+        ? new Date(tokens.tokenExpiresAt).toISOString()
+        : 'undefined',
+      expiresInSeconds: tokenData.expires_in || 'not provided',
+    });
+
+    if (!tokens.refreshToken) {
+      debugLogger.warn(
+        'oauth',
+        '⚠️ OAuth server did NOT provide a refresh_token - token refresh will not be possible',
+        {
+          serverId,
+          serverAdvertisedRefreshSupport: true, // We only auth if server claims support
+        }
+      );
+    }
+
     // Store tokens and clean up temporary data
     await this.storeOAuthTokens(serverId, tokens);
     await this.cleanupTemporaryStorage(serverId);
 
-    debugLogger.info('oauth', '✅ MCP OAuth 2.1 token exchange successful');
     return tokens;
   }
 
@@ -558,12 +580,57 @@ export class MCPOAuthManagerCompliant {
   }
 
   // Refresh access token if expired (MCP 2025-03-26 compliant)
-  async refreshTokenIfNeeded(serverId: string, tokens: MCPOAuthTokens): Promise<MCPOAuthTokens> {
-    if (!this.isTokenExpired(tokens) || !tokens.refreshToken) {
+  async refreshTokenIfNeeded(
+    serverId: string,
+    tokens: MCPOAuthTokens,
+    forceRefresh = false
+  ): Promise<MCPOAuthTokens> {
+    const isExpired = this.isTokenExpired(tokens);
+    const hasRefreshToken = !!tokens.refreshToken;
+
+    // Log refresh decision
+    debugLogger.info('oauth', '🔍 Token refresh check', {
+      serverId,
+      isExpired,
+      hasRefreshToken,
+      forceRefresh,
+      tokenExpiresAt: tokens.tokenExpiresAt
+        ? new Date(tokens.tokenExpiresAt).toISOString()
+        : 'undefined',
+    });
+
+    if (!forceRefresh && (!isExpired || !hasRefreshToken)) {
+      if (!hasRefreshToken) {
+        debugLogger.warn(
+          'oauth',
+          '⚠️ Skipping token refresh: No refresh token available - will require re-authentication',
+          { serverId }
+        );
+      } else if (!isExpired) {
+        debugLogger.info('oauth', 'ℹ️ Skipping token refresh: Token not expired yet', {
+          serverId,
+          expiresIn: tokens.tokenExpiresAt
+            ? Math.round((tokens.tokenExpiresAt - Date.now()) / 1000)
+            : 'unknown',
+        });
+      }
       return tokens;
     }
 
-    debugLogger.info('oauth', '🔄 Refreshing expired MCP OAuth 2.1 token');
+    if (!hasRefreshToken) {
+      debugLogger.error(
+        'oauth',
+        '❌ Cannot refresh token: No refresh token available - re-authentication required',
+        { serverId }
+      );
+      throw new Error('No refresh token available - please re-authenticate');
+    }
+
+    debugLogger.info('oauth', '🔄 Refreshing expired MCP OAuth 2.1 token', {
+      serverId,
+      forceRefresh,
+      isExpired,
+    });
 
     const [discoveryResult, clientResult, resourceResult] = await Promise.all([
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
@@ -580,9 +647,15 @@ export class MCPOAuthManagerCompliant {
     const resourceInfo = JSON.parse(resourceResult.value);
     const clientId = clientCredentials.clientId;
 
+    // TypeScript: We already checked hasRefreshToken above, but need to assert for type safety
+    const refreshToken = tokens.refreshToken;
+    if (!refreshToken) {
+      throw new Error('Refresh token missing - this should never happen');
+    }
+
     const refreshBody = new URLSearchParams({
       grant_type: 'refresh_token',
-      refresh_token: tokens.refreshToken,
+      refresh_token: refreshToken,
       client_id: clientId,
       scope: resourceInfo.mcpScope, // Include original scope for providers that require it
     });

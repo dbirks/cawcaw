@@ -501,7 +501,11 @@ export class MCPOAuthManager {
   }
 
   // Refresh access token if expired
-  async refreshTokenIfNeeded(serverId: string, tokens: MCPOAuthTokens): Promise<MCPOAuthTokens> {
+  async refreshTokenIfNeeded(
+    serverId: string,
+    tokens: MCPOAuthTokens,
+    _forceRefresh = false
+  ): Promise<MCPOAuthTokens> {
     if (!this.isTokenExpired(tokens) || !tokens.refreshToken) {
       return tokens;
     }
