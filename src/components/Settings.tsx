@@ -1434,11 +1434,10 @@ export default function Settings({ onClose }: SettingsProps) {
                                 <DialogTitle>Edit MCP Server</DialogTitle>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
                                   onClick={() => setShowEditDialog(false)}
-                                  className="h-8 w-8 p-0 rounded-full"
+                                  className="h-14 w-14 p-0"
                                 >
-                                  <X className="h-4 w-4" />
+                                  <X className="size-8" />
                                   <span className="sr-only">Close</span>
                                 </Button>
                               </div>
