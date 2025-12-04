@@ -1052,11 +1052,11 @@ export default function Settings({ onClose }: SettingsProps) {
             {currentView === 'tools' && (
               <div className="flex-1 min-h-0">
                 <ScrollArea className="h-full">
-                  <div className="space-y-6 pr-4 safe-x safe-bottom">
+                  <div className="space-y-3 pr-4 safe-x safe-bottom">
                     {/* Configured Servers */}
                     <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold">Configured Servers</h2>
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-semibold">Configured Servers</h2>
                         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                           <DialogTrigger asChild>
                             <Button>
@@ -1546,7 +1546,7 @@ export default function Settings({ onClose }: SettingsProps) {
                       </div>
 
                       {/* Server List */}
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {servers.length === 0 ? (
                           <Card className="border-dashed">
                             <CardContent className="flex flex-col items-center justify-center py-8 text-center">
