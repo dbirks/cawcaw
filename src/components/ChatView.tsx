@@ -1163,16 +1163,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                                       </div>
                                     )}
                                     {part.state === 'output-available' && (
-                                      <ToolOutput
-                                        output={
-                                          <Response>
-                                            {typeof part.output === 'object' && part.output !== null
-                                              ? JSON.stringify(part.output, null, 2)
-                                              : String(part.output || '')}
-                                          </Response>
-                                        }
-                                        errorText={part.errorText}
-                                      />
+                                      <ToolOutput output={part.output} errorText={part.errorText} />
                                     )}
                                   </ToolContent>
                                 </Tool>

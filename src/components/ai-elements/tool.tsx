@@ -163,7 +163,7 @@ export const ToolInput = ({ className, input, toolType, ...props }: ToolInputPro
 };
 
 export type ToolOutputProps = ComponentProps<'div'> & {
-  output: ReactNode;
+  output: ReactNode | Record<string, unknown> | unknown;
   errorText: ToolUIPart['errorText'];
 };
 
@@ -172,6 +172,44 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
     return null;
   }
 
+  // Helper to check if value is a React element
+  const isReactElement = (value: unknown): value is ReactNode => {
+    return (
+      value !== null &&
+      typeof value === 'object' &&
+      '$$typeof' in value &&
+      value.$$typeof === Symbol.for('react.element')
+    );
+  };
+
+  // Detect if output is a JSON object/array and should be rendered with syntax highlighting
+  const isJsonOutput = typeof output === 'object' && output !== null && !isReactElement(output);
+
+  const renderOutput = () => {
+    if (isJsonOutput) {
+      // Render JSON with syntax highlighting
+      const jsonString = JSON.stringify(output, null, 2);
+      return <CodeBlock code={jsonString} language="json" />;
+    }
+
+    // For string outputs, check if it's JSON string
+    if (typeof output === 'string') {
+      try {
+        const parsed = JSON.parse(output);
+        // If it parses successfully and is an object/array, render with syntax highlighting
+        if (typeof parsed === 'object' && parsed !== null) {
+          return <CodeBlock code={JSON.stringify(parsed, null, 2)} language="json" />;
+        }
+      } catch {
+        // Not valid JSON, render as-is
+      }
+      return <div className="whitespace-pre-wrap font-mono text-xs p-3">{output}</div>;
+    }
+
+    // For ReactNode or other types, render directly
+    return <div>{String(output)}</div>;
+  };
+
   return (
     <div className={cn('space-y-2 p-4', className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
@@ -179,12 +217,12 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
       </h4>
       <div
         className={cn(
-          'overflow-x-auto rounded-md text-xs [&_table]:w-full',
-          errorText ? 'bg-destructive/10 text-destructive' : 'bg-muted/50 text-foreground'
+          'overflow-x-auto rounded-md',
+          errorText && 'bg-destructive/10 text-destructive'
         )}
       >
-        {errorText && <div>{errorText}</div>}
-        {output && <div>{output}</div>}
+        {errorText && <div className="p-3 text-xs">{errorText}</div>}
+        {output !== null && output !== undefined && renderOutput()}
       </div>
     </div>
   );
