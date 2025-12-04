@@ -681,19 +681,17 @@ export class MCPOAuthManagerCompliant {
       isExpired,
     });
 
-    const [discoveryResult, clientResult, resourceResult] = await Promise.all([
+    const [discoveryResult, clientResult] = await Promise.all([
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}discovery_${serverId}` }),
       SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}client_${serverId}` }),
-      SecureStoragePlugin.get({ key: `${OAUTH_STORAGE_PREFIX}resource_${serverId}` }),
     ]);
 
-    if (!discoveryResult?.value || !clientResult?.value || !resourceResult?.value) {
+    if (!discoveryResult?.value || !clientResult?.value) {
       throw new Error('OAuth flow data not found');
     }
 
     const discovery: MCPOAuthDiscovery = JSON.parse(discoveryResult.value);
     const clientCredentials = JSON.parse(clientResult.value);
-    const resourceInfo = JSON.parse(resourceResult.value);
     const clientId = clientCredentials.clientId;
 
     // TypeScript: We already checked hasRefreshToken above, but need to assert for type safety
@@ -706,7 +704,8 @@ export class MCPOAuthManagerCompliant {
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: clientId,
-      scope: resourceInfo.mcpScope, // Include original scope for providers that require it
+      // OAuth 2.1 spec: Do NOT include scope in refresh requests unless narrowing permissions
+      // The refresh token already has the scope embedded - including it causes 400 errors
     });
 
     debugLogger.info('oauth', '📋 Token refresh request details', {
