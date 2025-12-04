@@ -5,6 +5,8 @@ on:
     branches: [ main, develop ]
     tags:
       - 'v*'  # Trigger on version tags (e.g., v1.0.0)
+    paths-ignore:
+      - '.beads/**'
   workflow_dispatch:
     inputs:
       environment:
