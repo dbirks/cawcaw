@@ -66,31 +66,30 @@ const getStatusBadge = (status: ToolUIPart['state']) => {
 };
 
 export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps) => {
-  // Extract tool name and server name from the type
-  // Format: "tool-Server_Name_toolName" -> toolName: "toolName", serverName: "Server Name"
-  const extractToolInfo = (type: string) => {
+  // Extract the full tool name from the type
+  // Format: "tool-Server_Name_GetCurrentDate" -> Display full name after "tool-" prefix
+  const extractToolName = (type: string) => {
     if (!type.startsWith('tool-')) {
-      return { toolName: type, serverName: null };
+      return type;
     }
 
-    const withoutPrefix = type.slice(5); // Remove "tool-" prefix
+    // Remove "tool-" prefix and show everything after it as the tool name
+    const fullName = type.slice(5);
 
-    // Find the last underscore to separate server name from tool name
-    const lastUnderscoreIndex = withoutPrefix.lastIndexOf('_');
+    // If there are underscores, assume format is "ServerName_ToolName"
+    // and extract just the tool name part (after last underscore)
+    const lastUnderscoreIndex = fullName.lastIndexOf('_');
 
     if (lastUnderscoreIndex === -1) {
-      // No underscore found, treat entire string as tool name
-      // Convert underscores to spaces and format as readable name
-      return { toolName: withoutPrefix.replace(/_/g, ' '), serverName: null };
+      // No underscore found, return entire name
+      return fullName;
     }
 
-    const serverName = withoutPrefix.slice(0, lastUnderscoreIndex).replace(/_/g, ' ');
-    const toolName = withoutPrefix.slice(lastUnderscoreIndex + 1).replace(/_/g, ' ');
-
-    return { toolName, serverName };
+    // Return the part after the last underscore (the actual tool name)
+    return fullName.slice(lastUnderscoreIndex + 1);
   };
 
-  const { toolName } = extractToolInfo(type);
+  const toolName = extractToolName(type);
 
   return (
     <CollapsibleTrigger
