@@ -32,8 +32,9 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
       // User messages: keep bubble styling with background
       'group-[.is-user]:rounded-lg group-[.is-user]:px-4 group-[.is-user]:py-3',
       'group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground',
-      // Assistant messages: full-width, flat interface with no background
+      // Assistant messages: full-width, flat interface with small horizontal padding
       'group-[.is-assistant]:bg-transparent group-[.is-assistant]:text-foreground',
+      'group-[.is-assistant]:px-4',
       className
     )}
     {...props}

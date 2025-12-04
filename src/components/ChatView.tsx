@@ -1188,23 +1188,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                             return null;
                           })}
                         </MessageContent>
-                        {message.role === 'assistant' ? (
-                          <Avatar className="size-8 ring ring-1 ring-border">
-                            <AvatarFallback
-                              className={
-                                message.provider === 'anthropic'
-                                  ? 'bg-[#C15F3C] text-white'
-                                  : 'bg-black text-white dark:bg-white dark:text-black'
-                              }
-                            >
-                              {message.provider === 'anthropic' ? (
-                                <AnthropicIcon size={16} />
-                              ) : (
-                                <OpenAIIcon size={16} />
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : (
+                        {message.role === 'assistant' ? null : (
                           <Avatar className="size-8 ring ring-1 ring-border">
                             <AvatarFallback className="bg-primary text-primary-foreground">
                               <User size={16} />
@@ -1222,21 +1206,6 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                             <LoadingMessage />
                           </div>
                         </MessageContent>
-                        <Avatar className="size-8 ring ring-1 ring-border">
-                          <AvatarFallback
-                            className={
-                              selectedProvider === 'anthropic'
-                                ? 'bg-[#C15F3C] text-white'
-                                : 'bg-black text-white dark:bg-white dark:text-black'
-                            }
-                          >
-                            {selectedProvider === 'anthropic' ? (
-                              <AnthropicIcon size={16} />
-                            ) : (
-                              <OpenAIIcon size={16} />
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
                       </Message>
                     )}
                   </div>
