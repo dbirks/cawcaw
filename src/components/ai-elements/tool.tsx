@@ -22,8 +22,15 @@ export const Tool = ({ className, ...props }: ToolProps) => (
     className={cn(
       'not-prose mb-4',
       'bg-green-900 dark:bg-green-950 text-white',
-      // Break out of parent containers to achieve wall-to-wall effect
-      '-mx-[100vw] px-[100vw]',
+      // Full-bleed technique: break out of centered container and reach scrollable container edges
+      // Calculation: width 100vw, then shift left by half viewport minus half of parent width
+      // This works because parent is centered with mx-auto
+      'w-[100vw]',
+      // Position relative to shift left. The centered parent is at 50% of scrollable container.
+      // We want to shift left from that center point by 50vw to reach the left edge.
+      'relative',
+      'left-1/2',
+      '-translate-x-1/2',
       className
     )}
     {...props}
