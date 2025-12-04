@@ -80,11 +80,12 @@ export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps
 
     if (lastUnderscoreIndex === -1) {
       // No underscore found, treat entire string as tool name
-      return { toolName: withoutPrefix, serverName: null };
+      // Convert underscores to spaces and format as readable name
+      return { toolName: withoutPrefix.replace(/_/g, ' '), serverName: null };
     }
 
     const serverName = withoutPrefix.slice(0, lastUnderscoreIndex).replace(/_/g, ' ');
-    const toolName = withoutPrefix.slice(lastUnderscoreIndex + 1);
+    const toolName = withoutPrefix.slice(lastUnderscoreIndex + 1).replace(/_/g, ' ');
 
     return { toolName, serverName };
   };
