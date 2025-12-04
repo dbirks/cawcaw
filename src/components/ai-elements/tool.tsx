@@ -20,8 +20,10 @@ export type ToolProps = ComponentProps<typeof Collapsible>;
 export const Tool = ({ className, ...props }: ToolProps) => (
   <Collapsible
     className={cn(
-      'not-prose mb-4 w-full rounded-md border border-green-200 dark:border-green-800',
-      'bg-green-50 dark:bg-green-950/30',
+      'not-prose mb-4',
+      'bg-green-900 dark:bg-green-950 text-white',
+      // Break out of parent containers to achieve wall-to-wall effect
+      '-mx-[100vw] px-[100vw]',
       className
     )}
     {...props}
@@ -91,15 +93,15 @@ export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps
 
   return (
     <CollapsibleTrigger
-      className={cn('flex w-full items-center justify-between gap-4 p-3', className)}
+      className={cn('flex w-full items-center justify-between gap-4 p-3 text-white', className)}
       {...props}
     >
       <div className="flex items-center gap-2">
-        <WrenchIcon className="size-4 text-muted-foreground" />
+        <WrenchIcon className="size-4 text-white/80" />
         <span className="font-medium text-sm">{toolName}</span>
         {getStatusBadge(state)}
       </div>
-      <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+      <ChevronDownIcon className="size-4 text-white/80 transition-transform group-data-[state=open]:rotate-180" />
     </CollapsibleTrigger>
   );
 };
