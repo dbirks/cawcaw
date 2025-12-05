@@ -1168,7 +1168,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                       <CardContent className="p-4">
                                         <div className="flex items-center gap-2 mb-2">
                                           {connectionTestResult.success ? (
-                                            <Wifi className="h-4 w-4 text-green-500" />
+                                            <Wifi className="h-4 w-4 text-emerald-600" />
                                           ) : (
                                             <WifiOff className="h-4 w-4 text-red-500" />
                                           )}
@@ -1599,7 +1599,10 @@ export default function Settings({ onClose }: SettingsProps) {
                                       </div>
                                       <div className="flex flex-col gap-2 items-end">
                                         {status?.connected ? (
-                                          <Badge variant="default" className="bg-green-500 text-xs">
+                                          <Badge
+                                            variant="default"
+                                            className="bg-emerald-600 text-xs"
+                                          >
                                             <Wifi className="h-3 w-3 mr-1" />
                                             Connected
                                           </Badge>
@@ -1832,7 +1835,7 @@ export default function Settings({ onClose }: SettingsProps) {
                                         : log.category === 'oauth'
                                           ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
                                           : log.category === 'mcp'
-                                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
                                             : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
                                   }`}
                                 >

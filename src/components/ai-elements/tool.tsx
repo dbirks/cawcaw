@@ -21,7 +21,7 @@ export const Tool = ({ className, ...props }: ToolProps) => (
   <Collapsible
     className={cn(
       'not-prose mb-4',
-      'bg-green-900 dark:bg-green-950 text-white',
+      'bg-emerald-900 dark:bg-emerald-950 text-white',
       // Full-bleed technique: break out of centered container and reach scrollable container edges
       // Calculation: width 100vw, then shift left by half viewport minus half of parent width
       // This works because parent is centered with mx-auto
@@ -59,7 +59,7 @@ const getStatusBadge = (status: ToolUIPart['state']) => {
     'input-available': <ClockIcon className="size-4 animate-pulse" />,
     'approval-requested': <ClockIcon className="size-4 text-yellow-600" />,
     'approval-responded': <CheckCircleIcon className="size-4 text-blue-600" />,
-    'output-available': <CheckCircleIcon className="size-4 text-green-600" />,
+    'output-available': <CheckCircleIcon className="size-4 text-emerald-600" />,
     'output-error': <XCircleIcon className="size-4 text-red-600" />,
     'output-denied': <XCircleIcon className="size-4 text-orange-600" />,
   } as const;
