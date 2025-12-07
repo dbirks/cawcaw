@@ -27,7 +27,7 @@ export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
 export const MessageContent = ({ children, className, ...props }: MessageContentProps) => (
   <div
     className={cn(
-      'flex flex-col gap-2 overflow-x-hidden text-foreground text-sm',
+      'flex flex-col gap-2 text-foreground text-sm',
       'min-w-0', // Prevent flex child from expanding beyond parent
       // User messages: keep bubble styling with background
       'group-[.is-user]:rounded-lg group-[.is-user]:px-4 group-[.is-user]:py-3',
