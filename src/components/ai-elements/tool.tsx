@@ -67,26 +67,14 @@ const getStatusBadge = (status: ToolUIPart['state']) => {
 
 export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps) => {
   // Extract the full tool name from the type
-  // Format: "tool-Server_Name_GetCurrentDate" -> Display full name after "tool-" prefix
+  // Format: "tool-MCP_server__getCurrentDate" -> Display full name "MCP_server__getCurrentDate"
   const extractToolName = (type: string) => {
     if (!type.startsWith('tool-')) {
       return type;
     }
 
-    // Remove "tool-" prefix and show everything after it as the tool name
-    const fullName = type.slice(5);
-
-    // If there are underscores, assume format is "ServerName_ToolName"
-    // and extract just the tool name part (after last underscore)
-    const lastUnderscoreIndex = fullName.lastIndexOf('_');
-
-    if (lastUnderscoreIndex === -1) {
-      // No underscore found, return entire name
-      return fullName;
-    }
-
-    // Return the part after the last underscore (the actual tool name)
-    return fullName.slice(lastUnderscoreIndex + 1);
+    // Remove "tool-" prefix and return the full tool name
+    return type.slice(5);
   };
 
   const toolName = extractToolName(type);
