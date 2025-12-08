@@ -22,8 +22,8 @@ export const Tool = ({ className, ...props }: ToolProps) => (
     className={cn(
       'not-prose mb-4',
       'bg-emerald-900 dark:bg-emerald-950 text-white',
-      // Full width within parent container - no overflow
-      'w-full',
+      // Full width with negative margin to counteract parent px-4 padding
+      'w-full -mx-4',
       className
     )}
     {...props}
@@ -81,7 +81,10 @@ export const ToolHeader = ({ className, type, state, ...props }: ToolHeaderProps
 
   return (
     <CollapsibleTrigger
-      className={cn('flex w-full items-center justify-between gap-4 p-3 text-white', className)}
+      className={cn(
+        'flex w-full items-center justify-between gap-4 px-4 py-3 text-white',
+        className
+      )}
       {...props}
     >
       <div className="flex items-center gap-2">
