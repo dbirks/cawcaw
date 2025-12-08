@@ -44,8 +44,7 @@ function App() {
             .completeOAuthFlow(serverId, code, state)
             .then(() => {
               console.log('✅ OAuth flow completed successfully');
-              alert('✅ OAuth authentication successful! MCP server is now connected.');
-              // Redirect back to main app
+              // Redirect back to main app - server status will show connection state
               window.location.href = '/';
             })
             .catch((error) => {
