@@ -1145,9 +1145,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
             )}
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground active:text-foreground"
+            className="h-9 w-9 shrink-0"
             onClick={handleNewConversationFromButton}
             title="New conversation"
           >
