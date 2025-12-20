@@ -3,7 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { ArrowUpIcon, Loader2Icon, MicIcon, PencilIcon, User } from 'lucide-react';
+import { ArrowUpIcon, Loader2Icon, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -986,6 +986,22 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     }
   };
 
+  const handleNewConversationFromButton = async () => {
+    try {
+      console.log('[ChatView] Creating new conversation from navbar button...');
+      const newConv = await conversationStorage.createNewConversation();
+      console.log('[ChatView] New conversation created:', newConv.id);
+
+      setCurrentConversationId(newConv.id);
+      setConversationTitle(newConv.title);
+      setMessages(newConv.messages);
+      setInput('');
+      console.log('[ChatView] State updated successfully');
+    } catch (error) {
+      console.error('[ChatView] Error creating new conversation:', error);
+    }
+  };
+
   const handleEditTitle = () => {
     setEditedTitle(conversationTitle);
     setIsEditingTitle(true);
@@ -1128,6 +1144,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
               </div>
             )}
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground active:text-foreground"
+            onClick={handleNewConversationFromButton}
+            title="New conversation"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Main Conversation - scrollable area */}
