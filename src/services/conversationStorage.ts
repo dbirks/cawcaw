@@ -322,7 +322,7 @@ class ConversationStorage {
         });
         if (!keyResult?.value) {
           console.warn(`No API key available for ${providerType} title generation`);
-          return;
+          throw new Error(`No API key available for ${providerType}`);
         }
         apiKey = keyResult.value;
       } else {
@@ -335,7 +335,7 @@ class ConversationStorage {
           const anthropicKeyResult = await SecureStoragePlugin.get({ key: 'anthropic_api_key' });
           if (!anthropicKeyResult?.value) {
             console.warn('No Anthropic API key available for title generation');
-            return;
+            throw new Error('No Anthropic API key available');
           }
           apiKey = anthropicKeyResult.value;
         } else {
@@ -343,7 +343,7 @@ class ConversationStorage {
           const openaiKeyResult = await SecureStoragePlugin.get({ key: 'openai_api_key' });
           if (!openaiKeyResult?.value) {
             console.warn('No OpenAI API key available for title generation');
-            return;
+            throw new Error('No OpenAI API key available');
           }
           apiKey = openaiKeyResult.value;
         }
