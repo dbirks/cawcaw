@@ -3,7 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { ArrowUpIcon, Loader2Icon, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
+import { ArrowUpIcon, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -1408,11 +1408,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                         disabled={status === 'submitted' || status === 'streaming'}
                         title="Start voice input"
                       >
-                        {status === 'submitted' ? (
-                          <Loader2Icon size={16} className="animate-spin" />
-                        ) : (
-                          <MicIcon size={16} />
-                        )}
+                        <MicIcon size={16} />
                       </Button>
 
                       {/* Submit button - prominent style */}
