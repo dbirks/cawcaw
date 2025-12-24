@@ -1345,7 +1345,18 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-9 gap-1.5 text-muted-foreground hover:text-foreground relative max-w-[120px]"
+                            className={cn(
+                              'h-9 gap-1.5 relative max-w-[120px]',
+                              (() => {
+                                // Check if any server has a warning/error
+                                const hasWarnings = Array.from(serverStatuses.values()).some(
+                                  (status) => status.error
+                                );
+                                return hasWarnings
+                                  ? 'text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400'
+                                  : 'text-muted-foreground hover:text-foreground';
+                              })()
+                            )}
                           >
                             <McpIcon size={14} className="shrink-0" />
                             <span className="text-xs font-medium truncate">MCP</span>
