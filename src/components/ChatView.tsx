@@ -3,6 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+import { search, SafeSearchType } from 'duck-duck-scrape';
 import { ArrowUpIcon, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
@@ -588,6 +589,55 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           },
         });
       }
+
+      // Add built-in web search tool
+      tools.web_search = tool({
+        description:
+          'Search the web using DuckDuckGo. Returns a list of search results with titles, descriptions, and URLs. Use this to find current information, recent news, or answer questions that require up-to-date knowledge.',
+        inputSchema: z.object({
+          query: z.string().describe('The search query to look up on the web'),
+          maxResults: z
+            .number()
+            .optional()
+            .describe('Maximum number of search results to return (default: 5, max: 10)'),
+        }),
+        execute: async ({ query, maxResults = 5 }) => {
+          try {
+            console.log(`[Web Search] Searching for: "${query}"`);
+
+            // Limit max results to 10 for performance
+            const limit = Math.min(maxResults, 10);
+
+            const searchResults = await search(query, {
+              safeSearch: SafeSearchType.OFF,
+            });
+
+            // Format results for the AI
+            const results = searchResults.results.slice(0, limit).map((result, index) => ({
+              position: index + 1,
+              title: result.title,
+              description: result.description,
+              url: result.url,
+            }));
+
+            console.log(`[Web Search] Found ${results.length} results`);
+
+            return {
+              query,
+              resultCount: results.length,
+              results,
+            };
+          } catch (error) {
+            console.error('[Web Search] Search failed:', error);
+            return {
+              error: error instanceof Error ? error.message : 'Web search failed',
+              query,
+            };
+          }
+        },
+      });
+
+      debugLogger.info('chat', '🔍 Built-in web search tool added');
 
       // Convert messages to the format expected by generateText
       const formattedMessages = messages.concat(userMessage).map((msg) => ({
