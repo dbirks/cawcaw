@@ -565,10 +565,6 @@ class MCPManager {
 
   constructor() {
     // Initialize with empty server configurations
-    this.initializeWithDefaultServers();
-  }
-
-  private initializeWithDefaultServers() {
     this.serverConfigs = [];
   }
 
