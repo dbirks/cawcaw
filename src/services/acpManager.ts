@@ -8,13 +8,14 @@
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { debugLogger } from '@/services/debugLogger';
 import { httpClient } from '@/utils/httpClient';
+import { ACPWebSocketClient } from '@/services/webSocketClient';
 import type {
   ACPAgentCard,
   ACPManagerConfig,
   ACPMessage,
+  ACPNotification,
   ACPPermissionRequest,
   ACPPromptResult,
-  ACPRequest,
   ACPResponse,
   ACPServerConfig,
   ACPServerStatus,
@@ -37,59 +38,64 @@ const DEFAULT_CONFIG: ACPManagerConfig = {
 
 /**
  * ACP Agent Client
- * Handles communication with a single ACP agent server
+ * Handles communication with a single ACP agent server via WebSocket
  */
 class ACPAgentClient {
   private config: ACPServerConfig;
-  private oauthToken?: string;
+  private wsClient: ACPWebSocketClient;
   private sessionId: string | null = null;
-  private requestIdCounter = 0;
 
-  constructor(config: ACPServerConfig, oauthToken?: string) {
+  constructor(config: ACPServerConfig, _oauthToken?: string) {
     this.config = config;
-    this.oauthToken = oauthToken;
+    this.wsClient = new ACPWebSocketClient({
+      url: config.url,
+      autoReconnect: true,
+      requestTimeout: 60000, // 60s for long-running requests
+    });
   }
 
   /**
-   * Generate next request ID
-   */
-  private nextRequestId(): string {
-    return `${Date.now()}_${++this.requestIdCounter}`;
-  }
-
-  /**
-   * Make JSON-RPC request to agent
+   * Make JSON-RPC request to agent via WebSocket
    */
   private async makeRequest<T>(method: string, params?: unknown): Promise<ACPResponse<T>> {
-    const request: ACPRequest = {
-      jsonrpc: '2.0',
-      id: this.nextRequestId(),
-      method,
-      params,
-    };
-
-    debugLogger.info('mcp', `ACP Request to ${this.config.name}:`, { method, params });
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Add OAuth token if available
-    if (this.oauthToken) {
-      headers.Authorization = `Bearer ${this.oauthToken}`;
-    }
+    debugLogger.info('acp', `ACP Request to ${this.config.name}:`, { method, params });
 
     try {
-      const httpResponse = await httpClient.post(this.config.url, request, headers);
-      const response = (await httpResponse.json()) as ACPResponse<T>;
-
-      debugLogger.info('mcp', `ACP Response from ${this.config.name}:`, response);
-
+      const response = await this.wsClient.send<T>(method, params);
+      debugLogger.info('acp', `ACP Response from ${this.config.name}:`, response);
       return response;
     } catch (error) {
-      debugLogger.error('mcp', `ACP request failed for ${this.config.name}:`, error);
+      debugLogger.error('acp', `ACP request failed for ${this.config.name}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Connect to WebSocket server
+   */
+  async connect(): Promise<void> {
+    await this.wsClient.connect();
+  }
+
+  /**
+   * Check if connected
+   */
+  isConnected(): boolean {
+    return this.wsClient.isConnected();
+  }
+
+  /**
+   * Register notification handler
+   */
+  onNotification(handler: (notification: ACPNotification) => void): () => void {
+    return this.wsClient.onNotification(handler);
+  }
+
+  /**
+   * Close connection
+   */
+  close(): void {
+    this.wsClient.close();
   }
 
   /**
@@ -419,14 +425,23 @@ class ACPManager {
     const startTime = Date.now();
 
     try {
-      // Try to discover agent card
-      const agentCard = config.url ? await this.discoverAgent(config.url) : null;
+      // Try to discover agent card (only works for HTTP-based discovery)
+      const agentCard = config.url && config.url.startsWith('http')
+        ? await this.discoverAgent(config.url)
+        : null;
 
       // Try to initialize connection
       const client = new ACPAgentClient(config as ACPServerConfig);
 
       try {
+        // Connect to WebSocket
+        await client.connect();
+
+        // Initialize protocol
         await client.initialize();
+
+        // Close test connection
+        client.close();
 
         return {
           success: true,
@@ -493,7 +508,10 @@ class ACPManager {
       // Create client
       const client = new ACPAgentClient(config, oauthToken);
 
-      // Initialize
+      // Connect to WebSocket
+      await client.connect();
+
+      // Initialize protocol
       await client.initialize();
 
       // Store client
@@ -506,9 +524,9 @@ class ACPManager {
         lastChecked: Date.now(),
       });
 
-      debugLogger.info('mcp', `Connected to ACP server: ${config.name}`);
+      debugLogger.info('acp', `Connected to ACP server: ${config.name}`);
     } catch (error) {
-      debugLogger.error('mcp', `Failed to connect to ${config.name}:`, error);
+      debugLogger.error('acp', `Failed to connect to ${config.name}:`, error);
 
       this.serverStatuses.set(serverId, {
         id: serverId,
