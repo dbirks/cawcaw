@@ -44,9 +44,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { LiveAudioVisualizer } from '@/components/ui/LiveAudioVisualizer';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { SelectGroup, SelectLabel } from '@/components/ui/select';
-
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { acpManager } from '@/services/acpManager';
 import {
   type Conversation as ConversationData,
   conversationStorage,
@@ -54,6 +62,7 @@ import {
 } from '@/services/conversationStorage';
 import { debugLogger } from '@/services/debugLogger';
 import { mcpManager } from '@/services/mcpManager';
+import type { ACPMessage, ACPPlan, ACPServerConfig, ACPToolCall } from '@/types/acp';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Settings from './Settings';
 import Sidebar, { SidebarToggle } from './Sidebar';
@@ -115,7 +124,12 @@ interface UIMessage {
   role: 'user' | 'assistant' | 'system';
   parts: MessagePart[];
   timestamp?: number;
-  provider?: 'openai' | 'anthropic'; // Track which provider generated this message
+  provider?: 'openai' | 'anthropic' | 'acp'; // Track which provider generated this message
+
+  // ACP-specific fields
+  acpToolCalls?: ACPToolCall[];
+  acpPlan?: ACPPlan;
+  acpSessionId?: string;
 }
 
 export default function ChatView({ initialConversationId }: { initialConversationId: string }) {
@@ -147,6 +161,12 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     stream: MediaStream;
   } | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false); // Track initialization completion
+
+  // ACP state
+  const [chatMode, setChatMode] = useState<'chat' | 'acp'>('chat');
+  const [acpServers, setAcpServers] = useState<ACPServerConfig[]>([]);
+  const [selectedAcpServer, setSelectedAcpServer] = useState<string | null>(null);
+  const [currentAcpSessionId, setCurrentAcpSessionId] = useState<string | null>(null);
 
   // Ref for auto-scrolling to latest messages
   const conversationRef = useRef<HTMLDivElement>(null);
@@ -228,6 +248,19 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         });
         setAvailableServers(servers);
         setServerStatuses(statuses);
+
+        // Initialize ACP manager and load servers
+        debugLogger.info('acp', '🔄 Loading ACP configurations on startup');
+        await acpManager.initialize();
+        const acpServerConfigs = acpManager.getServers();
+        debugLogger.info('acp', '✅ ACP servers initialized', {
+          totalServers: acpServerConfigs.length,
+          enabledServers: acpServerConfigs.filter((s) => s.enabled).length,
+        });
+        setAcpServers(acpServerConfigs);
+
+        // Connect to enabled ACP servers
+        await acpManager.connectToEnabledServers();
       } catch (error) {
         debugLogger.error('mcp', '❌ Failed to initialize MCP servers', {
           error: error instanceof Error ? error.message : String(error),
@@ -479,16 +512,205 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     });
   };
 
+  const sendAcpMessage = async (content: string) => {
+    if (!selectedAcpServer) {
+      alert('Please select an ACP agent');
+      return;
+    }
+
+    try {
+      debugLogger.info('acp', '🚀 Starting ACP message send', {
+        serverId: selectedAcpServer,
+        contentLength: content.length,
+        hasSession: !!currentAcpSessionId,
+      });
+
+      setStatus('submitted');
+
+      // Add user message to UI
+      const userMessage: UIMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        parts: [{ type: 'text', text: content }],
+        timestamp: Date.now(),
+        provider: 'acp',
+      };
+
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+
+      // Save user message
+      await saveMessagesToStorage(updatedMessages).catch((error) => {
+        console.error('Failed to save user message:', error);
+      });
+
+      // Convert to ACP message format
+      const acpMessages: ACPMessage[] = updatedMessages.map((msg) => ({
+        role: msg.role === 'user' ? 'user' : 'agent',
+        content: [{ type: 'text', text: msg.parts.find((p) => p.type === 'text')?.text || '' }],
+      }));
+
+      // Create session if needed
+      let sessionId = currentAcpSessionId;
+      if (!sessionId) {
+        debugLogger.info('acp', '📝 Creating new ACP session');
+        const session = await acpManager.createSession(selectedAcpServer, { cwd: '/' });
+        sessionId = session.id;
+        setCurrentAcpSessionId(sessionId);
+        debugLogger.info('acp', '✅ Session created:', sessionId);
+      }
+
+      // Stream response from ACP agent
+      const agentMessageId = `agent-${Date.now()}`;
+      let agentContent = '';
+      const toolCalls: ACPToolCall[] = [];
+      let agentPlan: ACPPlan | null = null;
+
+      setStatus('streaming');
+
+      debugLogger.info('acp', '📡 Starting message stream');
+      const stream = acpManager.sendPrompt(sessionId, acpMessages);
+
+      for await (const update of stream) {
+        debugLogger.info('acp', '📥 Received update:', update.type);
+
+        switch (update.type) {
+          case 'agent_message_chunk':
+            if (update.text) {
+              agentContent += update.text;
+              setMessages((prev) => {
+                const existing = prev.find((m) => m.id === agentMessageId);
+                if (existing) {
+                  return prev.map((m) =>
+                    m.id === agentMessageId
+                      ? {
+                          ...m,
+                          parts: [{ type: 'text', text: agentContent }],
+                        }
+                      : m
+                  );
+                }
+                return [
+                  ...prev,
+                  {
+                    id: agentMessageId,
+                    role: 'assistant' as const,
+                    parts: [{ type: 'text', text: agentContent }],
+                    timestamp: Date.now(),
+                    provider: 'acp' as const,
+                    acpToolCalls: toolCalls,
+                    acpPlan: agentPlan || undefined,
+                    acpSessionId: sessionId,
+                  },
+                ];
+              });
+            }
+            break;
+
+          case 'tool_call':
+          case 'tool_call_update':
+            if (update.toolCall) {
+              const existingIndex = toolCalls.findIndex(
+                (tc) => tc.toolCallId === update.toolCall?.toolCallId
+              );
+              if (existingIndex >= 0) {
+                toolCalls[existingIndex] = update.toolCall;
+              } else {
+                toolCalls.push(update.toolCall);
+              }
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === agentMessageId ? { ...m, acpToolCalls: [...toolCalls] } : m
+                )
+              );
+            }
+            break;
+
+          case 'plan':
+            if (update.plan) {
+              agentPlan = update.plan;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === agentMessageId ? { ...m, acpPlan: agentPlan || undefined } : m
+                )
+              );
+            }
+            break;
+
+          case 'thought':
+            debugLogger.info('acp', '💭 Agent thought:', update.thought);
+            break;
+        }
+      }
+
+      // Save final conversation
+      const finalMessages = [...updatedMessages];
+      const agentMessage = messages.find((m) => m.id === agentMessageId);
+      if (agentMessage) {
+        finalMessages.push(agentMessage);
+      }
+
+      await saveMessagesToStorage(finalMessages).catch((error) => {
+        console.error('Failed to save conversation:', error);
+      });
+
+      setStatus('ready');
+      debugLogger.info('acp', '✅ ACP message flow completed');
+    } catch (error) {
+      debugLogger.error('acp', '❌ ACP message error:', error);
+      console.error('ACP message error:', error);
+
+      const errorMessage: UIMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text',
+            text: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+        timestamp: Date.now(),
+        provider: 'acp',
+      };
+
+      setMessages((prev) => {
+        const newMessages = [...prev, errorMessage];
+        saveMessagesToStorage(newMessages).catch((err) => {
+          console.error('Failed to save error message:', err);
+        });
+        return newMessages;
+      });
+
+      setStatus('error');
+    }
+  };
+
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
 
     debugLogger.info('chat', '💬 Starting message send', {
       contentLength: content.trim().length,
-      selectedProvider,
-      selectedModel,
+      chatMode,
+      selectedProvider: chatMode === 'chat' ? selectedProvider : 'acp',
+      selectedModel: chatMode === 'chat' ? selectedModel : selectedAcpServer,
       currentConversationId,
     });
 
+    const trimmedContent = content.trim();
+
+    // Check for /mcp command - handle various forms
+    if (trimmedContent.toLowerCase().startsWith('/mcp')) {
+      await handleMcpCommand(trimmedContent);
+      return;
+    }
+
+    // Handle ACP mode
+    if (chatMode === 'acp') {
+      await sendAcpMessage(trimmedContent);
+      return;
+    }
+
+    // Handle Chat mode (OpenAI/Anthropic)
     // Check if we have the appropriate API key for the selected provider
     const currentApiKey = selectedProvider === 'openai' ? apiKey : anthropicApiKey;
     if (!currentApiKey) {
@@ -501,14 +723,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
       return;
     }
 
-    const trimmedContent = content.trim();
     debugLogger.info('chat', '✅ API key validated', { provider: selectedProvider });
-
-    // Check for /mcp command - handle various forms
-    if (trimmedContent.toLowerCase().startsWith('/mcp')) {
-      await handleMcpCommand(trimmedContent);
-      return;
-    }
 
     // Create user message with parts structure
     const userMessage: UIMessage = {
@@ -1050,6 +1265,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     setAvailableServers(servers);
     setServerStatuses(statuses);
 
+    // Reload ACP servers when Settings closes in case they were added/modified
+    console.log('[ChatView] Settings closed, reloading ACP configurations...');
+    await acpManager.loadConfigurations();
+    await acpManager.connectToEnabledServers();
+
+    const acpServerConfigs = acpManager.getServers();
+    console.log('[ChatView] ACP servers reloaded:', acpServerConfigs.length, acpServerConfigs);
+    setAcpServers(acpServerConfigs);
+
     setShowSettings(false);
   };
 
@@ -1203,6 +1427,122 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                             }
                             return null;
                           })}
+
+                          {/* ACP Agent Plan */}
+                          {message.acpPlan && (
+                            <div className="mt-3 rounded-lg border p-3 bg-muted/30">
+                              <div className="text-xs font-semibold text-muted-foreground mb-2">
+                                {message.acpPlan.title || 'Agent Plan'}
+                              </div>
+                              <div className="space-y-1">
+                                {message.acpPlan.items.map((item) => (
+                                  <div key={item.id} className="flex items-center gap-2 text-sm">
+                                    <div
+                                      className={cn(
+                                        'h-4 w-4 flex items-center justify-center rounded-full text-xs font-semibold',
+                                        item.status === 'completed' && 'bg-green-500 text-white',
+                                        item.status === 'in_progress' && 'bg-blue-500 text-white',
+                                        item.status === 'failed' && 'bg-red-500 text-white',
+                                        item.status === 'pending' && 'bg-gray-300 dark:bg-gray-600',
+                                        item.status === 'skipped' && 'bg-gray-200 dark:bg-gray-700'
+                                      )}
+                                    >
+                                      {item.status === 'completed'
+                                        ? '✓'
+                                        : item.status === 'in_progress'
+                                          ? '⋯'
+                                          : item.status === 'failed'
+                                            ? '✗'
+                                            : '○'}
+                                    </div>
+                                    <span className="flex-1">{item.title}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* ACP Tool Calls */}
+                          {message.acpToolCalls && message.acpToolCalls.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              <div className="text-xs font-semibold text-muted-foreground">
+                                Tool Calls
+                              </div>
+                              {message.acpToolCalls.map((toolCall) => (
+                                <div
+                                  key={toolCall.toolCallId}
+                                  className="rounded-lg border p-3 space-y-2 bg-muted/20"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className={cn(
+                                          'h-2 w-2 rounded-full',
+                                          toolCall.status === 'completed' && 'bg-green-500',
+                                          toolCall.status === 'in_progress' && 'bg-blue-500',
+                                          toolCall.status === 'failed' && 'bg-red-500',
+                                          toolCall.status === 'pending' && 'bg-gray-300'
+                                        )}
+                                      />
+                                      <span className="text-sm font-medium">{toolCall.title}</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {toolCall.kind}
+                                    </span>
+                                  </div>
+
+                                  {toolCall.path && (
+                                    <div className="text-xs text-muted-foreground">
+                                      Path:{' '}
+                                      <code className="bg-muted px-1 rounded">{toolCall.path}</code>
+                                    </div>
+                                  )}
+
+                                  {toolCall.diff && (
+                                    <div className="text-xs font-mono bg-muted p-2 rounded overflow-x-auto max-h-[200px] overflow-y-auto">
+                                      {toolCall.diff.oldText && (
+                                        <div className="text-red-600 dark:text-red-400">
+                                          - {toolCall.diff.oldText}
+                                        </div>
+                                      )}
+                                      <div className="text-green-600 dark:text-green-400">
+                                        + {toolCall.diff.newText}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {toolCall.terminal && (
+                                    <div className="space-y-1">
+                                      {toolCall.terminal.command && (
+                                        <div className="text-xs">
+                                          Command:{' '}
+                                          <code className="bg-muted px-1 rounded">
+                                            {toolCall.terminal.command}
+                                          </code>
+                                        </div>
+                                      )}
+                                      {toolCall.terminal.output && (
+                                        <div className="text-xs font-mono bg-muted p-2 rounded overflow-x-auto max-h-[200px] overflow-y-auto">
+                                          {toolCall.terminal.output}
+                                        </div>
+                                      )}
+                                      {toolCall.terminal.exitCode !== undefined && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Exit Code: {toolCall.terminal.exitCode}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {toolCall.error && (
+                                    <div className="text-xs text-red-600 dark:text-red-400">
+                                      Error: {toolCall.error}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </MessageContent>
                         {message.role === 'assistant' ? null : (
                           <Avatar className="size-8 ring ring-1 ring-border">
@@ -1235,6 +1575,65 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         {/* Fixed Input Area with safe area */}
         <div className="border-t pt-4 pb-6 safe-bottom flex-shrink-0">
           <div className="w-full max-w-4xl mx-auto px-4 safe-x">
+            {/* Mode Switcher */}
+            <div className="flex items-center gap-2 mb-3">
+              <Button
+                variant={chatMode === 'chat' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setChatMode('chat')}
+                className="h-8"
+              >
+                Chat
+              </Button>
+              <Button
+                variant={chatMode === 'acp' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setChatMode('acp')}
+                className="h-8"
+              >
+                ACP Agent
+              </Button>
+
+              {chatMode === 'acp' && (
+                <Select value={selectedAcpServer || ''} onValueChange={setSelectedAcpServer}>
+                  <SelectTrigger className="w-[200px] h-8">
+                    <SelectValue placeholder="Select agent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {acpServers.filter((s) => s.enabled).length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        No enabled agents. Configure in Settings.
+                      </div>
+                    ) : (
+                      acpServers
+                        .filter((s) => s.enabled)
+                        .map((server) => (
+                          <SelectItem key={server.id} value={server.id}>
+                            {server.name}
+                          </SelectItem>
+                        ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {chatMode === 'acp' && status === 'streaming' && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    if (currentAcpSessionId) {
+                      acpManager.cancelSession(currentAcpSessionId);
+                      setStatus('ready');
+                    }
+                  }}
+                  className="h-8"
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+
             <PromptInput
               onSubmit={handleFormSubmit}
               className={cn(

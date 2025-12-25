@@ -31,7 +31,7 @@ export interface Message {
     errorText?: string;
   }>;
   timestamp: number;
-  provider?: 'openai' | 'anthropic'; // Track which provider generated this message
+  provider?: 'openai' | 'anthropic' | 'acp'; // Track which provider generated this message
 }
 
 export interface Conversation {
