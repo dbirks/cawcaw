@@ -1,3 +1,6 @@
+// FIRST IMPORT - Initialize Sentry before anything else
+import './sentry';
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';

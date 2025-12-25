@@ -1,9 +1,10 @@
+import * as Sentry from '@sentry/react';
 import { useEffect, useState } from 'react';
 import ChatView from './components/ChatView';
 import { conversationStorage } from './services/conversationStorage';
 import { mcpManager } from './services/mcpManager';
 
-function App() {
+function AppContent() {
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
@@ -149,5 +150,26 @@ function App() {
 
   return <ChatView initialConversationId={initialConversationId} />;
 }
+
+const App = Sentry.withErrorBoundary(AppContent, {
+  fallback: (
+    <div className="flex items-center justify-center min-h-screen p-4">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+        <p className="text-muted-foreground mb-4">
+          Our team has been notified. Please try refreshing the page.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+        >
+          Reload Page
+        </button>
+      </div>
+    </div>
+  ),
+  showDialog: false,
+});
 
 export default App;
