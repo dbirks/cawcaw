@@ -47,8 +47,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/hooks/useTheme';
+import { acpManager } from '@/services/acpManager';
 import { type DebugLogEntry, debugLogger } from '@/services/debugLogger';
 import { mcpManager } from '@/services/mcpManager';
+import type { ACPServerConfig, ACPServerStatus } from '@/types/acp';
 import type { MCPOAuthDiscovery, MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 
 interface SettingsProps {
@@ -104,7 +106,7 @@ const AVAILABLE_STT_MODELS = [
 ] as const;
 
 // Settings navigation
-type SettingsView = 'list' | 'llm' | 'audio' | 'tools' | 'appearance' | 'debug' | 'about';
+type SettingsView = 'list' | 'llm' | 'audio' | 'tools' | 'acp' | 'appearance' | 'debug' | 'about';
 
 const SETTINGS_ITEMS = [
   {
@@ -124,6 +126,12 @@ const SETTINGS_ITEMS = [
     label: 'MCP Servers',
     icon: Wrench,
     description: 'Manage Model Context Protocol servers',
+  },
+  {
+    id: 'acp' as const,
+    label: 'ACP Agents',
+    icon: Network,
+    description: 'Connect to AI coding agents',
   },
   {
     id: 'appearance' as const,
@@ -154,6 +162,15 @@ export default function Settings({ onClose }: SettingsProps) {
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<SettingsView>('list');
+
+  // ACP state
+  const [acpServers, setAcpServers] = useState<ACPServerConfig[]>([]);
+  const [acpServerStatuses, setAcpServerStatuses] = useState<Map<string, ACPServerStatus>>(
+    new Map()
+  );
+  const [showAcpAddDialog, setShowAcpAddDialog] = useState(false);
+  const [showAcpEditDialog, setShowAcpEditDialog] = useState(false);
+  const [editingAcpServerId, setEditingAcpServerId] = useState<string | null>(null);
 
   // Debug logs state
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
@@ -193,6 +210,21 @@ export default function Settings({ onClose }: SettingsProps) {
     name: '',
     url: '',
     transportType: 'http-streamable' as 'http-streamable' | 'sse',
+    description: '',
+    enabled: true,
+  });
+
+  // ACP form state
+  const [newAcpServer, setNewAcpServer] = useState({
+    name: '',
+    url: '',
+    description: '',
+    enabled: true,
+  });
+
+  const [editAcpServer, setEditAcpServer] = useState({
+    name: '',
+    url: '',
     description: '',
     enabled: true,
   });
@@ -237,6 +269,14 @@ export default function Settings({ onClose }: SettingsProps) {
   const editTransportTypeId = useId();
   const editServerDescriptionId = useId();
   const editServerEnabledId = useId();
+  const acpServerNameId = useId();
+  const acpServerUrlId = useId();
+  const acpServerDescriptionId = useId();
+  const acpServerEnabledId = useId();
+  const editAcpServerNameId = useId();
+  const editAcpServerUrlId = useId();
+  const editAcpServerDescriptionId = useId();
+  const editAcpServerEnabledId = useId();
 
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [oauthStatuses, setOAuthStatuses] = useState<Map<string, boolean>>(new Map());
@@ -285,6 +325,12 @@ export default function Settings({ onClose }: SettingsProps) {
         }
       }
       setOAuthStatuses(oauthStatusMap);
+
+      // Load ACP servers
+      await acpManager.initialize();
+      const acpConfigs = await acpManager.loadConfigurations();
+      setAcpServers(acpConfigs);
+      setAcpServerStatuses(new Map(acpManager.getAllServerStatuses().map((s) => [s.id, s])));
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -642,6 +688,152 @@ export default function Settings({ onClose }: SettingsProps) {
       setShowErrorDetails(false); // Reset expanded state
     } finally {
       setIsTestingConnection(false);
+    }
+  };
+
+  // ACP Server Functions
+  const handleAddAcpServer = async () => {
+    if (!newAcpServer.name.trim() || !newAcpServer.url.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      await acpManager.addServer(newAcpServer);
+      setNewAcpServer({
+        name: '',
+        url: '',
+        description: '',
+        enabled: true,
+      });
+      setShowAcpAddDialog(false);
+      await loadSettings();
+    } catch (error) {
+      console.error('Failed to add ACP server:', error);
+      alert('Failed to add server. Please check the configuration.');
+    }
+  };
+
+  const handleUpdateAcpServer = async () => {
+    if (!editAcpServer.name.trim() || !editAcpServer.url.trim() || !editingAcpServerId) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      await acpManager.updateServer(editingAcpServerId, {
+        name: editAcpServer.name,
+        url: editAcpServer.url,
+        description: editAcpServer.description,
+        enabled: editAcpServer.enabled,
+      });
+
+      setShowAcpEditDialog(false);
+      setEditingAcpServerId(null);
+      setEditAcpServer({
+        name: '',
+        url: '',
+        description: '',
+        enabled: true,
+      });
+      await loadSettings();
+    } catch (error) {
+      console.error('Failed to update ACP server:', error);
+      alert('Failed to update server. Please check the configuration.');
+    }
+  };
+
+  const handleStartEditAcpServer = (server: ACPServerConfig) => {
+    setEditingAcpServerId(server.id);
+    setEditAcpServer({
+      name: server.name,
+      url: server.url,
+      description: server.description || '',
+      enabled: server.enabled,
+    });
+    setShowAcpEditDialog(true);
+  };
+
+  const handleCancelAcpEdit = () => {
+    setShowAcpEditDialog(false);
+    setEditingAcpServerId(null);
+    setEditAcpServer({
+      name: '',
+      url: '',
+      description: '',
+      enabled: true,
+    });
+  };
+
+  const handleToggleAcpServer = async (serverId: string, enabled: boolean) => {
+    try {
+      await acpManager.updateServer(serverId, { enabled });
+      await loadSettings();
+    } catch (error) {
+      console.error('Failed to update ACP server:', error);
+    }
+  };
+
+  const handleRemoveAcpServer = async (serverId: string) => {
+    if (confirm('Are you sure you want to remove this ACP agent?')) {
+      try {
+        await acpManager.removeServer(serverId);
+        await loadSettings();
+      } catch (error) {
+        console.error('Failed to remove ACP server:', error);
+      }
+    }
+  };
+
+  const handleTestAcpConnection = async (serverId: string) => {
+    try {
+      const server = acpServers.find((s) => s.id === serverId);
+      if (!server) {
+        alert('Server not found');
+        return;
+      }
+      const result = await acpManager.testConnection(server);
+      if (result.success) {
+        alert('Connection successful!');
+      } else {
+        alert(`Connection failed: ${result.error || 'Unknown error'}`);
+      }
+      await loadSettings();
+    } catch (error) {
+      console.error('Failed to test ACP connection:', error);
+      alert('Connection test failed');
+    }
+  };
+
+  const handleAcpOAuthStart = async (serverId: string) => {
+    try {
+      debugLogger.info('oauth', '🚀 Starting ACP OAuth authentication', { serverId });
+
+      const authUrl = await acpManager.startOAuthFlow(serverId);
+      debugLogger.info('oauth', '✅ ACP OAuth URL generated', { authUrl });
+
+      // Open OAuth URL in system browser
+      if (typeof window !== 'undefined' && 'open' in window) {
+        debugLogger.info('oauth', '🌐 Opening ACP OAuth URL in browser...');
+        window.open(authUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        // Fallback - copy URL to clipboard
+        debugLogger.info('oauth', '📋 Fallback: copying ACP OAuth URL to clipboard...');
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(authUrl);
+          alert('OAuth URL copied to clipboard. Please open it in your browser.');
+        } else {
+          alert(`Please open this URL in your browser: ${authUrl}`);
+        }
+      }
+    } catch (error) {
+      debugLogger.error('oauth', '❌ Failed to start ACP OAuth flow', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        serverId,
+      });
+      alert(
+        `Failed to start OAuth authentication: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   };
 
@@ -1694,6 +1886,354 @@ export default function Settings({ onClose }: SettingsProps) {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleRemoveServer(server.id)}
+                                          className="px-3 py-2"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            {currentView === 'acp' && (
+              <div className="flex-1 min-h-0">
+                <ScrollArea className="h-full">
+                  <div className="space-y-3 pr-4 safe-x safe-bottom">
+                    {/* Configured ACP Agents */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-semibold">Configured Agents</h2>
+                        <Dialog open={showAcpAddDialog} onOpenChange={setShowAcpAddDialog}>
+                          <DialogTrigger asChild>
+                            <Button>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Agent
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent
+                            className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border"
+                            showCloseButton={false}
+                          >
+                            <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
+                              <div className="flex items-center justify-between">
+                                <DialogTitle>Add ACP Agent</DialogTitle>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowAcpAddDialog(false)}
+                                  className="h-8 w-8 p-0 rounded-full"
+                                >
+                                  <X className="h-4 w-4" />
+                                  <span className="sr-only">Close</span>
+                                </Button>
+                              </div>
+                            </DialogHeader>
+                            <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
+                              <div className="space-y-4 py-4 pb-6">
+                                <div>
+                                  <label htmlFor={acpServerNameId} className="text-sm font-medium">
+                                    Name *
+                                  </label>
+                                  <Input
+                                    id={acpServerNameId}
+                                    value={newAcpServer.name}
+                                    onChange={(e) =>
+                                      setNewAcpServer({ ...newAcpServer, name: e.target.value })
+                                    }
+                                    placeholder="My Coding Agent"
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor={acpServerUrlId} className="text-sm font-medium">
+                                    URL *
+                                  </label>
+                                  <Input
+                                    id={acpServerUrlId}
+                                    value={newAcpServer.url}
+                                    onChange={(e) =>
+                                      setNewAcpServer({ ...newAcpServer, url: e.target.value })
+                                    }
+                                    placeholder="https://agent.example.com"
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    htmlFor={acpServerDescriptionId}
+                                    className="text-sm font-medium"
+                                  >
+                                    Description
+                                  </label>
+                                  <Textarea
+                                    id={acpServerDescriptionId}
+                                    value={newAcpServer.description}
+                                    onChange={(e) =>
+                                      setNewAcpServer({
+                                        ...newAcpServer,
+                                        description: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Optional description..."
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Switch
+                                    id={acpServerEnabledId}
+                                    checked={newAcpServer.enabled}
+                                    onCheckedChange={(enabled) =>
+                                      setNewAcpServer({ ...newAcpServer, enabled })
+                                    }
+                                  />
+                                  <label htmlFor={acpServerEnabledId} className="text-sm">
+                                    Enable agent
+                                  </label>
+                                </div>
+                              </div>
+                            </ScrollArea>
+
+                            {/* Dialog Footer with Action Buttons */}
+                            <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background safe-bottom safe-x">
+                              <div className="flex gap-2">
+                                <Button onClick={handleAddAcpServer} className="flex-1">
+                                  Add Agent
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        {/* Edit ACP Agent Dialog */}
+                        <Dialog open={showAcpEditDialog} onOpenChange={setShowAcpEditDialog}>
+                          <DialogContent
+                            className="w-full h-full max-w-full max-h-full sm:max-w-lg sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col m-0 sm:m-6 rounded-none sm:rounded-lg border-0 sm:border"
+                            showCloseButton={false}
+                          >
+                            <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
+                              <div className="flex items-center justify-between">
+                                <DialogTitle>Edit ACP Agent</DialogTitle>
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => setShowAcpEditDialog(false)}
+                                  className="h-14 w-14 p-0"
+                                >
+                                  <X className="size-8" />
+                                  <span className="sr-only">Close</span>
+                                </Button>
+                              </div>
+                            </DialogHeader>
+                            <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
+                              <div className="space-y-4 py-4 pb-6">
+                                <div>
+                                  <label
+                                    htmlFor={editAcpServerNameId}
+                                    className="text-sm font-medium"
+                                  >
+                                    Name *
+                                  </label>
+                                  <Input
+                                    id={editAcpServerNameId}
+                                    value={editAcpServer.name}
+                                    onChange={(e) =>
+                                      setEditAcpServer({ ...editAcpServer, name: e.target.value })
+                                    }
+                                    placeholder="My Coding Agent"
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    htmlFor={editAcpServerUrlId}
+                                    className="text-sm font-medium"
+                                  >
+                                    URL *
+                                  </label>
+                                  <Input
+                                    id={editAcpServerUrlId}
+                                    value={editAcpServer.url}
+                                    onChange={(e) =>
+                                      setEditAcpServer({ ...editAcpServer, url: e.target.value })
+                                    }
+                                    placeholder="https://agent.example.com"
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    htmlFor={editAcpServerDescriptionId}
+                                    className="text-sm font-medium"
+                                  >
+                                    Description
+                                  </label>
+                                  <Textarea
+                                    id={editAcpServerDescriptionId}
+                                    value={editAcpServer.description}
+                                    onChange={(e) =>
+                                      setEditAcpServer({
+                                        ...editAcpServer,
+                                        description: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Optional description..."
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Switch
+                                    id={editAcpServerEnabledId}
+                                    checked={editAcpServer.enabled}
+                                    onCheckedChange={(enabled) =>
+                                      setEditAcpServer({ ...editAcpServer, enabled })
+                                    }
+                                  />
+                                  <label htmlFor={editAcpServerEnabledId} className="text-sm">
+                                    Enable agent
+                                  </label>
+                                </div>
+                              </div>
+                            </ScrollArea>
+
+                            {/* Dialog Footer with Action Buttons */}
+                            <div className="border-t p-4 sm:p-6 pt-4 sm:pt-6 bg-background safe-bottom safe-x">
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={handleCancelAcpEdit}
+                                  className="flex-1"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button onClick={handleUpdateAcpServer} className="flex-1">
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+
+                      {/* ACP Agent List */}
+                      <div className="space-y-3">
+                        {acpServers.length === 0 ? (
+                          <Card className="border-dashed">
+                            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                              <Network className="h-12 w-12 text-muted-foreground mb-4" />
+                              <h3 className="text-lg font-medium mb-2">No ACP Agents Configured</h3>
+                              <p className="text-muted-foreground mb-4">
+                                Add your first ACP agent to connect to AI coding assistants.
+                              </p>
+                              <Button onClick={() => setShowAcpAddDialog(true)}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Your First Agent
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          acpServers.map((server) => {
+                            const status = acpServerStatuses.get(server.id);
+                            return (
+                              <Card key={server.id}>
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-lg flex items-center">
+                                    {server.name}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 sm:p-4 pt-0">
+                                  <div className="flex flex-col gap-3 sm:gap-4">
+                                    <div className="flex flex-row gap-3 justify-between items-start">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-muted-foreground mb-2 break-all">
+                                          {server.url}
+                                        </p>
+                                        {server.description && (
+                                          <p className="text-sm text-muted-foreground mb-2">
+                                            {server.description}
+                                          </p>
+                                        )}
+                                        {status?.error && (
+                                          <p className="text-xs text-red-500 mt-1 break-words">
+                                            Error: {status.error}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col gap-2 items-end">
+                                        {status?.connected ? (
+                                          <Badge
+                                            variant="default"
+                                            className="bg-emerald-600 text-xs"
+                                          >
+                                            <Wifi className="h-3 w-3 mr-1" />
+                                            Connected
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className="text-xs">
+                                            <WifiOff className="h-3 w-3 mr-1" />
+                                            Disconnected
+                                          </Badge>
+                                        )}
+                                        {server.requiresAuth && (
+                                          <Badge
+                                            variant="destructive"
+                                            className="text-xs bg-transparent"
+                                          >
+                                            <Lock className="h-3 w-3 mr-1" />
+                                            OAuth Required
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 border-t border-border/50">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted-foreground">
+                                          Enabled
+                                        </span>
+                                        <Switch
+                                          checked={server.enabled}
+                                          onCheckedChange={(enabled) =>
+                                            handleToggleAcpServer(server.id, enabled)
+                                          }
+                                        />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleTestAcpConnection(server.id)}
+                                          className="px-3 py-2"
+                                          title="Test Connection"
+                                        >
+                                          <TestTube className="h-4 w-4" />
+                                        </Button>
+                                        {server.requiresAuth && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleAcpOAuthStart(server.id)}
+                                            className="px-3 py-2"
+                                            title="Connect with OAuth"
+                                          >
+                                            <Unlock className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleStartEditAcpServer(server)}
+                                          className="px-3 py-2"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleRemoveAcpServer(server.id)}
                                           className="px-3 py-2"
                                         >
                                           <Trash2 className="h-4 w-4" />
