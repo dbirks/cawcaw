@@ -7,8 +7,8 @@
 
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { debugLogger } from '@/services/debugLogger';
-import { httpClient } from '@/utils/httpClient';
 import { ACPWebSocketClient } from '@/services/webSocketClient';
+import { httpClient } from '@/utils/httpClient';
 import type {
   ACPAgentCard,
   ACPManagerConfig,
@@ -472,7 +472,7 @@ class ACPManager {
 
     try {
       // Try to discover agent card (only works for HTTP-based discovery)
-      const agentCard = config.url && config.url.startsWith('http')
+      const agentCard = config.url?.startsWith('http')
         ? await this.discoverAgent(config.url)
         : null;
 

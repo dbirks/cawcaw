@@ -96,7 +96,7 @@ export class ACPWebSocketClient {
    */
   private getReconnectDelay(): number {
     const delay = Math.min(
-      this.config.reconnectDelay * Math.pow(2, this.reconnectAttempts),
+      this.config.reconnectDelay * 2 ** this.reconnectAttempts,
       this.config.maxReconnectDelay
     );
     return delay;
@@ -226,7 +226,7 @@ export class ACPWebSocketClient {
     this.ws = null;
 
     // Reject all pending requests
-    for (const [id, pending] of this.pendingRequests.entries()) {
+    for (const [_id, pending] of this.pendingRequests.entries()) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('WebSocket disconnected'));
     }
@@ -249,7 +249,10 @@ export class ACPWebSocketClient {
     this.state = ACPWebSocketState.RECONNECTING;
     const delay = this.getReconnectDelay();
 
-    debugLogger.info('acp', `Scheduling reconnect in ${delay}ms (attempt ${this.reconnectAttempts + 1})`);
+    debugLogger.info(
+      'acp',
+      `Scheduling reconnect in ${delay}ms (attempt ${this.reconnectAttempts + 1})`
+    );
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
@@ -341,7 +344,7 @@ export class ACPWebSocketClient {
     this.state = ACPWebSocketState.CLOSED;
 
     // Reject all pending requests
-    for (const [id, pending] of this.pendingRequests.entries()) {
+    for (const [_id, pending] of this.pendingRequests.entries()) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('WebSocket closed'));
     }
