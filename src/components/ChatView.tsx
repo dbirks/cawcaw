@@ -41,6 +41,13 @@ import { LoadingMessage } from '@/components/ui/bouncing-dots';
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { LiveAudioVisualizer } from '@/components/ui/LiveAudioVisualizer';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -62,7 +69,14 @@ import {
 } from '@/services/conversationStorage';
 import { debugLogger } from '@/services/debugLogger';
 import { mcpManager } from '@/services/mcpManager';
-import type { ACPMessage, ACPPlan, ACPServerConfig, ACPToolCall } from '@/types/acp';
+import type {
+  ACPMessage,
+  ACPPermissionKind,
+  ACPPermissionRequest,
+  ACPPlan,
+  ACPServerConfig,
+  ACPToolCall,
+} from '@/types/acp';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
 import Settings from './Settings';
 import Sidebar, { SidebarToggle } from './Sidebar';
@@ -167,6 +181,8 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const [acpServers, setAcpServers] = useState<ACPServerConfig[]>([]);
   const [selectedAcpServer, setSelectedAcpServer] = useState<string | null>(null);
   const [currentAcpSessionId, setCurrentAcpSessionId] = useState<string | null>(null);
+  const [pendingPermissionRequest, setPendingPermissionRequest] =
+    useState<ACPPermissionRequest | null>(null);
 
   // Ref for auto-scrolling to latest messages
   const conversationRef = useRef<HTMLDivElement>(null);
@@ -512,6 +528,34 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     });
   };
 
+  const handlePermissionResponse = async (
+    requestId: string,
+    optionId: string,
+    kind: ACPPermissionKind
+  ) => {
+    if (!currentAcpSessionId) {
+      debugLogger.error('acp', '❌ No active ACP session for permission response');
+      console.error('No active ACP session');
+      return;
+    }
+
+    try {
+      debugLogger.info('acp', `📤 Sending permission response: ${kind}`, { requestId, optionId });
+
+      // Send response to agent via acpManager
+      await acpManager.respondToPermission(currentAcpSessionId, requestId, optionId);
+
+      debugLogger.info('acp', '✅ Permission response sent successfully');
+      setPendingPermissionRequest(null);
+    } catch (error) {
+      debugLogger.error('acp', '❌ Failed to send permission response:', error);
+      console.error('Permission response error:', error);
+      alert(
+        `Failed to respond to permission request: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  };
+
   const sendAcpMessage = async (content: string) => {
     if (!selectedAcpServer) {
       alert('Please select an ACP agent');
@@ -639,6 +683,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
           case 'thought':
             debugLogger.info('acp', '💭 Agent thought:', update.thought);
+            break;
+
+          case 'permission_request':
+            if (update.permissionRequest) {
+              debugLogger.info('acp', '🔐 Permission request received:', update.permissionRequest);
+              setPendingPermissionRequest(update.permissionRequest);
+            }
             break;
         }
       }
@@ -1837,6 +1888,88 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           </div>
         </div>
       </div>
+
+      {/* Permission Request Dialog */}
+      {pendingPermissionRequest && (
+        <Dialog
+          open={!!pendingPermissionRequest}
+          onOpenChange={(open) => {
+            if (!open) {
+              // User closed dialog - treat as reject once
+              const rejectOption = pendingPermissionRequest.options.find(
+                (opt) => opt.kind === 'reject_once'
+              );
+              if (rejectOption) {
+                handlePermissionResponse(
+                  pendingPermissionRequest.requestId,
+                  rejectOption.id,
+                  'reject_once'
+                );
+              }
+              setPendingPermissionRequest(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{pendingPermissionRequest.title}</DialogTitle>
+              {pendingPermissionRequest.description && (
+                <DialogDescription>{pendingPermissionRequest.description}</DialogDescription>
+              )}
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {/* File Path */}
+              {pendingPermissionRequest.path && (
+                <div className="rounded-lg bg-muted p-3">
+                  <div className="text-xs font-semibold text-muted-foreground mb-1">File Path</div>
+                  <code className="text-sm">{pendingPermissionRequest.path}</code>
+                </div>
+              )}
+
+              {/* Diff Preview */}
+              {pendingPermissionRequest.diff && (
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs font-semibold text-muted-foreground mb-2">Changes</div>
+                  <div className="font-mono text-xs space-y-1 max-h-[300px] overflow-y-auto">
+                    {pendingPermissionRequest.diff.oldText && (
+                      <div className="text-red-600 dark:text-red-400">
+                        - {pendingPermissionRequest.diff.oldText}
+                      </div>
+                    )}
+                    <div className="text-green-600 dark:text-green-400">
+                      + {pendingPermissionRequest.diff.newText}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Permission Options */}
+              <div className="grid grid-cols-2 gap-2">
+                {pendingPermissionRequest.options.map((option) => (
+                  <Button
+                    key={option.id}
+                    variant={option.kind.startsWith('allow') ? 'default' : 'destructive'}
+                    onClick={() =>
+                      handlePermissionResponse(
+                        pendingPermissionRequest.requestId,
+                        option.id,
+                        option.kind
+                      )
+                    }
+                    className="w-full flex flex-col items-center justify-center h-auto py-3"
+                  >
+                    <span className="font-semibold">{option.label}</span>
+                    {option.description && (
+                      <span className="text-xs opacity-70 mt-1">{option.description}</span>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

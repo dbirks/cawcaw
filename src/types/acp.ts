@@ -276,7 +276,8 @@ export type ACPUpdateType =
   | 'tool_call_update' // Tool call status changed
   | 'plan' // Agent plan created/updated
   | 'resource' // Resource block
-  | 'thought'; // Agent reasoning
+  | 'thought' // Agent reasoning
+  | 'permission_request'; // Permission request from agent
 
 /**
  * Streaming update from session/update notification
@@ -287,6 +288,7 @@ export interface ACPUpdate {
   toolCall?: ACPToolCall; // For tool_call, tool_call_update
   plan?: ACPPlan; // For plan
   thought?: string; // For thought
+  permissionRequest?: ACPPermissionRequest; // For permission_request
   timestamp?: number;
 }
 

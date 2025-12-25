@@ -654,21 +654,18 @@ class ACPManager {
   /**
    * Respond to permission request
    */
-  async respondToPermission(requestId: string, optionId: string): Promise<void> {
+  async respondToPermission(sessionId: string, requestId: string, optionId: string): Promise<void> {
     const request = this.pendingPermissions.get(requestId);
 
     if (!request) {
-      throw new Error(`Permission request ${requestId} not found`);
+      debugLogger.warn('mcp', `Permission request ${requestId} not found in pending map`);
+      // Don't throw error - permission might have been handled already
     }
 
-    const session = this.sessions.get(
-      Array.from(this.sessions.values()).find(
-        (s) => s.serverId === request.toolCallId.split('_')[0]
-      )?.id || ''
-    );
+    const session = this.sessions.get(sessionId);
 
     if (!session) {
-      throw new Error('Session not found for permission request');
+      throw new Error(`Session ${sessionId} not found`);
     }
 
     const client = this.clients.get(session.serverId);
@@ -682,7 +679,10 @@ class ACPManager {
     // Remove from pending
     this.pendingPermissions.delete(requestId);
 
-    debugLogger.info('mcp', `Responded to permission: ${requestId}`);
+    debugLogger.info('mcp', `Responded to permission: ${requestId}`, {
+      sessionId,
+      optionId,
+    });
   }
 
   /**

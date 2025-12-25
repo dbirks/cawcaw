@@ -48,15 +48,27 @@ class DebugLogger {
     });
   }
 
-  info(category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat', message: string, data?: unknown) {
+  info(
+    category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat',
+    message: string,
+    data?: unknown
+  ) {
     this.log('info', category, message, data);
   }
 
-  warn(category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat', message: string, data?: unknown) {
+  warn(
+    category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat',
+    message: string,
+    data?: unknown
+  ) {
     this.log('warn', category, message, data);
   }
 
-  error(category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat', message: string, data?: unknown) {
+  error(
+    category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat',
+    message: string,
+    data?: unknown
+  ) {
     this.log('error', category, message, data);
   }
 
@@ -64,7 +76,9 @@ class DebugLogger {
     return [...this.logs];
   }
 
-  getLogsByCategory(category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat'): DebugLogEntry[] {
+  getLogsByCategory(
+    category: 'oauth' | 'mcp' | 'acp' | 'general' | 'audio' | 'chat'
+  ): DebugLogEntry[] {
     return this.logs.filter((log) => log.category === category);
   }
 
