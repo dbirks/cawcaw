@@ -160,31 +160,77 @@ class ACPAgentClient {
     sessionId: string,
     messages: ACPMessage[]
   ): AsyncGenerator<ACPUpdate, ACPPromptResult, undefined> {
-    // For now, we'll use polling or SSE for streaming
-    // This is a simplified implementation - in production, you'd want proper SSE or WebSocket
+    // Create a queue for updates
+    const updateQueue: ACPUpdate[] = [];
+    let completed = false;
+    let finalResult: ACPPromptResult | null = null;
+    let error: Error | null = null;
 
-    const response = await this.makeRequest<ACPPromptResult>('session/prompt', {
-      sessionId,
-      messages,
+    // Subscribe to notifications
+    const unsubscribe = this.onNotification((notification) => {
+      debugLogger.info('acp', `Notification: ${notification.method}`, notification.params);
+
+      // Handle session/update notifications
+      if (notification.method === 'session/update' && notification.params) {
+        const params = notification.params as { sessionId: string; update: ACPUpdate };
+
+        // Only process updates for this session
+        if (params.sessionId === sessionId) {
+          updateQueue.push(params.update);
+        }
+      }
+      // Handle session/prompt_complete notification
+      else if (notification.method === 'session/prompt_complete' && notification.params) {
+        const params = notification.params as { sessionId: string; result: ACPPromptResult };
+
+        if (params.sessionId === sessionId) {
+          finalResult = params.result;
+          completed = true;
+        }
+      }
     });
 
-    if (response.error) {
-      throw new Error(`Prompt failed: ${response.error.message}`);
-    }
+    try {
+      // Send prompt request (non-blocking)
+      this.makeRequest('session/prompt', {
+        sessionId,
+        messages,
+      }).catch((err) => {
+        error = err;
+        completed = true;
+      });
 
-    // TODO: Implement proper streaming with SSE or WebSocket
-    // For now, yield a stub update and return the final result
-    // In Phase 3, this will properly stream updates via SSE
-    yield {
-      type: 'agent_message_chunk' as const,
-      text: '',
-    };
+      // Stream updates as they arrive
+      while (!completed || updateQueue.length > 0) {
+        // Check for errors
+        if (error) {
+          throw error;
+        }
 
-    return (
-      response.result ?? {
-        stopReason: 'end_turn' as const,
+        // Yield all queued updates
+        while (updateQueue.length > 0) {
+          const update = updateQueue.shift();
+          if (update) {
+            yield update;
+          }
+        }
+
+        // If not completed, wait a bit before checking again
+        if (!completed) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
       }
-    );
+
+      // Return final result
+      return (
+        finalResult ?? {
+          stopReason: 'end_turn' as const,
+        }
+      );
+    } finally {
+      // Cleanup notification subscription
+      unsubscribe();
+    }
   }
 
   /**

@@ -699,6 +699,32 @@ export default function Settings({ onClose }: SettingsProps) {
     }
   };
 
+  // Quick Setup: Add preset MCP server
+  const handleAddPresetServer = async (preset: {
+    name: string;
+    url: string;
+    description: string;
+    transportType: 'http-streamable' | 'sse';
+  }) => {
+    try {
+      // Test connection to discover OAuth requirements
+      const result = await mcpManager.testServerWithOAuthDiscovery(preset);
+
+      const serverConfig = {
+        ...preset,
+        enabled: true,
+        requiresAuth: result.requiresAuth,
+        oauthDiscovery: result.oauthDiscovery,
+      };
+
+      await mcpManager.addServer(serverConfig);
+      await loadSettings();
+    } catch (error) {
+      console.error('Failed to add preset server:', error);
+      alert(`Failed to add ${preset.name}. Please check your internet connection and try again.`);
+    }
+  };
+
   // ACP Server Functions
   const handleAddAcpServer = async () => {
     if (!newAcpServer.name.trim() || !newAcpServer.url.trim()) {
@@ -1343,6 +1369,55 @@ export default function Settings({ onClose }: SettingsProps) {
               <div className="flex-1 min-h-0">
                 <ScrollArea className="h-full">
                   <div className="space-y-3 pr-4 safe-x safe-bottom">
+                    {/* Quick Setup Section */}
+                    <div>
+                      <h2 className="text-lg font-semibold mb-3">Quick Setup</h2>
+                      <Card>
+                        <CardContent className="p-4">
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Add popular MCP servers with one click. OAuth authentication will be
+                            configured automatically.
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Sentry MCP Server */}
+                            <Card className="border-2 hover:border-primary/50 transition-colors">
+                              <CardContent className="p-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-1">
+                                    <h3 className="font-semibold mb-1">Sentry Error Tracking</h3>
+                                    <p className="text-xs text-muted-foreground mb-3">
+                                      AI-powered error analysis and root cause detection with 18+
+                                      tools
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                      <Lock className="h-3 w-3" />
+                                      <span>OAuth Required</span>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={() =>
+                                        handleAddPresetServer({
+                                          name: 'Sentry Error Tracking',
+                                          url: 'https://mcp.sentry.dev/mcp',
+                                          description:
+                                            'AI-powered error analysis and root cause detection',
+                                          transportType: 'http-streamable',
+                                        })
+                                      }
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add Server
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
                     {/* Configured Servers */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
