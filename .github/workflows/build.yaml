@@ -73,6 +73,7 @@ jobs:
         echo "✅ React build complete"
       env:
         BUILD_NUMBER: ${{ steps.build_number.outputs.build_number }}
+        VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
         
     - name: 💎 Setup Ruby
       uses: ruby/setup-ruby@v1
