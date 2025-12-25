@@ -331,6 +331,14 @@ export default function Settings({ onClose }: SettingsProps) {
       const acpConfigs = await acpManager.loadConfigurations();
       setAcpServers(acpConfigs);
       setAcpServerStatuses(new Map(acpManager.getAllServerStatuses().map((s) => [s.id, s])));
+
+      // Automatically connect to enabled ACP servers
+      try {
+        await acpManager.connectToEnabledServers();
+        debugLogger.info('mcp', 'Connected to enabled ACP servers on startup');
+      } catch (error) {
+        debugLogger.warn('mcp', 'Failed to connect to some ACP servers:', error);
+      }
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -699,7 +707,40 @@ export default function Settings({ onClose }: SettingsProps) {
     }
 
     try {
-      await acpManager.addServer(newAcpServer);
+      debugLogger.info('mcp', 'Adding new ACP server:', newAcpServer);
+
+      // Test connection and discover agent card before adding
+      const testResult = await acpManager.testConnection(newAcpServer);
+
+      const serverConfig = {
+        ...newAcpServer,
+        agentCard: testResult.agentCard,
+        requiresAuth: testResult.requiresAuth,
+        oauthDiscovery: testResult.oauthDiscovery,
+      };
+
+      const addedServer = await acpManager.addServer(serverConfig);
+
+      debugLogger.info('mcp', `ACP server added: ${addedServer.id}`, {
+        success: testResult.success,
+        requiresAuth: testResult.requiresAuth,
+      });
+
+      // Try to connect if enabled and connection test was successful
+      if (addedServer.enabled && testResult.success && !testResult.requiresAuth) {
+        try {
+          await acpManager.connectToServer(addedServer.id);
+          debugLogger.info('mcp', `Auto-connected to new ACP server: ${addedServer.name}`);
+        } catch (error) {
+          debugLogger.warn(
+            'mcp',
+            `Failed to auto-connect to new server: ${addedServer.name}`,
+            error
+          );
+          // Don't fail the add operation if connection fails
+        }
+      }
+
       setNewAcpServer({
         name: '',
         url: '',
@@ -708,9 +749,24 @@ export default function Settings({ onClose }: SettingsProps) {
       });
       setShowAcpAddDialog(false);
       await loadSettings();
+
+      if (testResult.requiresAuth) {
+        alert(
+          `Server added successfully!\n\nOAuth authentication is required to connect.\nClick the OAuth button (🔓) to authenticate.`
+        );
+      } else if (testResult.success) {
+        alert('Server added and connected successfully!');
+      } else {
+        alert(
+          `Server added, but connection test failed.\n\nError: ${testResult.error || 'Unknown error'}`
+        );
+      }
     } catch (error) {
       console.error('Failed to add ACP server:', error);
-      alert('Failed to add server. Please check the configuration.');
+      debugLogger.error('mcp', 'Failed to add ACP server:', error);
+      alert(
+        `Failed to add server: ${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease check the URL and try again.`
+      );
     }
   };
 
@@ -768,9 +824,22 @@ export default function Settings({ onClose }: SettingsProps) {
   const handleToggleAcpServer = async (serverId: string, enabled: boolean) => {
     try {
       await acpManager.updateServer(serverId, { enabled });
+
+      // If enabling the server, try to connect automatically
+      if (enabled) {
+        try {
+          await acpManager.connectToServer(serverId);
+          debugLogger.info('mcp', `Auto-connected to ACP server: ${serverId}`);
+        } catch (error) {
+          debugLogger.warn('mcp', `Failed to auto-connect to ACP server: ${serverId}`, error);
+          // Don't fail the toggle operation if connection fails
+        }
+      }
+
       await loadSettings();
     } catch (error) {
       console.error('Failed to update ACP server:', error);
+      alert('Failed to toggle server. Please try again.');
     }
   };
 
@@ -792,16 +861,45 @@ export default function Settings({ onClose }: SettingsProps) {
         alert('Server not found');
         return;
       }
+
+      debugLogger.info('mcp', `Testing ACP connection to: ${server.name}`, { url: server.url });
+
       const result = await acpManager.testConnection(server);
+
       if (result.success) {
-        alert('Connection successful!');
+        // Update server with discovered agent card info
+        if (result.agentCard) {
+          await acpManager.updateServer(serverId, {
+            agentCard: result.agentCard,
+          });
+          debugLogger.info('mcp', `Agent card discovered for ${server.name}:`, result.agentCard);
+        }
+
+        const latencyInfo = result.latency ? ` (${result.latency}ms)` : '';
+        const agentInfo = result.agentCard
+          ? `\n\nAgent: ${result.agentCard.name} v${result.agentCard.version}`
+          : '';
+
+        alert(`Connection successful!${latencyInfo}${agentInfo}`);
+      } else if (result.requiresAuth) {
+        // Update server to mark it as requiring auth
+        await acpManager.updateServer(serverId, {
+          requiresAuth: true,
+          oauthDiscovery: result.oauthDiscovery,
+        });
+
+        alert(
+          `Connection requires OAuth authentication.\n\nClick the OAuth button (🔓) to authenticate.`
+        );
       } else {
         alert(`Connection failed: ${result.error || 'Unknown error'}`);
       }
+
       await loadSettings();
     } catch (error) {
       console.error('Failed to test ACP connection:', error);
-      alert('Connection test failed');
+      debugLogger.error('mcp', 'ACP connection test error:', error);
+      alert(`Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

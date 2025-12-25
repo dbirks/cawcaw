@@ -114,7 +114,11 @@ class ACPAgentClient {
       throw new Error(`Initialize failed: ${response.error.message}`);
     }
 
-    return response.result!;
+    if (!response.result) {
+      throw new Error('Initialize failed: No result returned');
+    }
+
+    return response.result;
   }
 
   /**
@@ -130,7 +134,12 @@ class ACPAgentClient {
       throw new Error(`Create session failed: ${response.error.message}`);
     }
 
-    this.sessionId = response.result?.sessionId;
+    const sessionId = response.result?.sessionId;
+    if (!sessionId) {
+      throw new Error('Session ID not returned from server');
+    }
+
+    this.sessionId = sessionId;
     debugLogger.info('mcp', `Session created: ${this.sessionId}`);
 
     return this.sessionId;
