@@ -11,13 +11,12 @@ import type { ACPNotification, ACPRequest, ACPResponse } from '@/types/acp';
 /**
  * WebSocket connection states
  */
-export enum ACPWebSocketState {
-  DISCONNECTED = 'disconnected',
-  CONNECTING = 'connecting',
-  CONNECTED = 'connected',
-  RECONNECTING = 'reconnecting',
-  CLOSED = 'closed',
-}
+export type ACPWebSocketState =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'closed';
 
 /**
  * Pending request tracking
@@ -25,7 +24,7 @@ export enum ACPWebSocketState {
 interface PendingRequest {
   resolve: (value: ACPResponse) => void;
   reject: (error: Error) => void;
-  timeout: NodeJS.Timeout;
+  timeout: ReturnType<typeof setTimeout>;
 }
 
 /**
@@ -51,11 +50,11 @@ export interface ACPWebSocketConfig {
 export class ACPWebSocketClient {
   private config: Required<ACPWebSocketConfig>;
   private ws: WebSocket | null = null;
-  private state: ACPWebSocketState = ACPWebSocketState.DISCONNECTED;
+  private state: ACPWebSocketState = 'disconnected';
   private pendingRequests: Map<string | number, PendingRequest> = new Map();
   private notificationHandlers: Set<NotificationHandler> = new Set();
   private reconnectAttempts = 0;
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private requestIdCounter = 0;
 
   constructor(config: ACPWebSocketConfig) {
@@ -81,7 +80,7 @@ export class ACPWebSocketClient {
    * Check if connected
    */
   isConnected(): boolean {
-    return this.state === ACPWebSocketState.CONNECTED && this.ws?.readyState === WebSocket.OPEN;
+    return this.state === 'connected' && this.ws?.readyState === WebSocket.OPEN;
   }
 
   /**
@@ -106,21 +105,21 @@ export class ACPWebSocketClient {
    * Connect to WebSocket server
    */
   async connect(): Promise<void> {
-    if (this.state === ACPWebSocketState.CONNECTING || this.isConnected()) {
+    if (this.state === 'connecting' || this.isConnected()) {
       debugLogger.warn('acp', 'Already connected or connecting');
       return;
     }
 
     return new Promise((resolve, reject) => {
       try {
-        this.state = ACPWebSocketState.CONNECTING;
+        this.state = 'connecting';
         debugLogger.info('acp', `Connecting to WebSocket: ${this.config.url}`);
 
         this.ws = new WebSocket(this.config.url);
 
         // Connection opened
         this.ws.onopen = () => {
-          this.state = ACPWebSocketState.CONNECTED;
+          this.state = 'connected';
           this.reconnectAttempts = 0;
           debugLogger.info('acp', 'WebSocket connected');
           resolve();
@@ -134,7 +133,7 @@ export class ACPWebSocketClient {
         // Connection error
         this.ws.onerror = (error) => {
           debugLogger.error('acp', 'WebSocket error:', error);
-          if (this.state === ACPWebSocketState.CONNECTING) {
+          if (this.state === 'connecting') {
             reject(new Error('Failed to connect to WebSocket'));
           }
         };
@@ -146,7 +145,7 @@ export class ACPWebSocketClient {
         };
       } catch (error) {
         debugLogger.error('acp', 'WebSocket connection error:', error);
-        this.state = ACPWebSocketState.DISCONNECTED;
+        this.state = 'disconnected';
         reject(error);
       }
     });
@@ -221,8 +220,8 @@ export class ACPWebSocketClient {
    * Handle WebSocket disconnect
    */
   private handleDisconnect(): void {
-    const wasConnected = this.state === ACPWebSocketState.CONNECTED;
-    this.state = ACPWebSocketState.DISCONNECTED;
+    const wasConnected = this.state === 'connected';
+    this.state = 'disconnected';
     this.ws = null;
 
     // Reject all pending requests
@@ -246,7 +245,7 @@ export class ACPWebSocketClient {
       return; // Already scheduled
     }
 
-    this.state = ACPWebSocketState.RECONNECTING;
+    this.state = 'reconnecting';
     const delay = this.getReconnectDelay();
 
     debugLogger.info(
@@ -341,7 +340,7 @@ export class ACPWebSocketClient {
       this.ws = null;
     }
 
-    this.state = ACPWebSocketState.CLOSED;
+    this.state = 'closed';
 
     // Reject all pending requests
     for (const [_id, pending] of this.pendingRequests.entries()) {

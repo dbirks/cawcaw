@@ -707,12 +707,17 @@ export default function Settings({ onClose }: SettingsProps) {
     transportType: 'http-streamable' | 'sse';
   }) => {
     try {
-      // Test connection to discover OAuth requirements
-      const result = await mcpManager.testServerWithOAuthDiscovery(preset);
-
-      const serverConfig = {
+      // Create a partial config for testing
+      const testConfig = {
         ...preset,
         enabled: true,
+      };
+
+      // Test connection to discover OAuth requirements
+      const result = await mcpManager.testServerWithOAuthDiscovery(testConfig);
+
+      const serverConfig = {
+        ...testConfig,
         requiresAuth: result.requiresAuth,
         oauthDiscovery: result.oauthDiscovery,
       };
