@@ -2,20 +2,25 @@
  * Filesystem Cache Implementation
  *
  * Provides a Cache API-like interface using Capacitor Filesystem for persistent storage.
- * Model files are stored in iOS Application Support directory (Directory.Data) which
- * persists across app updates, unlike Cache API which can be cleared by the system.
+ * Model files are stored in iOS Application Support directory (Directory.Library) which
+ * persists across app updates but is NOT backed up to iCloud, unlike Cache API which
+ * can be cleared by the system.
  *
  * Directory structure:
- * Data/transformers-cache/
+ * Library/transformers-cache/
  *   ├── metadata.json (URL to filename mapping + headers)
  *   └── files/
  *       ├── <hash1>.bin (cached file 1)
  *       ├── <hash2>.bin (cached file 2)
  *       └── ...
+ *
+ * Migration: On first run after update, existing cache is copied from Data → Library.
+ * Backup: metadata.json is backed up to Preferences for redundancy.
  */
 
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
+import { Preferences } from '@capacitor/preferences';
 
 // ============================================================================
 // Constants
@@ -24,6 +29,8 @@ import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 const CACHE_DIR = 'transformers-cache';
 const FILES_DIR = `${CACHE_DIR}/files`;
 const METADATA_FILE = `${CACHE_DIR}/metadata.json`;
+const METADATA_BACKUP_KEY = 'cache-metadata-backup';
+const MIGRATION_COMPLETE_KEY = 'cache-migration-complete';
 
 // ============================================================================
 // Types
@@ -53,6 +60,11 @@ interface CacheMetadata {
 // ============================================================================
 
 /**
+ * Filesystem readiness flag - ensures Capacitor is initialized before cache operations
+ */
+let filesystemReady = false;
+
+/**
  * Simple hash function to create safe filenames from URLs
  * Uses a deterministic hash to ensure the same URL always maps to the same filename
  */
@@ -67,13 +79,120 @@ function urlToFilename(url: string): string {
 }
 
 /**
- * Read metadata file, creating it if it doesn't exist
+ * Ensure filesystem is ready and perform one-time migration if needed
+ */
+async function ensureFilesystemReady(): Promise<void> {
+  if (filesystemReady) {
+    return;
+  }
+
+  console.log('[FilesystemCache] Initializing filesystem...');
+
+  // Ensure cache directory exists in Library
+  await ensureCacheDirectory();
+
+  // Check if migration from Data → Library is needed
+  const migrationComplete = await Preferences.get({ key: MIGRATION_COMPLETE_KEY });
+  if (!migrationComplete.value) {
+    await migrateFromDataToLibrary();
+    await Preferences.set({ key: MIGRATION_COMPLETE_KEY, value: 'true' });
+  }
+
+  filesystemReady = true;
+  console.log('[FilesystemCache] Filesystem ready');
+}
+
+/**
+ * Migrate cache from Directory.Data to Directory.Library (one-time operation)
+ */
+async function migrateFromDataToLibrary(): Promise<void> {
+  console.log('[FilesystemCache] Checking for migration from Data → Library...');
+
+  try {
+    // Try to read metadata from old Data directory
+    const oldMetadata = await Filesystem.readFile({
+      path: METADATA_FILE,
+      directory: Directory.Data,
+      encoding: Encoding.UTF8,
+    });
+
+    console.log('[FilesystemCache] Found cache in Data directory, migrating...');
+
+    // Parse metadata
+    let data: string;
+    if (typeof oldMetadata.data === 'string') {
+      data = oldMetadata.data;
+    } else {
+      data = await oldMetadata.data.text();
+    }
+    const metadata: CacheMetadata = JSON.parse(data);
+
+    // Copy each cached file from Data → Library
+    let migratedCount = 0;
+    for (const entry of Object.values(metadata.entries)) {
+      try {
+        const oldPath = `${FILES_DIR}/${entry.filename}`;
+
+        // Read from Data directory
+        const fileData = await Filesystem.readFile({
+          path: oldPath,
+          directory: Directory.Data,
+        });
+
+        // Write to Library directory
+        await Filesystem.writeFile({
+          path: oldPath,
+          directory: Directory.Library,
+          data: fileData.data,
+          recursive: true,
+        });
+
+        migratedCount++;
+        console.log(`[FilesystemCache] Migrated file: ${entry.filename}`);
+      } catch (error) {
+        console.error(`[FilesystemCache] Failed to migrate ${entry.filename}:`, error);
+      }
+    }
+
+    // Write metadata to Library directory
+    await Filesystem.writeFile({
+      path: METADATA_FILE,
+      directory: Directory.Library,
+      data: JSON.stringify(metadata, null, 2),
+      encoding: Encoding.UTF8,
+      recursive: true,
+    });
+
+    // Backup metadata to Preferences
+    await Preferences.set({ key: METADATA_BACKUP_KEY, value: JSON.stringify(metadata) });
+
+    console.log(`[FilesystemCache] Migration complete: ${migratedCount} files migrated`);
+
+    // Optional: Delete old cache from Data directory to free space
+    try {
+      await Filesystem.rmdir({
+        path: CACHE_DIR,
+        directory: Directory.Data,
+        recursive: true,
+      });
+      console.log('[FilesystemCache] Cleaned up old cache from Data directory');
+    } catch (error) {
+      console.warn('[FilesystemCache] Failed to clean up old cache:', error);
+    }
+  } catch (_error) {
+    // No cache in Data directory, this is normal for fresh installs
+    console.log('[FilesystemCache] No cache found in Data directory, skipping migration');
+  }
+}
+
+/**
+ * Read metadata file, with Preferences backup fallback
  */
 async function readMetadata(): Promise<CacheMetadata> {
   try {
     const result = await Filesystem.readFile({
       path: METADATA_FILE,
-      directory: Directory.Data,
+      directory: Directory.Library,
       encoding: Encoding.UTF8,
     });
 
@@ -87,7 +206,21 @@ async function readMetadata(): Promise<CacheMetadata> {
     }
     return JSON.parse(data);
   } catch (_error) {
-    // File doesn't exist or is corrupted, return empty metadata
+    console.log('[FilesystemCache] Failed to read metadata from filesystem, trying backup...');
+
+    // Try to restore from Preferences backup
+    try {
+      const backup = await Preferences.get({ key: METADATA_BACKUP_KEY });
+      if (backup.value) {
+        console.log('[FilesystemCache] Restored metadata from Preferences backup');
+        return JSON.parse(backup.value);
+      }
+    } catch (backupError) {
+      console.error('[FilesystemCache] Failed to restore from backup:', backupError);
+    }
+
+    // Both filesystem and backup failed, return empty metadata
+    console.log('[FilesystemCache] No metadata found, starting fresh');
     return {
       version: 1,
       entries: {},
@@ -96,16 +229,20 @@ async function readMetadata(): Promise<CacheMetadata> {
 }
 
 /**
- * Write metadata file
+ * Write metadata file with Preferences backup
  */
 async function writeMetadata(metadata: CacheMetadata): Promise<void> {
+  // Write to filesystem (primary storage)
   await Filesystem.writeFile({
     path: METADATA_FILE,
-    directory: Directory.Data,
+    directory: Directory.Library,
     data: JSON.stringify(metadata, null, 2),
     encoding: Encoding.UTF8,
     recursive: true,
   });
+
+  // Backup to Preferences (redundancy)
+  await Preferences.set({ key: METADATA_BACKUP_KEY, value: JSON.stringify(metadata) });
 }
 
 /**
@@ -115,7 +252,7 @@ async function ensureCacheDirectory(): Promise<void> {
   try {
     await Filesystem.mkdir({
       path: FILES_DIR,
-      directory: Directory.Data,
+      directory: Directory.Library,
       recursive: true,
     });
   } catch (error) {
@@ -169,6 +306,7 @@ export async function isCached(url: string): Promise<boolean> {
   }
 
   try {
+    await ensureFilesystemReady();
     const metadata = await readMetadata();
     const result = url in metadata.entries;
     console.log('[FilesystemCache] isCached RESULT', {
@@ -194,6 +332,7 @@ export async function getCached(url: string): Promise<Response | null> {
   }
 
   try {
+    await ensureFilesystemReady();
     const metadata = await readMetadata();
     const entry = metadata.entries[url];
 
@@ -205,7 +344,7 @@ export async function getCached(url: string): Promise<Response | null> {
     const filePath = `${FILES_DIR}/${entry.filename}`;
     const result = await Filesystem.readFile({
       path: filePath,
-      directory: Directory.Data,
+      directory: Directory.Library,
     });
 
     // Convert base64 data to ArrayBuffer
@@ -263,8 +402,8 @@ export async function setCached(
   }
 
   try {
-    console.log('[FilesystemCache] Ensuring cache directory...');
-    await ensureCacheDirectory();
+    console.log('[FilesystemCache] Ensuring filesystem ready...');
+    await ensureFilesystemReady();
 
     console.log('[FilesystemCache] Cloning response...');
     // Clone response to avoid consuming it

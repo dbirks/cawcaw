@@ -2055,6 +2055,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Add MCP Server</DialogTitle>
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => setShowAddDialog(false)}
@@ -2416,6 +2417,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Edit MCP Server</DialogTitle>
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => setShowEditDialog(false)}
@@ -2720,6 +2722,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Add ACP Agent</DialogTitle>
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => setShowAcpAddDialog(false)}
@@ -2814,6 +2817,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Edit ACP Agent</DialogTitle>
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => setShowAcpEditDialog(false)}
