@@ -217,12 +217,6 @@ export default function Settings({ onClose }: SettingsProps) {
     isEstimate: boolean;
   } | null>(null);
 
-  // Model download progress state
-  const [downloadProgress, setDownloadProgress] = useState<{
-    progress: number;
-    stage: string;
-  } | null>(null);
-
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
   const [isUpdatingKey, setIsUpdatingKey] = useState(false);
@@ -913,37 +907,6 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
       setShowErrorDetails(false); // Reset expanded state
     } finally {
       setIsTestingConnection(false);
-    }
-  };
-
-  // Quick Setup: Add preset MCP server
-  const handleAddPresetServer = async (preset: {
-    name: string;
-    url: string;
-    description: string;
-    transportType: 'http-streamable' | 'sse';
-  }) => {
-    try {
-      // Create a partial config for testing
-      const testConfig = {
-        ...preset,
-        enabled: true,
-      };
-
-      // Test connection to discover OAuth requirements
-      const result = await mcpManager.testServerWithOAuthDiscovery(testConfig);
-
-      const serverConfig = {
-        ...testConfig,
-        requiresAuth: result.requiresAuth,
-        oauthDiscovery: result.oauthDiscovery,
-      };
-
-      await mcpManager.addServer(serverConfig);
-      await loadSettings();
-    } catch (error) {
-      console.error('Failed to add preset server:', error);
-      alert(`Failed to add ${preset.name}. Please check your internet connection and try again.`);
     }
   };
 
@@ -1706,11 +1669,11 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                                 <DialogTitle>Add MCP Server</DialogTitle>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => setShowAddDialog(false)}
-                                  className="h-8 w-8 p-0 rounded-full"
+                                  className="h-10 w-10 p-0 rounded-full"
                                 >
-                                  <X className="h-4 w-4" />
+                                  <X className="h-6 w-6" />
                                   <span className="sr-only">Close</span>
                                 </Button>
                               </div>
@@ -2370,11 +2333,11 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                                 <DialogTitle>Add ACP Agent</DialogTitle>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => setShowAcpAddDialog(false)}
-                                  className="h-8 w-8 p-0 rounded-full"
+                                  className="h-10 w-10 p-0 rounded-full"
                                 >
-                                  <X className="h-4 w-4" />
+                                  <X className="h-6 w-6" />
                                   <span className="sr-only">Close</span>
                                 </Button>
                               </div>
