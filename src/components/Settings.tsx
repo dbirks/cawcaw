@@ -663,6 +663,14 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
           dtype: 'q4f16',
         },
         (progress, stage) => {
+          // Debug logging for progress state updates
+          console.log('[Settings Progress Debug] State update:', {
+            progress,
+            progressPercent: Math.round(progress * 100),
+            stage,
+            timestamp: Date.now(),
+          });
+
           // Update progress state for UI
           setDownloadProgress({ progress, stage });
 

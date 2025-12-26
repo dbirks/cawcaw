@@ -135,15 +135,97 @@ let modelPipeline: TextGenerationPipeline | null = null;
  */
 let isCancelled = false;
 
+/**
+ * Progress tracking for multi-file downloads
+ * Maps file URLs to their individual progress
+ */
+interface FileProgress {
+  loaded: number;
+  total: number;
+  progress: number; // 0-100
+}
+
+const fileProgressMap = new Map<string, FileProgress>();
+let lastReportedProgress = 0;
+
 // ============================================================================
 // Message Handlers
 // ============================================================================
+
+/**
+ * Calculate aggregated progress across all downloaded files
+ * Returns a monotonically increasing progress value (0-1)
+ */
+function calculateAggregatedProgress(): number {
+  if (fileProgressMap.size === 0) {
+    return 0;
+  }
+
+  let totalBytes = 0;
+  let loadedBytes = 0;
+
+  for (const fileProgress of fileProgressMap.values()) {
+    totalBytes += fileProgress.total;
+    loadedBytes += fileProgress.loaded;
+  }
+
+  if (totalBytes === 0) {
+    return 0;
+  }
+
+  // Calculate overall progress (0-1 range)
+  const overallProgress = loadedBytes / totalBytes;
+
+  // Ensure monotonic increase - never report lower progress than before
+  const monotonicProgress = Math.max(overallProgress, lastReportedProgress);
+
+  // Update last reported value
+  lastReportedProgress = monotonicProgress;
+
+  return monotonicProgress;
+}
+
+/**
+ * Debounce timer for progress updates
+ */
+let progressDebounceTimer: NodeJS.Timeout | null = null;
+let hasPendingProgressUpdate = false;
+
+/**
+ * Report progress update to main thread with debouncing
+ * This reduces the frequency of UI updates and prevents visual flashing
+ */
+function reportProgress(progress: number, stage: string): void {
+  hasPendingProgressUpdate = true;
+
+  if (progressDebounceTimer) {
+    clearTimeout(progressDebounceTimer);
+  }
+
+  // Debounce to max 10 updates per second (100ms interval)
+  progressDebounceTimer = setTimeout(() => {
+    if (hasPendingProgressUpdate) {
+      self.postMessage({
+        type: 'load-progress',
+        progress,
+        stage,
+      } satisfies WorkerResponse);
+
+      hasPendingProgressUpdate = false;
+    }
+    progressDebounceTimer = null;
+  }, 100);
+}
 
 /**
  * Load the AI model using Transformers.js
  */
 async function handleLoad(config: LoadConfig): Promise<void> {
   try {
+    // Reset progress tracking state for new download
+    fileProgressMap.clear();
+    lastReportedProgress = 0;
+
     // Load the text generation pipeline with progress callbacks
     // Type assertion needed due to complex union type from pipeline()
     // Using double assertion to work around TypeScript's complex union type issue
@@ -153,24 +235,82 @@ async function handleLoad(config: LoadConfig): Promise<void> {
       progress_callback: (progressData) => {
         // Transform Transformers.js progress format to our protocol
         // ProgressInfo is a union type: InitiateProgressInfo | DownloadProgressInfo | ProgressStatusInfo | DoneProgressInfo | ReadyProgressInfo
-        // Only ProgressStatusInfo has the progress field
-        // CRITICAL: Transformers.js reports progress as 0-100, not 0-1!
-        // We normalize to 0-1 range for consistent internal representation
-        let rawProgress = progressData.status === 'progress' ? progressData.progress : 0;
+        // Only ProgressStatusInfo has the progress field with loaded/total bytes
+        // CRITICAL: Transformers.js reports progress per-file, not overall!
+        // We need to aggregate across all files for smooth UX
 
-        // Clamp to valid 0-100 range and convert to 0-1
-        rawProgress = Math.max(0, Math.min(100, rawProgress));
-        const progress = rawProgress / 100;
+        if (progressData.status === 'progress' && 'file' in progressData) {
+          const fileUrl = progressData.file;
+          const rawProgress = progressData.progress ?? 0;
+          const loaded = 'loaded' in progressData ? (progressData.loaded as number) : 0;
+          const total = 'total' in progressData ? (progressData.total as number) : 0;
 
-        const stage = progressData.status;
+          // Update file progress tracking
+          fileProgressMap.set(fileUrl, {
+            loaded,
+            total,
+            progress: rawProgress,
+          });
 
-        self.postMessage({
-          type: 'load-progress',
-          progress,
-          stage,
-        } satisfies WorkerResponse);
+          // Calculate aggregated progress across all files
+          const aggregatedProgress = calculateAggregatedProgress();
+
+          // Debug logging
+          console.log('[Worker Multi-File Progress]', {
+            file: fileUrl.split('/').pop(), // Just filename for brevity
+            fileProgress: `${rawProgress.toFixed(1)}%`,
+            fileSize: `${(loaded / 1024 / 1024).toFixed(2)}MB / ${(total / 1024 / 1024).toFixed(2)}MB`,
+            filesTracked: fileProgressMap.size,
+            aggregatedProgress: `${(aggregatedProgress * 100).toFixed(2)}%`,
+            isMonotonic: aggregatedProgress >= lastReportedProgress,
+          });
+
+          // Report aggregated progress with debouncing
+          reportProgress(aggregatedProgress, 'downloading');
+        } else if (progressData.status === 'initiate' || progressData.status === 'download') {
+          // File download initiated - report as-is
+          const stage = progressData.status;
+          console.log(`[Worker Progress] ${stage}:`, {
+            file: 'file' in progressData ? progressData.file : 'unknown',
+          });
+
+          reportProgress(lastReportedProgress, stage);
+        } else if (progressData.status === 'done') {
+          // File completed - mark as 100%
+          if ('file' in progressData) {
+            const fileUrl = progressData.file as string;
+            const existingProgress = fileProgressMap.get(fileUrl);
+
+            if (existingProgress) {
+              // Mark file as fully loaded
+              fileProgressMap.set(fileUrl, {
+                loaded: existingProgress.total,
+                total: existingProgress.total,
+                progress: 100,
+              });
+
+              const aggregatedProgress = calculateAggregatedProgress();
+              console.log('[Worker File Completed]', {
+                file: fileUrl.split('/').pop(),
+                aggregatedProgress: `${(aggregatedProgress * 100).toFixed(2)}%`,
+              });
+
+              reportProgress(aggregatedProgress, 'done');
+            }
+          }
+        } else if (progressData.status === 'ready') {
+          // All files loaded - report 100%
+          console.log('[Worker All Files Complete]');
+          reportProgress(1.0, 'ready');
+        }
       },
     })) as unknown as TextGenerationPipeline;
+
+    // Ensure final progress update is sent
+    if (progressDebounceTimer) {
+      clearTimeout(progressDebounceTimer);
+      progressDebounceTimer = null;
+    }
 
     self.postMessage({ type: 'ready' } satisfies WorkerResponse);
   } catch (error) {

@@ -3,9 +3,14 @@
  *
  * Displays detailed download progress for local AI model.
  * Shows progress bar, current stage, download speed, and estimated time.
+ *
+ * Progress smoothing: Optionally interpolates between progress values for
+ * smooth visual transitions. Disabled by default since worker now handles
+ * aggregation and debouncing.
  */
 
 import { Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
@@ -14,6 +19,7 @@ interface LocalAIProgressCardProps {
   stage: string;
   downloadSpeed?: string; // e.g., "2.5 MB/s"
   estimatedTimeRemaining?: string; // e.g., "30s"
+  enableSmoothing?: boolean; // Optional: smooth progress transitions (default: false)
 }
 
 export function LocalAIProgressCard({
@@ -21,10 +27,51 @@ export function LocalAIProgressCard({
   stage,
   downloadSpeed,
   estimatedTimeRemaining,
+  enableSmoothing = false,
 }: LocalAIProgressCardProps) {
+  // Optional smoothing state (disabled by default)
+  const [displayProgress, setDisplayProgress] = useState(progress);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Smooth progress transitions if enabled
+  useEffect(() => {
+    if (!enableSmoothing) {
+      setDisplayProgress(progress);
+      return;
+    }
+
+    // Smoothly interpolate to target progress
+    const animate = () => {
+      setDisplayProgress((current) => {
+        const diff = progress - current;
+
+        // Close enough - snap to target
+        if (Math.abs(diff) < 0.001) {
+          return progress;
+        }
+
+        // Smoothly move towards target (20% per frame)
+        return current + diff * 0.2;
+      });
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [progress, enableSmoothing]);
+
+  // Use smoothed or direct progress based on setting
+  const effectiveProgress = enableSmoothing ? displayProgress : progress;
+
   // Ensure progress is always valid (0-100%)
   // Clamp to 0-1 range first, then convert to percentage
-  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const clampedProgress = Math.max(0, Math.min(1, effectiveProgress));
   const progressPercent = Math.round(clampedProgress * 100);
 
   return (
