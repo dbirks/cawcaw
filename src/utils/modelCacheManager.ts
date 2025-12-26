@@ -25,14 +25,25 @@ export interface CacheStatus {
 export async function isModelCached(
   modelId = 'onnx-community/gemma-3-270m-it-ONNX'
 ): Promise<boolean> {
+  console.log('[ModelCache] isModelCached START', { modelId });
+
   try {
     // Get all cached URLs from filesystem
     const cachedUrls = await filesystemCache.listCached();
 
     // Check if any cached entry contains the model ID
-    return cachedUrls.some((url) => url.includes(modelId));
+    const result = cachedUrls.some((url) => url.includes(modelId));
+
+    console.log('[ModelCache] isModelCached RESULT', {
+      modelId,
+      result,
+      totalCachedUrls: cachedUrls.length,
+      matchingUrls: cachedUrls.filter((url) => url.includes(modelId)),
+    });
+
+    return result;
   } catch (error) {
-    console.error('Failed to check model cache:', error);
+    console.error('[ModelCache] isModelCached FAILED', { modelId, error });
     return false;
   }
 }

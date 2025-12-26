@@ -60,6 +60,14 @@ import {
   getModelCacheStatus,
   getStorageEstimate,
 } from '@/utils/modelCacheManager';
+import type { CachedFileInfo, StorageAnalysis } from '@/utils/storageAnalysis';
+import {
+  analyzeStorage,
+  cleanupOrphanedFiles,
+  clearAllStorage,
+  clearLegacyCache,
+  deleteFile,
+} from '@/utils/storageAnalysis';
 import { webgpuProbe } from '@/utils/webgpuProbe';
 
 interface SettingsProps {
@@ -223,6 +231,11 @@ export default function Settings({ onClose }: SettingsProps) {
     progress: number;
     stage: string;
   } | null>(null);
+
+  // Storage analysis state
+  const [storageAnalysis, setStorageAnalysis] = useState<StorageAnalysis | null>(null);
+  const [_isAnalyzingStorage, setIsAnalyzingStorage] = useState(false);
+  const [_isCleaningStorage, setIsCleaningStorage] = useState(false);
 
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
@@ -633,6 +646,11 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
 
       // Refresh cache status
       await handleRefreshCacheStatus();
+
+      // Refresh storage analysis if available
+      if (storageAnalysis) {
+        await handleAnalyzeStorage();
+      }
     } catch (error) {
       console.error('Failed to clear cache:', error);
       alert(
@@ -641,6 +659,157 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
     } finally {
       setIsClearingCache(false);
     }
+  };
+
+  const handleAnalyzeStorage = async () => {
+    setIsAnalyzingStorage(true);
+    try {
+      const analysis = await analyzeStorage();
+      setStorageAnalysis(analysis);
+      console.log('[Settings] Storage analysis:', analysis);
+    } catch (error) {
+      console.error('Failed to analyze storage:', error);
+      alert(
+        `❌ Failed to analyze storage: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsAnalyzingStorage(false);
+    }
+  };
+
+  const _handleCleanupOrphans = async () => {
+    if (!storageAnalysis || storageAnalysis.orphanedFiles.length === 0) {
+      return;
+    }
+
+    if (
+      !confirm(
+        `Remove ${storageAnalysis.orphanedFiles.length} orphaned files (${storageAnalysis.orphanedSizeFormatted})? These are incomplete downloads or corrupted files.`
+      )
+    ) {
+      return;
+    }
+
+    setIsCleaningStorage(true);
+    try {
+      const deletedCount = await cleanupOrphanedFiles();
+      alert(`✅ Cleaned up ${deletedCount} orphaned files!`);
+
+      // Refresh analysis
+      await handleAnalyzeStorage();
+      await handleRefreshCacheStatus();
+    } catch (error) {
+      console.error('Failed to cleanup orphaned files:', error);
+      alert(`❌ Failed to cleanup: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsCleaningStorage(false);
+    }
+  };
+
+  const _handleClearLegacyCache = async () => {
+    if (!storageAnalysis || storageAnalysis.breakdown.legacyCache === 0) {
+      return;
+    }
+
+    if (
+      !confirm(
+        `Clear legacy cache (${storageAnalysis.breakdownFormatted.legacyCache})? This removes old cached data from a previous app version.`
+      )
+    ) {
+      return;
+    }
+
+    setIsCleaningStorage(true);
+    try {
+      const clearedSize = await clearLegacyCache();
+      alert(`✅ Cleared ${formatBytes(clearedSize)} of legacy cache!`);
+
+      // Refresh analysis
+      await handleAnalyzeStorage();
+      await handleRefreshCacheStatus();
+    } catch (error) {
+      console.error('Failed to clear legacy cache:', error);
+      alert(
+        `❌ Failed to clear legacy cache: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsCleaningStorage(false);
+    }
+  };
+
+  const _handleClearAllStorage = async () => {
+    if (!storageAnalysis) {
+      return;
+    }
+
+    if (
+      !confirm(
+        `Clear ALL cached data (${storageAnalysis.breakdownFormatted.total})? This includes model files, orphaned files, and legacy cache. Models will need to be re-downloaded.`
+      )
+    ) {
+      return;
+    }
+
+    setIsCleaningStorage(true);
+    try {
+      // Unload the model if it's currently loaded
+      if (localAIService.isReady()) {
+        localAIService.unload();
+      }
+
+      const clearedSize = await clearAllStorage();
+      alert(`✅ Cleared ${formatBytes(clearedSize)} of storage!`);
+
+      // Refresh analysis
+      await handleAnalyzeStorage();
+      await handleRefreshCacheStatus();
+    } catch (error) {
+      console.error('Failed to clear all storage:', error);
+      alert(
+        `❌ Failed to clear storage: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsCleaningStorage(false);
+    }
+  };
+
+  const _handleDeleteFile = async (file: CachedFileInfo) => {
+    if (
+      !confirm(
+        `Delete cached file "${file.name}" (${file.sizeFormatted})? It will be re-downloaded when needed.`
+      )
+    ) {
+      return;
+    }
+
+    setIsCleaningStorage(true);
+    try {
+      const deleted = await deleteFile(file.url);
+
+      if (deleted) {
+        alert(`✅ Deleted ${file.name}!`);
+        await handleAnalyzeStorage();
+        await handleRefreshCacheStatus();
+      } else {
+        alert('❌ File not found or already deleted');
+      }
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+      alert(
+        `❌ Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsCleaningStorage(false);
+    }
+  };
+
+  // Helper function to format bytes (local copy)
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / k ** i).toFixed(1)} ${sizes[i]}`;
   };
 
   const handlePredownloadModel = async () => {

@@ -55,12 +55,16 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
       // Clone the response before caching since we'll consume it
       const clonedResponse = response.clone();
 
-      // Cache in background (don't await to avoid blocking)
-      filesystemCache.setCached(url, clonedResponse).catch((error) => {
-        console.error(`[FilesystemCache] Failed to cache ${url}:`, error);
-      });
+      // CRITICAL FIX: Await cache operation to ensure files are written
+      // before model loading completes. This prevents "download complete
+      // but cache shows as empty" bugs.
+      console.log(`[FilesystemCache] Starting cache write for: ${url.substring(0, 100)}`);
+      await filesystemCache.setCached(url, clonedResponse);
+      console.log(`[FilesystemCache] Cache write complete for: ${url.substring(0, 100)}`);
     } catch (error) {
-      console.error(`[FilesystemCache] Error during cache operation:`, error);
+      console.error(`[FilesystemCache] CRITICAL - Failed to cache ${url}:`, error);
+      // Don't throw - allow the response to be used even if caching fails
+      // This ensures download works even if filesystem has issues
     }
   }
 
@@ -155,21 +159,56 @@ let lastReportedProgress = 0;
 /**
  * Calculate aggregated progress across all downloaded files
  * Returns a monotonically increasing progress value (0-1)
+ *
+ * CRITICAL: Only includes files with known sizes (total > 0) to prevent
+ * small files from dominating the progress calculation before large files
+ * report their sizes.
  */
 function calculateAggregatedProgress(): number {
   if (fileProgressMap.size === 0) {
+    console.log('[Progress Debug] No files in map, returning 0');
     return 0;
   }
 
   let totalBytes = 0;
   let loadedBytes = 0;
+  let filesWithKnownSizes = 0;
 
-  for (const fileProgress of fileProgressMap.values()) {
-    totalBytes += fileProgress.total;
-    loadedBytes += fileProgress.loaded;
+  // Debug: Log all files in the map
+  const filesDebug: Array<{
+    file: string;
+    loaded: number;
+    total: number;
+    progress: number;
+    included: boolean;
+  }> = [];
+
+  for (const [fileUrl, fileProgress] of fileProgressMap.entries()) {
+    // CRITICAL FIX: Only include files with known sizes (total > 0)
+    // This prevents small files from completing before large files report sizes,
+    // which would cause progress to jump to 100% prematurely
+    const hasKnownSize = fileProgress.total > 0;
+
+    if (hasKnownSize) {
+      totalBytes += fileProgress.total;
+      loadedBytes += fileProgress.loaded;
+      filesWithKnownSizes++;
+    }
+
+    filesDebug.push({
+      file: fileUrl.split('/').pop() || 'unknown',
+      loaded: fileProgress.loaded,
+      total: fileProgress.total,
+      progress: fileProgress.progress,
+      included: hasKnownSize,
+    });
   }
 
   if (totalBytes === 0) {
+    console.log(
+      '[Progress Debug] Total bytes is 0 (no files with known sizes yet), files:',
+      filesDebug
+    );
     return 0;
   }
 
@@ -178,6 +217,19 @@ function calculateAggregatedProgress(): number {
 
   // Ensure monotonic increase - never report lower progress than before
   const monotonicProgress = Math.max(overallProgress, lastReportedProgress);
+
+  // Comprehensive debug logging
+  console.log('[Progress Debug] Calculation:', {
+    filesInMap: fileProgressMap.size,
+    filesWithKnownSizes,
+    filesDetails: filesDebug,
+    totalBytes,
+    loadedBytes,
+    calculatedProgress: overallProgress,
+    lastReportedProgress,
+    finalProgress: monotonicProgress,
+    isMonotonic: monotonicProgress === lastReportedProgress,
+  });
 
   // Update last reported value
   lastReportedProgress = monotonicProgress;
@@ -239,11 +291,26 @@ async function handleLoad(config: LoadConfig): Promise<void> {
         // CRITICAL: Transformers.js reports progress per-file, not overall!
         // We need to aggregate across all files for smooth UX
 
+        console.log('[Progress Debug] Raw event:', {
+          status: progressData.status,
+          file: 'file' in progressData ? progressData.file : undefined,
+          progress: 'progress' in progressData ? progressData.progress : undefined,
+          loaded: 'loaded' in progressData ? progressData.loaded : undefined,
+          total: 'total' in progressData ? progressData.total : undefined,
+        });
+
         if (progressData.status === 'progress' && 'file' in progressData) {
           const fileUrl = progressData.file;
           const rawProgress = progressData.progress ?? 0;
           const loaded = 'loaded' in progressData ? (progressData.loaded as number) : 0;
           const total = 'total' in progressData ? (progressData.total as number) : 0;
+
+          console.log('[Progress Debug] Processing progress event:', {
+            file: fileUrl.split('/').pop(),
+            rawProgress,
+            loaded,
+            total,
+          });
 
           // Update file progress tracking
           fileProgressMap.set(fileUrl, {
@@ -280,6 +347,11 @@ async function handleLoad(config: LoadConfig): Promise<void> {
           if ('file' in progressData) {
             const fileUrl = progressData.file as string;
             const existingProgress = fileProgressMap.get(fileUrl);
+
+            console.log('[Progress Debug] File done event:', {
+              file: fileUrl.split('/').pop(),
+              existingProgress,
+            });
 
             if (existingProgress) {
               // Mark file as fully loaded

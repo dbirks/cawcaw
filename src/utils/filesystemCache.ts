@@ -156,16 +156,29 @@ function objectToHeaders(obj: Record<string, string>): Headers {
  * Check if a URL is cached
  */
 export async function isCached(url: string): Promise<boolean> {
+  console.log('[FilesystemCache] isCached START', {
+    url,
+    platform: Capacitor.getPlatform(),
+    isNative: Capacitor.isNativePlatform(),
+  });
+
   // On web, always return false since we only use filesystem on native
   if (!Capacitor.isNativePlatform()) {
+    console.log('[FilesystemCache] isCached SKIPPED (web platform)');
     return false;
   }
 
   try {
     const metadata = await readMetadata();
-    return url in metadata.entries;
+    const result = url in metadata.entries;
+    console.log('[FilesystemCache] isCached RESULT', {
+      url: url.substring(0, 100), // Truncate for readability
+      result,
+      totalEntries: Object.keys(metadata.entries).length,
+    });
+    return result;
   } catch (error) {
-    console.error('Failed to check cache:', error);
+    console.error('[FilesystemCache] isCached FAILED', { url, error });
     return false;
   }
 }
@@ -237,20 +250,35 @@ export async function setCached(
   response: Response,
   onProgress?: (progress: number) => void
 ): Promise<void> {
+  console.log('[FilesystemCache] setCached START', {
+    url: url.substring(0, 100), // Truncate for readability
+    platform: Capacitor.getPlatform(),
+    isNative: Capacitor.isNativePlatform(),
+  });
+
   // On web, skip caching since we only use filesystem on native
   if (!Capacitor.isNativePlatform()) {
+    console.log('[FilesystemCache] setCached SKIPPED (web platform)');
     return;
   }
 
   try {
+    console.log('[FilesystemCache] Ensuring cache directory...');
     await ensureCacheDirectory();
 
+    console.log('[FilesystemCache] Cloning response...');
     // Clone response to avoid consuming it
     const clonedResponse = response.clone();
 
+    console.log('[FilesystemCache] Converting to ArrayBuffer...');
     // Get response body as ArrayBuffer
     const arrayBuffer = await clonedResponse.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
+
+    console.log('[FilesystemCache] Converting to base64...', {
+      sizeBytes: arrayBuffer.byteLength,
+      sizeMB: (arrayBuffer.byteLength / 1024 / 1024).toFixed(2),
+    });
 
     // Convert to base64 for Capacitor Filesystem
     // Note: This increases size by ~33% but is required by Capacitor
@@ -260,10 +288,20 @@ export async function setCached(
         .join('')
     );
 
+    console.log('[FilesystemCache] Base64 conversion complete', {
+      base64SizeMB: (base64Data.length / 1024 / 1024).toFixed(2),
+    });
+
     // Generate filename and prepare entry
     const filename = urlToFilename(url);
     const filePath = `${FILES_DIR}/${filename}`;
     const headers = headersToObject(clonedResponse.headers);
+
+    console.log('[FilesystemCache] Writing file to filesystem...', {
+      filename,
+      path: filePath,
+      directory: Directory.Data,
+    });
 
     // Write file to filesystem
     await Filesystem.writeFile({
@@ -273,6 +311,9 @@ export async function setCached(
       recursive: true,
     });
 
+    console.log('[FilesystemCache] File written successfully');
+
+    console.log('[FilesystemCache] Updating metadata...');
     // Update metadata
     const metadata = await readMetadata();
     metadata.entries[url] = {
@@ -284,12 +325,27 @@ export async function setCached(
     };
     await writeMetadata(metadata);
 
+    console.log('[FilesystemCache] Metadata updated', {
+      totalEntries: Object.keys(metadata.entries).length,
+    });
+
     // Report completion
     if (onProgress) {
       onProgress(1);
     }
+
+    console.log('[FilesystemCache] setCached SUCCESS', {
+      url: url.substring(0, 100),
+      filename,
+      sizeBytes: arrayBuffer.byteLength,
+    });
   } catch (error) {
-    console.error('Failed to cache response:', error);
+    console.error('[FilesystemCache] setCached FAILED', {
+      url: url.substring(0, 100),
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     throw error;
   }
 }
@@ -351,16 +407,27 @@ export async function clearCache(): Promise<void> {
  * List all cached URLs
  */
 export async function listCached(): Promise<string[]> {
+  console.log('[FilesystemCache] listCached START', {
+    platform: Capacitor.getPlatform(),
+    isNative: Capacitor.isNativePlatform(),
+  });
+
   // On web, return empty array since we only use filesystem on native
   if (!Capacitor.isNativePlatform()) {
+    console.log('[FilesystemCache] listCached SKIPPED (web platform)');
     return [];
   }
 
   try {
     const metadata = await readMetadata();
-    return Object.keys(metadata.entries);
+    const urls = Object.keys(metadata.entries);
+    console.log('[FilesystemCache] listCached RESULT', {
+      count: urls.length,
+      urls: urls.map((url) => url.substring(0, 80)), // Truncate for readability
+    });
+    return urls;
   } catch (error) {
-    console.error('Failed to list cached URLs:', error);
+    console.error('[FilesystemCache] listCached FAILED', { error });
     return [];
   }
 }
