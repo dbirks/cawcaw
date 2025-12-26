@@ -80,6 +80,8 @@ import type {
   ACPToolCall,
 } from '@/types/acp';
 import type { MCPServerConfig, MCPServerStatus } from '@/types/mcp';
+import { isModelCached } from '@/utils/modelCacheManager';
+import { LocalAIProgressCard } from './LocalAIProgressCard';
 import Settings from './Settings';
 import Sidebar, { SidebarToggle } from './Sidebar';
 
@@ -173,6 +175,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     'openai'
   );
   const [isLocalAIAvailable, setIsLocalAIAvailable] = useState<boolean>(false);
+
+  // Local AI state
+  const [localAIProgress, setLocalAIProgress] = useState<{
+    progress: number;
+    stage: string;
+  } | null>(null);
+  const [_streamingLocalText, setStreamingLocalText] = useState<string>('');
 
   // New state for AI Elements features
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
@@ -299,6 +308,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           reason: localCapability.reason,
         });
         setIsLocalAIAvailable(localCapability.available);
+
+        // Check if local model is cached (for logging only)
+        const cached = await isModelCached();
+        debugLogger.info(
+          'chat',
+          `📦 Local model cache status: ${cached ? 'Cached' : 'Not cached'}`
+        );
       } catch (error) {
         debugLogger.error('mcp', '❌ Failed to initialize MCP servers', {
           error: error instanceof Error ? error.message : String(error),
@@ -795,11 +811,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           },
           (progress, stage) => {
             debugLogger.info('chat', `📊 Model loading: ${stage} - ${Math.round(progress * 100)}%`);
-            // TODO Phase 5: Update UI with progress
+            // Update progress UI (progress is 0-1 from Transformers.js, LocalAIProgressCard converts to %)
+            setLocalAIProgress({ progress, stage });
           }
         );
 
         debugLogger.info('chat', '✅ Local AI model ready');
+        setLocalAIProgress(null); // Clear progress after loading
       }
 
       setStatus('streaming');
@@ -822,6 +840,21 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
       // Generate response
       const startTime = Date.now();
+      const assistantMessageId = (Date.now() + 1).toString();
+
+      // Reset streaming text
+      setStreamingLocalText('');
+
+      // Create initial assistant message for streaming
+      const initialAssistantMessage: UIMessage = {
+        id: assistantMessageId,
+        role: 'assistant',
+        parts: [{ type: 'text', text: '' }],
+        timestamp: Date.now(),
+        provider: 'local',
+      };
+
+      setMessages((prev) => [...prev, initialAssistantMessage]);
 
       const result = await localAIService.generate(
         prompt,
@@ -830,9 +863,18 @@ export default function ChatView({ initialConversationId }: { initialConversatio
           temperature: 0.7,
           topP: 0.9,
         },
-        (_token) => {
-          // Stream tokens to UI
-          // TODO Phase 5: Update UI with streaming tokens
+        (token) => {
+          // Stream tokens to UI in real-time
+          setStreamingLocalText((prev) => {
+            const newText = prev + token;
+            // Update message in place
+            setMessages((msgs) =>
+              msgs.map((m) =>
+                m.id === assistantMessageId ? { ...m, parts: [{ type: 'text', text: newText }] } : m
+              )
+            );
+            return newText;
+          });
         }
       );
 
@@ -844,22 +886,20 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         tokensPerSecond: result.stats.tokensPerSecond,
       });
 
-      // Create assistant message
-      const assistantMessage: UIMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        parts: [{ type: 'text', text: result.text }],
-        timestamp: Date.now(),
-        provider: 'local',
-      };
+      // Final update with complete text (in case streaming missed anything)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMessageId ? { ...m, parts: [{ type: 'text', text: result.text }] } : m
+        )
+      );
 
-      setMessages((prev) => {
-        const newMessages = [...prev, assistantMessage];
-        saveMessagesToStorage(newMessages).catch((error) => {
+      // Save final messages to storage
+      const finalMessages = await conversationStorage.getCurrentConversation();
+      if (finalMessages) {
+        await saveMessagesToStorage(finalMessages.messages as UIMessage[]).catch((error) => {
           console.error('Failed to save assistant message:', error);
         });
-        return newMessages;
-      });
+      }
 
       setStatus('ready');
       debugLogger.info('chat', '✅ Local AI message flow completed');
@@ -1606,6 +1646,16 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {/* Local AI Download Progress */}
+                    {localAIProgress && (
+                      <div className="flex justify-center">
+                        <LocalAIProgressCard
+                          progress={localAIProgress.progress}
+                          stage={localAIProgress.stage}
+                        />
+                      </div>
+                    )}
+
                     {messages.map((message) => (
                       <Message key={message.id} from={message.role}>
                         <MessageContent>

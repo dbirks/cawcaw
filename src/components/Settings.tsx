@@ -50,9 +50,15 @@ import { useTheme } from '@/hooks/useTheme';
 import { acpManager } from '@/services/acpManager';
 import { type DebugLogEntry, debugLogger } from '@/services/debugLogger';
 import { getLocalAICapability } from '@/services/localAICapabilities';
+import { localAIService } from '@/services/localAIService';
 import { mcpManager } from '@/services/mcpManager';
 import type { ACPServerConfig, ACPServerStatus } from '@/types/acp';
 import type { MCPOAuthDiscovery, MCPServerConfig, MCPServerStatus } from '@/types/mcp';
+import {
+  clearModelCache,
+  getModelCacheStatus,
+  getStorageEstimate,
+} from '@/utils/modelCacheManager';
 import { webgpuProbe } from '@/utils/webgpuProbe';
 
 interface SettingsProps {
@@ -192,6 +198,22 @@ export default function Settings({ onClose }: SettingsProps) {
   // Local AI test state
   const [isTestingLocalAI, setIsTestingLocalAI] = useState(false);
   const [localAITestResult, setLocalAITestResult] = useState<string | null>(null);
+
+  // Model cache state
+  const [cacheStatus, setCacheStatus] = useState<{
+    isCached: boolean;
+    cacheSize?: number;
+    estimatedSize?: string;
+  } | null>(null);
+  const [isLoadingCache, setIsLoadingCache] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [storageEstimate, setStorageEstimate] = useState<{
+    usage: number;
+    quota: number;
+    usageFormatted: string;
+    quotaFormatted: string;
+    percentage: number;
+  } | null>(null);
 
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
@@ -359,6 +381,14 @@ export default function Settings({ onClose }: SettingsProps) {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  // Load cache status when debug view is opened
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleRefreshCacheStatus is stable
+  useEffect(() => {
+    if (currentView === 'debug') {
+      handleRefreshCacheStatus();
+    }
+  }, [currentView]);
 
   // Subscribe to debug logs
   useEffect(() => {
@@ -554,6 +584,90 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
       alert(errorMessage);
     } finally {
       setIsTestingWebGPU(false);
+    }
+  };
+
+  const handleRefreshCacheStatus = async () => {
+    setIsLoadingCache(true);
+    try {
+      const status = await getModelCacheStatus();
+      setCacheStatus(status);
+
+      // Also fetch storage estimate
+      const estimate = await getStorageEstimate();
+      setStorageEstimate(estimate);
+    } catch (error) {
+      console.error('Failed to check cache status:', error);
+    } finally {
+      setIsLoadingCache(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    if (
+      !confirm(
+        'Are you sure you want to clear the local AI model cache? The model will need to be downloaded again (~150-250MB) on next use.'
+      )
+    ) {
+      return;
+    }
+
+    setIsClearingCache(true);
+    try {
+      // Unload the model if it's currently loaded
+      if (localAIService.isReady()) {
+        localAIService.unload();
+      }
+
+      await clearModelCache();
+      alert('✅ Model cache cleared successfully!');
+
+      // Refresh cache status
+      await handleRefreshCacheStatus();
+    } catch (error) {
+      console.error('Failed to clear cache:', error);
+      alert(
+        `❌ Failed to clear cache: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const handlePredownloadModel = async () => {
+    if (
+      !confirm(
+        'Download the local AI model now (~150-250MB)? This will make the model available for offline use.'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsLoadingCache(true);
+      await localAIService.initialize(
+        {
+          modelId: 'onnx-community/gemma-3-270m-it-ONNX',
+          device: 'webgpu',
+          dtype: 'q4f16',
+        },
+        (progress, stage) => {
+          debugLogger.info(
+            'general',
+            `📊 Model download: ${stage} - ${Math.round(progress * 100)}%`
+          );
+        }
+      );
+
+      alert('✅ Model downloaded and ready for offline use!');
+      await handleRefreshCacheStatus();
+    } catch (error) {
+      console.error('Failed to download model:', error);
+      alert(
+        `❌ Failed to download model: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsLoadingCache(false);
     }
   };
 
@@ -2655,6 +2769,99 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                       {localAITestResult && (
                         <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
                           {localAITestResult}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Model Cache Management Section */}
+                <div className="px-4 sm:px-4 safe-x">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Monitor className="h-5 w-5" />
+                        Local AI Model Cache
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Manage the cached Gemma 3 270M model (~150-250MB). Cached models are
+                        available for offline use.
+                      </p>
+
+                      {/* Cache Status */}
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">Cache Status:</span>
+                          {isLoadingCache ? (
+                            <span className="text-sm text-muted-foreground">Checking...</span>
+                          ) : cacheStatus ? (
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={cacheStatus.isCached ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {cacheStatus.isCached ? 'Cached' : 'Not Downloaded'}
+                              </Badge>
+                              {cacheStatus.isCached && cacheStatus.estimatedSize && (
+                                <span className="text-sm text-muted-foreground">
+                                  ({cacheStatus.estimatedSize})
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Unknown</span>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRefreshCacheStatus}
+                          disabled={isLoadingCache}
+                        >
+                          Refresh
+                        </Button>
+                      </div>
+
+                      {/* Cache Actions */}
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={handlePredownloadModel}
+                          disabled={isLoadingCache || (cacheStatus?.isCached ?? false)}
+                          className="w-full sm:w-auto"
+                        >
+                          Pre-download Model
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleClearCache}
+                          disabled={isClearingCache || !(cacheStatus?.isCached ?? false)}
+                          className="w-full sm:w-auto"
+                        >
+                          {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                        </Button>
+                      </div>
+
+                      {/* Storage Usage Display */}
+                      {storageEstimate && (
+                        <div className="space-y-2 pt-3 border-t">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Storage Usage:</span>
+                            <span className="text-sm text-muted-foreground">
+                              {storageEstimate.usageFormatted} / {storageEstimate.quotaFormatted}
+                            </span>
+                          </div>
+                          <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all"
+                              style={{ width: `${Math.min(storageEstimate.percentage, 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {storageEstimate.percentage.toFixed(1)}% of available storage used
+                          </p>
                         </div>
                       )}
                     </CardContent>
