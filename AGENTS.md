@@ -362,6 +362,49 @@ All complete without waiting. Main thread coordinates final integration.
 - **Error handling**: If one subagent fails, others continue (failures don't block other work)
 - **Token efficiency**: Parallel execution is more efficient than sequential for multi-agent work
 
+### **CRITICAL: Default to Async/Parallel Subagents**
+
+⚠️ **IMPORTANT**: Unless there's a specific reason not to, **ALWAYS prefer async/parallel subagent execution** to preserve main thread context.
+
+**Why This Matters**:
+- **Context Preservation**: Main thread stays clean and focused on user interaction
+- **Token Efficiency**: Deep investigations don't pollute main thread with intermediate details
+- **Better Organization**: Each investigation is self-contained and traceable
+- **Faster Execution**: Truly parallel work completes faster
+- **Better Debugging**: Failed subagents don't crash the main thread
+
+**Rule of Thumb**:
+- **Multiple issues to investigate?** → Async parallel subagents
+- **Multiple fixes to implement?** → Async parallel subagents
+- **Complex debugging with multiple angles?** → Async parallel subagents
+- **Research + implementation?** → Async parallel subagents
+- **Only ONE simple task?** → Main thread is fine
+
+**Example from this project** (2025-12-26):
+User reported 3 issues:
+1. Download progress showing 5004%
+2. Cache not persisting across TestFlight builds
+3. X buttons not working consistently
+
+**Correct approach**: Launch 3 parallel subagents
+- Agent 1: Fix progress bug (investigation + fix + commit)
+- Agent 2: Research cache persistence (investigation + analysis)
+- Agent 3: Debug X button behavior (investigation + fix)
+
+**Wrong approach**: Do all three sequentially in main thread
+- ❌ Main thread gets cluttered with all investigation details
+- ❌ User can't see high-level progress
+- ❌ Takes longer (sequential instead of parallel)
+- ❌ Harder to track which investigation found what
+
+**When to use main thread directly**:
+- Single straightforward fix (< 5 minutes)
+- Quick file read + immediate response to user
+- Coordination/synthesis of subagent results
+- User interaction (asking questions, confirming approach)
+
+**Default mindset**: "Can this be done in parallel subagents?" If yes → do it.
+
 ---
 
 ## Project Overview
