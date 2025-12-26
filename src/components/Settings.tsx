@@ -49,6 +49,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/hooks/useTheme';
 import { acpManager } from '@/services/acpManager';
 import { type DebugLogEntry, debugLogger } from '@/services/debugLogger';
+import { getLocalAICapability } from '@/services/localAICapabilities';
 import { mcpManager } from '@/services/mcpManager';
 import type { ACPServerConfig, ACPServerStatus } from '@/types/acp';
 import type { MCPOAuthDiscovery, MCPServerConfig, MCPServerStatus } from '@/types/mcp';
@@ -187,6 +188,10 @@ export default function Settings({ onClose }: SettingsProps) {
   // WebGPU test state
   const [isTestingWebGPU, setIsTestingWebGPU] = useState(false);
   const [webgpuTestResult, setWebgpuTestResult] = useState<string | null>(null);
+
+  // Local AI test state
+  const [isTestingLocalAI, setIsTestingLocalAI] = useState(false);
+  const [localAITestResult, setLocalAITestResult] = useState<string | null>(null);
 
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
@@ -549,6 +554,38 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
       alert(errorMessage);
     } finally {
       setIsTestingWebGPU(false);
+    }
+  };
+
+  const handleTestLocalAI = async () => {
+    setIsTestingLocalAI(true);
+    setLocalAITestResult(null);
+    try {
+      const capability = await getLocalAICapability(true); // Force refresh
+
+      const resultMessage = `
+Local AI Capability Check:
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Status: ${capability.available ? '✓ Available' : '✗ Unavailable'}
+Reason: ${capability.reason}
+
+Capability Details:
+  ${capability.details.hasWebGPU ? '✓' : '✗'} WebGPU API: ${capability.details.hasWebGPU ? 'Available' : 'Not Available'}
+  ${capability.details.hasAdapter ? '✓' : '✗'} GPU Adapter: ${capability.details.hasAdapter ? 'Available' : 'Not Available'}
+  ${capability.details.canCreateDevice ? '✓' : '✗'} Device Creation: ${capability.details.canCreateDevice ? 'Success' : 'Failed'}
+  ${capability.details.canRunComputePass ? '✓' : '✗'} Compute Pass: ${capability.details.canRunComputePass ? 'Success' : 'Failed'}
+
+${capability.available ? 'Local AI (Gemma 3 270M) is available for offline inference!' : 'Local AI is not available. Use OpenAI or Anthropic instead.'}
+      `.trim();
+
+      setLocalAITestResult(resultMessage);
+    } catch (error) {
+      const errorMessage = `Failed to test Local AI: ${error instanceof Error ? error.message : String(error)}`;
+      setLocalAITestResult(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setIsTestingLocalAI(false);
     }
   };
 
@@ -2588,6 +2625,36 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
                       {webgpuTestResult && (
                         <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
                           {webgpuTestResult}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Local AI Capability Test Section */}
+                <div className="px-4 sm:px-4 safe-x">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="h-5 w-5" />
+                        Local AI Capability
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Check if Gemma 3 270M local AI is available on this device. Requires WebGPU
+                        support for on-device inference.
+                      </p>
+                      <Button
+                        onClick={handleTestLocalAI}
+                        disabled={isTestingLocalAI}
+                        className="w-full sm:w-auto"
+                      >
+                        {isTestingLocalAI ? 'Testing...' : 'Test Local AI'}
+                      </Button>
+                      {localAITestResult && (
+                        <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
+                          {localAITestResult}
                         </div>
                       )}
                     </CardContent>

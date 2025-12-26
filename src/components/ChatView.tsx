@@ -68,6 +68,8 @@ import {
   type Message as StoredMessage,
 } from '@/services/conversationStorage';
 import { debugLogger } from '@/services/debugLogger';
+import { getLocalAICapability } from '@/services/localAICapabilities';
+import { localAIService } from '@/services/localAIService';
 import { mcpManager } from '@/services/mcpManager';
 import type {
   ACPMessage,
@@ -120,6 +122,13 @@ const AVAILABLE_MODELS = [
     label: 'Claude Sonnet 4',
     provider: 'anthropic',
   },
+
+  // Local Models
+  {
+    value: 'gemma-3-270m-local',
+    label: 'Gemma 3 270M (Local)',
+    provider: 'local',
+  },
 ] as const;
 
 // Updated interfaces for AI Elements compatibility
@@ -138,7 +147,7 @@ interface UIMessage {
   role: 'user' | 'assistant' | 'system';
   parts: MessagePart[];
   timestamp?: number;
-  provider?: 'openai' | 'anthropic' | 'acp'; // Track which provider generated this message
+  provider?: 'openai' | 'anthropic' | 'acp' | 'local'; // Track which provider generated this message
 
   // ACP-specific fields
   acpToolCalls?: ACPToolCall[];
@@ -160,7 +169,10 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const [editedTitle, setEditedTitle] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'local'>(
+    'openai'
+  );
+  const [isLocalAIAvailable, setIsLocalAIAvailable] = useState<boolean>(false);
 
   // New state for AI Elements features
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
@@ -187,17 +199,18 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   // Ref for auto-scrolling to latest messages
   const conversationRef = useRef<HTMLDivElement>(null);
 
-  // Filter models based on available API keys
+  // Filter models based on available API keys and local AI capability
   const availableModels = useMemo(() => {
     const models = AVAILABLE_MODELS.filter((model) => {
       if (model.provider === 'openai') return !!apiKey;
       if (model.provider === 'anthropic') return !!anthropicApiKey;
+      if (model.provider === 'local') return isLocalAIAvailable;
       return false;
     });
 
     // If no API keys are set, show all models (for settings view)
     return models.length > 0 ? models : AVAILABLE_MODELS;
-  }, [apiKey, anthropicApiKey]);
+  }, [apiKey, anthropicApiKey, isLocalAIAvailable]);
 
   useEffect(() => {
     // Load conversation data and initialize settings
@@ -277,6 +290,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
         // Connect to enabled ACP servers
         await acpManager.connectToEnabledServers();
+
+        // Check local AI capability
+        debugLogger.info('chat', '🔍 Checking local AI capability...');
+        const localCapability = await getLocalAICapability();
+        debugLogger.info('chat', '✅ Local AI capability check complete', {
+          available: localCapability.available,
+          reason: localCapability.reason,
+        });
+        setIsLocalAIAvailable(localCapability.available);
       } catch (error) {
         debugLogger.error('mcp', '❌ Failed to initialize MCP servers', {
           error: error instanceof Error ? error.message : String(error),
@@ -736,6 +758,142 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     }
   };
 
+  const sendLocalMessage = async (content: string) => {
+    debugLogger.info('chat', '🤖 Starting local AI message send', {
+      contentLength: content.length,
+      modelState: localAIService.getState(),
+    });
+
+    // Create user message
+    const userMessage: UIMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      parts: [{ type: 'text', text: content }],
+      timestamp: Date.now(),
+    };
+
+    setMessages((prev) => {
+      const newMessages = [...prev, userMessage];
+      saveMessagesToStorage(newMessages).catch((error) => {
+        console.error('Failed to save user message:', error);
+      });
+      return newMessages;
+    });
+    setStatus('submitted');
+
+    try {
+      // Initialize model if not ready
+      if (!localAIService.isReady()) {
+        debugLogger.info('chat', '📥 Initializing local AI model...');
+        setStatus('streaming'); // Show loading state during model download
+
+        await localAIService.initialize(
+          {
+            modelId: 'onnx-community/gemma-3-270m-it-ONNX',
+            device: 'webgpu',
+            dtype: 'q4f16', // CRITICAL: Avoid q4/fp32 crashes
+          },
+          (progress, stage) => {
+            debugLogger.info('chat', `📊 Model loading: ${stage} - ${Math.round(progress * 100)}%`);
+            // TODO Phase 5: Update UI with progress
+          }
+        );
+
+        debugLogger.info('chat', '✅ Local AI model ready');
+      }
+
+      setStatus('streaming');
+
+      // Convert messages to simple text format for local model
+      const conversationHistory = messages
+        .concat(userMessage)
+        .map((msg) => {
+          const textPart = msg.parts.find((p) => p.type === 'text');
+          const role = msg.role === 'user' ? 'User' : 'Assistant';
+          return `${role}: ${textPart?.text || ''}`;
+        })
+        .join('\n\n');
+
+      const prompt = `${conversationHistory}\n\nAssistant:`;
+
+      debugLogger.info('chat', '🚀 Calling local AI generate', {
+        promptLength: prompt.length,
+      });
+
+      // Generate response
+      const startTime = Date.now();
+
+      const result = await localAIService.generate(
+        prompt,
+        {
+          maxNewTokens: 256,
+          temperature: 0.7,
+          topP: 0.9,
+        },
+        (_token) => {
+          // Stream tokens to UI
+          // TODO Phase 5: Update UI with streaming tokens
+        }
+      );
+
+      const duration = Date.now() - startTime;
+
+      debugLogger.info('chat', '✅ Local AI response received', {
+        duration: `${duration}ms`,
+        textLength: result.text.length,
+        tokensPerSecond: result.stats.tokensPerSecond,
+      });
+
+      // Create assistant message
+      const assistantMessage: UIMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        parts: [{ type: 'text', text: result.text }],
+        timestamp: Date.now(),
+        provider: 'local',
+      };
+
+      setMessages((prev) => {
+        const newMessages = [...prev, assistantMessage];
+        saveMessagesToStorage(newMessages).catch((error) => {
+          console.error('Failed to save assistant message:', error);
+        });
+        return newMessages;
+      });
+
+      setStatus('ready');
+      debugLogger.info('chat', '✅ Local AI message flow completed');
+    } catch (error) {
+      debugLogger.error('chat', '❌ Local AI error', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      const errorMessage: UIMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text',
+            text: `Sorry, local AI encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Try switching to OpenAI or Anthropic.`,
+          },
+        ],
+        timestamp: Date.now(),
+        provider: 'local',
+      };
+
+      setMessages((prev) => {
+        const newMessages = [...prev, errorMessage];
+        saveMessagesToStorage(newMessages).catch((err) => {
+          console.error('Failed to save error message:', err);
+        });
+        return newMessages;
+      });
+
+      setStatus('error');
+    }
+  };
+
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
 
@@ -761,8 +919,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
       return;
     }
 
-    // Handle Chat mode (OpenAI/Anthropic)
-    // Check if we have the appropriate API key for the selected provider
+    // Handle Chat mode (OpenAI/Anthropic/Local)
+    // Handle local provider separately (no API key needed)
+    if (selectedProvider === 'local') {
+      debugLogger.info('chat', '🤖 Using local AI provider');
+      await sendLocalMessage(trimmedContent);
+      return;
+    }
+
+    // Check if we have the appropriate API key for cloud providers
     const currentApiKey = selectedProvider === 'openai' ? apiKey : anthropicApiKey;
     if (!currentApiKey) {
       debugLogger.error('chat', '❌ No API key available', {
