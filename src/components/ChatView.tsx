@@ -3,7 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { ArrowUpIcon, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
+import { ArrowUpIcon, Cpu, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -1963,6 +1963,8 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                         <PromptInputModelSelectTrigger className="h-9 gap-1.5 sm:max-w-[200px]">
                           {selectedProvider === 'anthropic' ? (
                             <AnthropicIcon size={14} className="shrink-0" />
+                          ) : selectedProvider === 'local' ? (
+                            <Cpu size={14} className="shrink-0" />
                           ) : (
                             <OpenAIIcon size={14} className="shrink-0" />
                           )}
@@ -1994,6 +1996,21 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                               </SelectLabel>
                               {availableModels
                                 .filter((m) => m.provider === 'anthropic')
+                                .map((model) => (
+                                  <PromptInputModelSelectItem key={model.value} value={model.value}>
+                                    {model.label}
+                                  </PromptInputModelSelectItem>
+                                ))}
+                            </SelectGroup>
+                          )}
+                          {availableModels.filter((m) => m.provider === 'local').length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="flex items-center gap-2">
+                                <Cpu size={14} />
+                                <span>Local Models</span>
+                              </SelectLabel>
+                              {availableModels
+                                .filter((m) => m.provider === 'local')
                                 .map((model) => (
                                   <PromptInputModelSelectItem key={model.value} value={model.value}>
                                     {model.label}

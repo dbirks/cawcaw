@@ -107,19 +107,25 @@ export async function clearModelCache(
 
 /**
  * Get estimated storage usage and quota
+ *
+ * Note: This API returns browser estimates, not exact values.
+ * Values may differ from actual usage and vary by browser/platform.
  */
 export async function getStorageEstimate(): Promise<{
   usage: number;
   quota: number;
   usageFormatted: string;
   quotaFormatted: string;
+  freeFormatted: string;
   percentage: number;
+  isEstimate: boolean;
 }> {
   try {
     if (navigator.storage?.estimate) {
       const estimate = await navigator.storage.estimate();
       const usage = estimate.usage || 0;
       const quota = estimate.quota || 0;
+      const free = Math.max(0, quota - usage);
       const percentage = quota > 0 ? (usage / quota) * 100 : 0;
 
       return {
@@ -127,7 +133,9 @@ export async function getStorageEstimate(): Promise<{
         quota,
         usageFormatted: formatBytes(usage),
         quotaFormatted: formatBytes(quota),
+        freeFormatted: formatBytes(free),
         percentage,
+        isEstimate: true,
       };
     }
   } catch (error) {
@@ -139,7 +147,9 @@ export async function getStorageEstimate(): Promise<{
     quota: 0,
     usageFormatted: 'Unknown',
     quotaFormatted: 'Unknown',
+    freeFormatted: 'Unknown',
     percentage: 0,
+    isEstimate: false,
   };
 }
 

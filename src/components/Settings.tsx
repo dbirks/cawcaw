@@ -212,7 +212,15 @@ export default function Settings({ onClose }: SettingsProps) {
     quota: number;
     usageFormatted: string;
     quotaFormatted: string;
+    freeFormatted: string;
     percentage: number;
+    isEstimate: boolean;
+  } | null>(null);
+
+  // Model download progress state
+  const [downloadProgress, setDownloadProgress] = useState<{
+    progress: number;
+    stage: string;
   } | null>(null);
 
   // API Key state
@@ -1479,9 +1487,12 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                         {storageEstimate && (
                           <div className="space-y-2 pt-3 border-t">
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">Storage Usage:</span>
+                              <span className="text-sm font-medium">
+                                Browser Storage{storageEstimate.isEstimate ? ' (estimated)' : ''}:
+                              </span>
                               <span className="text-sm text-muted-foreground">
-                                {storageEstimate.usageFormatted} / {storageEstimate.quotaFormatted}
+                                {storageEstimate.usageFormatted} used,{' '}
+                                {storageEstimate.freeFormatted} free
                               </span>
                             </div>
                             <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
@@ -1491,7 +1502,8 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                               />
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              {storageEstimate.percentage.toFixed(1)}% of available storage used
+                              {storageEstimate.percentage.toFixed(1)}% used of{' '}
+                              {storageEstimate.quotaFormatted} quota
                             </p>
                           </div>
                         )}
@@ -1674,55 +1686,6 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
               <div className="flex-1 min-h-0">
                 <ScrollArea className="h-full">
                   <div className="space-y-3 pr-4 safe-x safe-bottom">
-                    {/* Quick Setup Section */}
-                    <div>
-                      <h2 className="text-lg font-semibold mb-3">Quick Setup</h2>
-                      <Card>
-                        <CardContent className="p-4">
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Add popular MCP servers with one click. OAuth authentication will be
-                            configured automatically.
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {/* Sentry MCP Server */}
-                            <Card className="border-2 hover:border-primary/50 transition-colors">
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="flex-1">
-                                    <h3 className="font-semibold mb-1">Sentry Error Tracking</h3>
-                                    <p className="text-xs text-muted-foreground mb-3">
-                                      AI-powered error analysis and root cause detection with 18+
-                                      tools
-                                    </p>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                                      <Lock className="h-3 w-3" />
-                                      <span>OAuth Required</span>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      className="w-full"
-                                      onClick={() =>
-                                        handleAddPresetServer({
-                                          name: 'Sentry Error Tracking',
-                                          url: 'https://mcp.sentry.dev/mcp',
-                                          description:
-                                            'AI-powered error analysis and root cause detection',
-                                          transportType: 'http-streamable',
-                                        })
-                                      }
-                                    >
-                                      <Plus className="h-3 w-3 mr-1" />
-                                      Add Server
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
                     {/* Configured Servers */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
