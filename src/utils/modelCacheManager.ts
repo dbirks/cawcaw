@@ -1,9 +1,14 @@
 /**
  * Model Cache Manager
  *
- * Utilities for managing Transformers.js model cache in browser Cache API.
+ * Utilities for managing Transformers.js model cache using Capacitor Filesystem.
  * Provides functions to check cache status, get cache size, and clear cache.
+ *
+ * Uses Capacitor Filesystem for persistent storage that survives app updates,
+ * replacing the previous Cache API implementation which was cleared by iOS.
  */
+
+import * as filesystemCache from './filesystemCache';
 
 /**
  * Cache status information
@@ -21,12 +26,11 @@ export async function isModelCached(
   modelId = 'onnx-community/gemma-3-270m-it-ONNX'
 ): Promise<boolean> {
   try {
-    // Transformers.js uses Cache API with cache name 'transformers-cache'
-    const cache = await caches.open('transformers-cache');
-    const keys = await cache.keys();
+    // Get all cached URLs from filesystem
+    const cachedUrls = await filesystemCache.listCached();
 
     // Check if any cached entry contains the model ID
-    return keys.some((request) => request.url.includes(modelId));
+    return cachedUrls.some((url) => url.includes(modelId));
   } catch (error) {
     console.error('Failed to check model cache:', error);
     return false;
@@ -42,22 +46,8 @@ export async function getModelCacheSize(
   _modelId = 'onnx-community/gemma-3-270m-it-ONNX'
 ): Promise<number> {
   try {
-    const cache = await caches.open('transformers-cache');
-    const keys = await cache.keys();
-
-    let totalSize = 0;
-
-    // Calculate total size of ALL cached entries since Transformers.js
-    // may cache files with various URL patterns (model files, tokenizer, config, etc.)
-    for (const request of keys) {
-      const response = await cache.match(request);
-      if (response) {
-        const blob = await response.blob();
-        totalSize += blob.size;
-      }
-    }
-
-    return totalSize;
+    // Get total cache size from filesystem
+    return await filesystemCache.getCacheSize();
   } catch (error) {
     console.error('Failed to get cache size:', error);
     return 0;
@@ -94,13 +84,7 @@ export async function clearModelCache(
   _modelId = 'onnx-community/gemma-3-270m-it-ONNX'
 ): Promise<void> {
   try {
-    const cache = await caches.open('transformers-cache');
-    const keys = await cache.keys();
-
-    // Clear all transformers cache entries (model files, tokenizer, config, etc.)
-    for (const request of keys) {
-      await cache.delete(request);
-    }
+    await filesystemCache.clearCache();
   } catch (error) {
     console.error('Failed to clear model cache:', error);
     throw error;

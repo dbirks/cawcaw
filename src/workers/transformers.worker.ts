@@ -4,7 +4,7 @@
  * Runs AI inference in a background thread to prevent UI blocking.
  * Handles model loading, text generation, and progress events.
  *
- * Phase 3: Integrated with @huggingface/transformers v3
+ * Phase 4: Integrated with Capacitor Filesystem cache for persistence across app updates
  */
 
 import {
@@ -14,10 +14,61 @@ import {
   type TextGenerationPipeline,
   TextStreamer,
 } from '@huggingface/transformers';
+import * as filesystemCache from '../utils/filesystemCache';
 
 // Configure Transformers.js environment
-env.useBrowserCache = true; // Use Cache API for model storage
+env.useBrowserCache = false; // Disable Cache API - we use filesystem cache instead
 env.allowRemoteModels = true; // Allow downloading from HuggingFace Hub
+
+// ============================================================================
+// Filesystem Cache Integration
+// ============================================================================
+
+/**
+ * Store the original fetch function before we override it
+ */
+const originalFetch = globalThis.fetch;
+
+/**
+ * Custom fetch implementation that uses Capacitor Filesystem cache
+ * Falls back to original fetch if not cached
+ */
+async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url =
+    typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+  // Check filesystem cache first
+  const cached = await filesystemCache.getCached(url);
+  if (cached) {
+    console.log(`[FilesystemCache] Cache hit for: ${url}`);
+    return cached;
+  }
+
+  console.log(`[FilesystemCache] Cache miss, downloading: ${url}`);
+
+  // Download and cache
+  const response = await originalFetch(input, init);
+
+  // Only cache successful responses
+  if (response.ok) {
+    try {
+      // Clone the response before caching since we'll consume it
+      const clonedResponse = response.clone();
+
+      // Cache in background (don't await to avoid blocking)
+      filesystemCache.setCached(url, clonedResponse).catch((error) => {
+        console.error(`[FilesystemCache] Failed to cache ${url}:`, error);
+      });
+    } catch (error) {
+      console.error(`[FilesystemCache] Error during cache operation:`, error);
+    }
+  }
+
+  return response;
+}
+
+// Override global fetch with our cached version
+globalThis.fetch = cachedFetch;
 
 // ============================================================================
 // Message Protocol Types
@@ -119,7 +170,7 @@ async function handleLoad(config: LoadConfig): Promise<void> {
           stage,
         } satisfies WorkerResponse);
       },
-    })) as any as TextGenerationPipeline;
+    })) as unknown as TextGenerationPipeline;
 
     self.postMessage({ type: 'ready' } satisfies WorkerResponse);
   } catch (error) {

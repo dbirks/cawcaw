@@ -18,35 +18,38 @@ importers:
         specifier: 3.0.0-beta.99
         version: 3.0.0-beta.99(react@19.2.0)(zod@4.1.12)
       '@capacitor-community/safe-area':
-        specifier: 7.0.0-beta.4
-        version: 7.0.0-beta.4(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0
       '@capacitor-community/sqlite':
         specifier: 7.0.2
-        version: 7.0.2(@capacitor/core@7.4.4)
+        version: 7.0.2(@capacitor/core@8.0.0)
       '@capacitor/app':
-        specifier: 7.1.0
-        version: 7.1.0(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/cli':
-        specifier: 7.4.4
-        version: 7.4.4
+        specifier: 8.0.0
+        version: 8.0.0
       '@capacitor/core':
-        specifier: 7.4.4
-        version: 7.4.4
+        specifier: 8.0.0
+        version: 8.0.0
+      '@capacitor/filesystem':
+        specifier: ^8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/haptics':
-        specifier: 7.0.2
-        version: 7.0.2(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/ios':
-        specifier: 7.4.4
-        version: 7.4.4(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/keyboard':
-        specifier: 7.0.3
-        version: 7.0.3(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/preferences':
-        specifier: 7.0.2
-        version: 7.0.2(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@capacitor/status-bar':
-        specifier: 7.0.3
-        version: 7.0.3(@capacitor/core@7.4.4)
+        specifier: 8.0.0
+        version: 8.0.0(@capacitor/core@8.0.0)
       '@huggingface/transformers':
         specifier: ^3.8.1
         version: 3.8.1
@@ -97,7 +100,7 @@ importers:
         version: 1.2.2(@types/react@19.2.6)(react@19.2.0)
       '@sentry/capacitor':
         specifier: 2.4.1
-        version: 2.4.1(@capacitor/core@7.4.4)(@sentry/react@10.32.1(react@19.2.0))
+        version: 2.4.1(@capacitor/core@8.0.0)(@sentry/react@10.32.1(react@19.2.0))
       '@sentry/react':
         specifier: 10.32.1
         version: 10.32.1(react@19.2.0)
@@ -112,7 +115,7 @@ importers:
         version: 2.3.0(react@19.2.0)
       capacitor-secure-storage-plugin:
         specifier: 0.12.0
-        version: 0.12.0(@capacitor/core@7.4.4)
+        version: 0.12.0(@capacitor/core@8.0.0)
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -413,10 +416,9 @@ packages:
   '@braintree/sanitize-url@7.1.1':
     resolution: {integrity: sha512-i1L7noDNxtFyL5DmZafWy1wRVhGehQmzZaz1HiN5e7iylJMSZR7ekOV7NsIqa5qBldlLrsKv4HbgFUVlQrz8Mw==}
 
-  '@capacitor-community/safe-area@7.0.0-beta.4':
-    resolution: {integrity: sha512-gtnBLzpM4WfRfQMjEaRftZS88UesQdjaDfTebTYF4oQcAxSLuAEyfXiZudswhLN79SloZ06dI68/uXddZcYP5A==}
-    peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+  '@capacitor-community/safe-area@8.0.0':
+    resolution: {integrity: sha512-URpU0Sr+v+3Ttq9SbfGwVKbGIM7wWcAo/zXQRvpCtgaASwXUWzn5+JQchuQkARcPSgVMfqyd/RZZCFxP1OD99Q==}
+    deprecated: 'The Chromium team promised the bug has been fixed as of Chromium M140. Now it''s up to the Capacitor team to correctly implement this and provide some documentation around it. See the following issue for more info: https://github.com/ionic-team/capacitor/issues/8121'
 
   '@capacitor-community/sqlite@7.0.2':
     resolution: {integrity: sha512-TkxvuLgVCSmme/NSUEE2xopTVMwMqdT6+zH9pH8g76DMdi2z+ZsPEATQnJchGw4YAhhiQ8vTYxIP9se3/zkhGg==}
@@ -424,43 +426,51 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
-  '@capacitor/app@7.1.0':
-    resolution: {integrity: sha512-W7m09IWrUjZbo7AKeq+rc/KyucxrJekTBg0l4QCm/yDtCejE3hebxp/W2esU26KKCzMc7H3ClkUw32E9lZkwRA==}
+  '@capacitor/app@8.0.0':
+    resolution: {integrity: sha512-OwzIkUs4w433Bu9WWAEbEYngXEfJXZ9Wmdb8eoaqzYBgB0W9/3Ed/mh6sAYPNBAZlpyarmewgP7Nb+d3Vrh+xA==}
     peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+      '@capacitor/core': '>=8.0.0'
 
-  '@capacitor/cli@7.4.4':
-    resolution: {integrity: sha512-J7ciBE7GlJ70sr2s8oz1+H4ZdNk4MGG41fsakUlDHWva5UWgFIZYMiEdDvGbYazAYTaxN3lVZpH9zil9FfZj+Q==}
-    engines: {node: '>=20.0.0'}
+  '@capacitor/cli@8.0.0':
+    resolution: {integrity: sha512-v9hEBi69xGxuuZhg55N031bMEenKaPSv71Il8C22VOOH6surDyv/MPeImN0oVfFc7eiklaW3rDFYVz6cmXfJWQ==}
+    engines: {node: '>=22.0.0'}
     hasBin: true
 
-  '@capacitor/core@7.4.4':
-    resolution: {integrity: sha512-xzjxpr+d2zwTpCaN0k+C6wKSZzWFAb9OVEUtmO72ihjr/NEDoLvsGl4WLfjWPcCO2zOy0b2X52tfRWjECFUjtw==}
+  '@capacitor/core@8.0.0':
+    resolution: {integrity: sha512-250HTVd/W/KdMygoqaedisvNbHbpbQTN2Hy/8ZYGm1nAqE0Fx7sGss4l0nDg33STxEdDhtVRoL2fIaaiukKseA==}
 
-  '@capacitor/haptics@7.0.2':
-    resolution: {integrity: sha512-vqfeEM6s2zMgLjpITCTUIy7P/hadq/Gr5E/RClFgMJPB41Y5FsqOKD+j85/uwh8N2cf/aWaPeXUmjnTzJbEB2g==}
+  '@capacitor/filesystem@8.0.0':
+    resolution: {integrity: sha512-RRGNLW9xEqvVVHGyGlfS4Oy0R3Na+bEefwZElKbex22S9eZr5cg8wc750BPPVwbcv5lf5fJymkY8x8y6UwKPyg==}
     peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+      '@capacitor/core': '>=8.0.0'
 
-  '@capacitor/ios@7.4.4':
-    resolution: {integrity: sha512-Xp3bGWlSQAwsZGngRMWTdoD2agdMV12Whnm+/xsYPxfQSj+Tksbr7r/8Mso7VWkpnTKO4iMlx762g3PjW+wi4w==}
+  '@capacitor/haptics@8.0.0':
+    resolution: {integrity: sha512-DY1IUOjke1T4ITl7mFHQIKCaJJyHYAYRYHG9bVApU7PDOZiMVGMp48Yjzdqjya+wv/AHS5mDabSTUmhJ5uDvBA==}
     peerDependencies:
-      '@capacitor/core': ^7.4.0
+      '@capacitor/core': '>=8.0.0'
 
-  '@capacitor/keyboard@7.0.3':
-    resolution: {integrity: sha512-BIBKjmky5rOYNhvYhNeDi0MMvjwYZ6YF9JoCYcGKvKY+XLJKtezsEL78XfOlgWZBkbfR8uq3tzktY6PqgoYLKA==}
+  '@capacitor/ios@8.0.0':
+    resolution: {integrity: sha512-gwSn6X4uHYNHlM8zZmVmM1zjEhexxbHpPSSnH1DZkp8o3zdK/RmH8tmDma+3zPZrhhTSrMC7sT24dKTOvV8www==}
     peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+      '@capacitor/core': ^8.0.0
 
-  '@capacitor/preferences@7.0.2':
-    resolution: {integrity: sha512-JVCy0/oc6RsRencLOZ8rMqjNxAlHs7awPJU/MXqangsJ48oO2PnYGHfCvci6WgIJlqyC0QhvWZaO1BR1lVkHWQ==}
+  '@capacitor/keyboard@8.0.0':
+    resolution: {integrity: sha512-ycPW6iQyFwzDK95jihesj5EGiyyGSfbBqNek11iNp9tBOB7zDeYkUA2S/vPpOETt3dhP6pWr7a9gNVGuEfj11g==}
     peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+      '@capacitor/core': '>=8.0.0'
 
-  '@capacitor/status-bar@7.0.3':
-    resolution: {integrity: sha512-JyRpVnKwHij9hgPWolF6PK+HT3e2HSPjN11/h2OmKxq8GAdPGARFLv+97eZl0pvuvm0Kka/LpiLb5whXISBg7Q==}
+  '@capacitor/preferences@8.0.0':
+    resolution: {integrity: sha512-NsE7Srk9Zr0SxiVelHGiAJR7M238eyCD6dI/sDhu3ckKwFrXn8/GRyGr+SZcnGLlQKy948li8Pfcfr0dqxNf1g==}
     peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+      '@capacitor/core': '>=8.0.0'
+
+  '@capacitor/status-bar@8.0.0':
+    resolution: {integrity: sha512-aIj3bc7z8lfPgOen8HlrBrkfnxpFnh21OCx6jCUx4Mvv+B6eEkUQ49b32DOddgVfr+igRHLX2SYi7duqIsNDXg==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
+  '@capacitor/synapse@1.0.4':
+    resolution: {integrity: sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==}
 
   '@chevrotain/cst-dts-gen@11.0.3':
     resolution: {integrity: sha512-BvIKpRLeS/8UbfxXxgC33xOumsacaeCKAjAeLyOn7Pcp95HiRbrpl14S+9vaZLolnbssPIUuiUd8IvgkRyt6NQ==}
@@ -4461,20 +4471,18 @@ snapshots:
 
   '@braintree/sanitize-url@7.1.1': {}
 
-  '@capacitor-community/safe-area@7.0.0-beta.4(@capacitor/core@7.4.4)':
-    dependencies:
-      '@capacitor/core': 7.4.4
+  '@capacitor-community/safe-area@8.0.0': {}
 
-  '@capacitor-community/sqlite@7.0.2(@capacitor/core@7.4.4)':
+  '@capacitor-community/sqlite@7.0.2(@capacitor/core@8.0.0)':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
       jeep-sqlite: 2.8.0
 
-  '@capacitor/app@7.1.0(@capacitor/core@7.4.4)':
+  '@capacitor/app@8.0.0(@capacitor/core@8.0.0)':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
 
-  '@capacitor/cli@7.4.4':
+  '@capacitor/cli@8.0.0':
     dependencies:
       '@ionic/cli-framework-output': 2.2.8
       '@ionic/utils-subprocess': 3.0.1
@@ -4496,29 +4504,36 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@capacitor/core@7.4.4':
+  '@capacitor/core@8.0.0':
     dependencies:
       tslib: 2.8.1
 
-  '@capacitor/haptics@7.0.2(@capacitor/core@7.4.4)':
+  '@capacitor/filesystem@8.0.0(@capacitor/core@8.0.0)':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
+      '@capacitor/synapse': 1.0.4
 
-  '@capacitor/ios@7.4.4(@capacitor/core@7.4.4)':
+  '@capacitor/haptics@8.0.0(@capacitor/core@8.0.0)':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
 
-  '@capacitor/keyboard@7.0.3(@capacitor/core@7.4.4)':
+  '@capacitor/ios@8.0.0(@capacitor/core@8.0.0)':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
 
-  '@capacitor/preferences@7.0.2(@capacitor/core@7.4.4)':
+  '@capacitor/keyboard@8.0.0(@capacitor/core@8.0.0)':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
 
-  '@capacitor/status-bar@7.0.3(@capacitor/core@7.4.4)':
+  '@capacitor/preferences@8.0.0(@capacitor/core@8.0.0)':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
+
+  '@capacitor/status-bar@8.0.0(@capacitor/core@8.0.0)':
+    dependencies:
+      '@capacitor/core': 8.0.0
+
+  '@capacitor/synapse@1.0.4': {}
 
   '@chevrotain/cst-dts-gen@11.0.3':
     dependencies:
@@ -5544,9 +5559,9 @@ snapshots:
       - encoding
       - supports-color
 
-  '@sentry/capacitor@2.4.1(@capacitor/core@7.4.4)(@sentry/react@10.32.1(react@19.2.0))':
+  '@sentry/capacitor@2.4.1(@capacitor/core@8.0.0)(@sentry/react@10.32.1(react@19.2.0))':
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
       '@sentry/browser': 9.46.0
       '@sentry/core': 9.46.0
       '@sentry/types': 9.46.0
@@ -6121,9 +6136,9 @@ snapshots:
 
   caniuse-lite@1.0.30001754: {}
 
-  capacitor-secure-storage-plugin@0.12.0(@capacitor/core@7.4.4):
+  capacitor-secure-storage-plugin@0.12.0(@capacitor/core@8.0.0):
     dependencies:
-      '@capacitor/core': 7.4.4
+      '@capacitor/core': 8.0.0
 
   ccount@2.0.1: {}
 

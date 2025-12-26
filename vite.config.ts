@@ -52,6 +52,9 @@ export default defineConfig({
 	build: {
 		sourcemap: 'hidden', // Generate source maps but don't expose them publicly
 	},
+	worker: {
+		format: 'es', // Use ES module format for workers (required for code-splitting)
+	},
 	define: {
 		__APP_VERSION__: JSON.stringify(version),
 		__BUILD_NUMBER__: JSON.stringify(buildNumber),
