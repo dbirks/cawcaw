@@ -63,8 +63,10 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
       console.log(`[FilesystemCache] Cache write complete for: ${url.substring(0, 100)}`);
     } catch (error) {
       console.error(`[FilesystemCache] CRITICAL - Failed to cache ${url}:`, error);
-      // Don't throw - allow the response to be used even if caching fails
-      // This ensures download works even if filesystem has issues
+      // THROW error to fail-fast with clear message - prevents "download complete but not cached" confusion
+      throw new Error(
+        `Failed to cache model file: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 

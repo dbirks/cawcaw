@@ -860,7 +860,7 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
       // Download complete - refresh cache status and clear progress
       setDownloadProgress(null);
       await handleRefreshCacheStatus();
-      alert('✅ Model downloaded and ready for offline use!');
+      // Success - UI will show updated cache status (no alert to avoid dismissing Settings modal)
     } catch (error) {
       console.error('Failed to download model:', error);
       setDownloadProgress(null);
