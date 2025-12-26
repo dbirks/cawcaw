@@ -52,6 +52,7 @@ import { type DebugLogEntry, debugLogger } from '@/services/debugLogger';
 import { mcpManager } from '@/services/mcpManager';
 import type { ACPServerConfig, ACPServerStatus } from '@/types/acp';
 import type { MCPOAuthDiscovery, MCPServerConfig, MCPServerStatus } from '@/types/mcp';
+import { webgpuProbe } from '@/utils/webgpuProbe';
 
 interface SettingsProps {
   onClose: () => void;
@@ -182,6 +183,10 @@ export default function Settings({ onClose }: SettingsProps) {
   );
   const debugFilterId = useId();
   const debugLevelFilterId = useId();
+
+  // WebGPU test state
+  const [isTestingWebGPU, setIsTestingWebGPU] = useState(false);
+  const [webgpuTestResult, setWebgpuTestResult] = useState<string | null>(null);
 
   // API Key state
   const [apiKey, setApiKey] = useState<string>('');
@@ -492,6 +497,35 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const handleClearLogs = () => {
     debugLogger.clearLogs();
+  };
+
+  const handleTestWebGPU = async () => {
+    setIsTestingWebGPU(true);
+    setWebgpuTestResult(null);
+    try {
+      const result = await webgpuProbe();
+      const resultMessage = `
+WebGPU Test Results:
+━━━━━━━━━━━━━━━━━━
+✓ Navigator GPU: ${result.hasNavigatorGpu ? 'Available' : 'Not Available'}
+✓ Adapter: ${result.hasAdapter ? 'Available' : 'Not Available'}
+✓ Secure Context: ${result.isSecureContext ? 'Yes' : 'No'}
+${result.adapterError ? `✗ Error: ${result.adapterError}` : ''}
+
+User Agent: ${result.userAgent}
+Timestamp: ${new Date(result.timestamp).toLocaleString()}
+
+Results have been logged to Sentry for remote monitoring.
+      `.trim();
+      setWebgpuTestResult(resultMessage);
+      alert(resultMessage);
+    } catch (error) {
+      const errorMessage = `Failed to run WebGPU test: ${error instanceof Error ? error.message : String(error)}`;
+      setWebgpuTestResult(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setIsTestingWebGPU(false);
+    }
   };
 
   // OAuth Functions
@@ -2504,6 +2538,36 @@ export default function Settings({ onClose }: SettingsProps) {
                       Clear
                     </Button>
                   </div>
+                </div>
+
+                {/* WebGPU Test Section */}
+                <div className="px-4 sm:px-4 safe-x">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TestTube className="h-5 w-5" />
+                        WebGPU Support Test
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Test WebGPU availability on this device. Results are logged to Sentry for
+                        remote monitoring and debugging.
+                      </p>
+                      <Button
+                        onClick={handleTestWebGPU}
+                        disabled={isTestingWebGPU}
+                        className="w-full sm:w-auto"
+                      >
+                        {isTestingWebGPU ? 'Testing...' : 'Test WebGPU Support'}
+                      </Button>
+                      {webgpuTestResult && (
+                        <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
+                          {webgpuTestResult}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Debug Log Display - Flex-grow scrollable area */}
