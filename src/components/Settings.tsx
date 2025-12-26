@@ -504,18 +504,42 @@ export default function Settings({ onClose }: SettingsProps) {
     setWebgpuTestResult(null);
     try {
       const result = await webgpuProbe();
-      const resultMessage = `
-WebGPU Test Results:
-━━━━━━━━━━━━━━━━━━
-✓ Navigator GPU: ${result.hasNavigatorGpu ? 'Available' : 'Not Available'}
-✓ Adapter: ${result.hasAdapter ? 'Available' : 'Not Available'}
-✓ Secure Context: ${result.isSecureContext ? 'Yes' : 'No'}
-${result.adapterError ? `✗ Error: ${result.adapterError}` : ''}
 
-User Agent: ${result.userAgent}
+      // Format device limits
+      const limitsSection = result.maxBufferSize
+        ? `
+GPU Limits:
+  Max Buffer Size: ${(result.maxBufferSize / 1024 / 1024).toFixed(0)} MB
+  Max Storage Buffer: ${result.maxStorageBufferBindingSize ? `${(result.maxStorageBufferBindingSize / 1024 / 1024).toFixed(0)} MB` : 'N/A'}
+  Max Compute Workgroup Storage: ${result.maxComputeWorkgroupStorageSize ? `${result.maxComputeWorkgroupStorageSize} bytes` : 'N/A'}
+  Max Compute Invocations: ${result.maxComputeInvocationsPerWorkgroup ?? 'N/A'}
+`
+        : '';
+
+      const resultMessage = `
+WebGPU Extended Diagnostics:
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Device Information:
+  Platform: ${result.platform}
+  OS Version: ${result.osVersion}
+  Model: ${result.deviceModel}
+  Secure Context: ${result.isSecureContext ? '✓ Yes' : '✗ No'}
+
+Capability Tests:
+  ${result.hasNavigatorGpu ? '✓' : '✗'} Navigator GPU: ${result.hasNavigatorGpu ? 'Available' : 'Not Available'}
+  ${result.hasAdapter ? '✓' : '✗'} Adapter: ${result.hasAdapter ? 'Available' : 'Not Available'}
+  ${result.canCreateDevice ? '✓' : '✗'} Device Creation: ${result.canCreateDevice ? 'Success' : 'Failed'}
+  ${result.canRunComputePass ? '✓' : '✗'} Compute Pass: ${result.canRunComputePass ? 'Success' : 'Failed'}
+${limitsSection}
+${result.adapterError ? `\nAdapter Error: ${result.adapterError}` : ''}
+${result.deviceError ? `Device Error: ${result.deviceError}` : ''}
+${result.computePassError ? `Compute Pass Error: ${result.computePassError}` : ''}
+
 Timestamp: ${new Date(result.timestamp).toLocaleString()}
 
-Results have been logged to Sentry for remote monitoring.
+✓ Results logged to Sentry for remote monitoring
+${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Local AI unavailable - use OpenAI/Claude'}
       `.trim();
       setWebgpuTestResult(resultMessage);
       alert(resultMessage);
