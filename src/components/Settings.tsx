@@ -32,6 +32,7 @@ import {
 import { useCallback, useEffect, useId, useState } from 'react';
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
+import { LocalAIProgressCard } from '@/components/LocalAIProgressCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -215,6 +216,12 @@ export default function Settings({ onClose }: SettingsProps) {
     freeFormatted: string;
     percentage: number;
     isEstimate: boolean;
+  } | null>(null);
+
+  // Model download progress state
+  const [downloadProgress, setDownloadProgress] = useState<{
+    progress: number;
+    stage: string;
   } | null>(null);
 
   // API Key state

@@ -35,9 +35,11 @@ export async function isModelCached(
 
 /**
  * Get approximate cache size for the model
+ * Note: This calculates the TOTAL size of all cached transformers.js files,
+ * not just the specific model, since files may be cached with different URL patterns
  */
 export async function getModelCacheSize(
-  modelId = 'onnx-community/gemma-3-270m-it-ONNX'
+  _modelId = 'onnx-community/gemma-3-270m-it-ONNX'
 ): Promise<number> {
   try {
     const cache = await caches.open('transformers-cache');
@@ -45,13 +47,13 @@ export async function getModelCacheSize(
 
     let totalSize = 0;
 
+    // Calculate total size of ALL cached entries since Transformers.js
+    // may cache files with various URL patterns (model files, tokenizer, config, etc.)
     for (const request of keys) {
-      if (request.url.includes(modelId)) {
-        const response = await cache.match(request);
-        if (response) {
-          const blob = await response.blob();
-          totalSize += blob.size;
-        }
+      const response = await cache.match(request);
+      if (response) {
+        const blob = await response.blob();
+        totalSize += blob.size;
       }
     }
 
@@ -86,18 +88,18 @@ export async function getModelCacheStatus(
 
 /**
  * Clear the model cache
+ * Note: This clears ALL transformers.js cache entries, not just the specific model
  */
 export async function clearModelCache(
-  modelId = 'onnx-community/gemma-3-270m-it-ONNX'
+  _modelId = 'onnx-community/gemma-3-270m-it-ONNX'
 ): Promise<void> {
   try {
     const cache = await caches.open('transformers-cache');
     const keys = await cache.keys();
 
+    // Clear all transformers cache entries (model files, tokenizer, config, etc.)
     for (const request of keys) {
-      if (request.url.includes(modelId)) {
-        await cache.delete(request);
-      }
+      await cache.delete(request);
     }
   } catch (error) {
     console.error('Failed to clear model cache:', error);
