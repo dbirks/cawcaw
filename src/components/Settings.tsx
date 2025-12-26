@@ -647,6 +647,8 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
 
     try {
       setIsLoadingCache(true);
+      setDownloadProgress({ progress: 0, stage: 'initializing' });
+
       await localAIService.initialize(
         {
           modelId: 'onnx-community/gemma-3-270m-it-ONNX',
@@ -654,6 +656,8 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
           dtype: 'q4f16',
         },
         (progress, stage) => {
+          // Update progress state for UI
+          setDownloadProgress({ progress, stage });
           debugLogger.info(
             'general',
             `📊 Model download: ${stage} - ${Math.round(progress * 100)}%`
@@ -661,10 +665,13 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
         }
       );
 
-      alert('✅ Model downloaded and ready for offline use!');
+      // Download complete - refresh cache status and clear progress
+      setDownloadProgress(null);
       await handleRefreshCacheStatus();
+      alert('✅ Model downloaded and ready for offline use!');
     } catch (error) {
       console.error('Failed to download model:', error);
+      setDownloadProgress(null);
       alert(
         `❌ Failed to download model: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
@@ -1426,6 +1433,14 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                           </Button>
                         </div>
 
+                        {/* Download Progress */}
+                        {downloadProgress && (
+                          <LocalAIProgressCard
+                            progress={downloadProgress.progress}
+                            stage={downloadProgress.stage}
+                          />
+                        )}
+
                         {/* Cache Actions */}
                         <div className="flex flex-col sm:flex-row gap-2">
                           <Button
@@ -1434,7 +1449,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                             disabled={isLoadingCache || (cacheStatus?.isCached ?? false)}
                             className="w-full sm:w-auto"
                           >
-                            Pre-download Model
+                            {isLoadingCache ? 'Downloading...' : 'Download Model'}
                           </Button>
                           <Button
                             variant="destructive"
