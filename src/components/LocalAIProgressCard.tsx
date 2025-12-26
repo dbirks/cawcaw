@@ -19,6 +19,8 @@ interface LocalAIProgressCardProps {
   stage: string;
   downloadSpeed?: string; // e.g., "2.5 MB/s"
   estimatedTimeRemaining?: string; // e.g., "30s"
+  modelName?: string; // e.g., "google/gemma-3-270m"
+  modelSize?: string; // e.g., "220 MB"
   enableSmoothing?: boolean; // Optional: smooth progress transitions (default: false)
 }
 
@@ -27,6 +29,8 @@ export function LocalAIProgressCard({
   stage,
   downloadSpeed,
   estimatedTimeRemaining,
+  modelName,
+  modelSize,
   enableSmoothing = false,
 }: LocalAIProgressCardProps) {
   // Optional smoothing state (disabled by default)
@@ -82,8 +86,16 @@ export function LocalAIProgressCard({
           Downloading Local AI Model
         </CardTitle>
         <CardDescription>
-          First-time download (~150-250MB). Model will be cached for offline use after download
-          completes.
+          {modelName && modelSize ? (
+            <>
+              {modelName} ({modelSize})
+            </>
+          ) : (
+            <>
+              First-time download (~150-250MB). Model will be cached for offline use after download
+              completes.
+            </>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

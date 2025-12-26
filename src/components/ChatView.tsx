@@ -180,6 +180,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const [localAIProgress, setLocalAIProgress] = useState<{
     progress: number;
     stage: string;
+    downloadSpeed?: string;
+    modelName?: string;
+    modelSize?: string;
   } | null>(null);
   const [_streamingLocalText, setStreamingLocalText] = useState<string>('');
 
@@ -809,10 +812,10 @@ export default function ChatView({ initialConversationId }: { initialConversatio
             device: 'webgpu',
             dtype: 'q4f16', // CRITICAL: Avoid q4/fp32 crashes
           },
-          (progress, stage) => {
+          (progress, stage, downloadSpeed, modelName, modelSize) => {
             debugLogger.info('chat', `📊 Model loading: ${stage} - ${Math.round(progress * 100)}%`);
             // Update progress UI (progress is 0-1 from Transformers.js, LocalAIProgressCard converts to %)
-            setLocalAIProgress({ progress, stage });
+            setLocalAIProgress({ progress, stage, downloadSpeed, modelName, modelSize });
           }
         );
 
@@ -1652,6 +1655,9 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                         <LocalAIProgressCard
                           progress={localAIProgress.progress}
                           stage={localAIProgress.stage}
+                          downloadSpeed={localAIProgress.downloadSpeed}
+                          modelName={localAIProgress.modelName}
+                          modelSize={localAIProgress.modelSize}
                         />
                       </div>
                     )}

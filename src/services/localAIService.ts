@@ -23,7 +23,13 @@ import type {
 /**
  * Callback for model loading progress
  */
-export type ProgressCallback = (progress: number, stage: string) => void;
+export type ProgressCallback = (
+  progress: number,
+  stage: string,
+  downloadSpeed?: string,
+  modelName?: string,
+  modelSize?: string
+) => void;
 
 /**
  * Callback for streaming tokens during generation
@@ -198,7 +204,13 @@ export class LocalAIService {
 
     switch (message.type) {
       case 'load-progress':
-        this.progressCallback?.(message.progress, message.stage);
+        this.progressCallback?.(
+          message.progress,
+          message.stage,
+          message.downloadSpeed,
+          message.modelName,
+          message.modelSize
+        );
         break;
 
       case 'ready':

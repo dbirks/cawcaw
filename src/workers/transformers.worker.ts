@@ -119,7 +119,14 @@ export type WorkerRequest =
  * Messages sent FROM worker TO main thread
  */
 export type WorkerResponse =
-  | { type: 'load-progress'; progress: number; stage: string }
+  | {
+      type: 'load-progress';
+      progress: number;
+      stage: string;
+      downloadSpeed?: string;
+      modelName?: string;
+      modelSize?: string;
+    }
   | { type: 'ready' }
   | { type: 'token'; text: string }
   | { type: 'complete'; fullText: string; stats: InferenceStats }
@@ -152,9 +159,45 @@ interface FileProgress {
 const fileProgressMap = new Map<string, FileProgress>();
 let lastReportedProgress = 0;
 
+/**
+ * Download speed tracking
+ */
+let downloadStartTime: number | null = null;
+let totalBytesLoaded = 0;
+let currentModelId = '';
+let totalModelSize = 0;
+
 // ============================================================================
 // Message Handlers
 // ============================================================================
+
+/**
+ * Format bytes to human-readable size (MB or GB)
+ */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 MB';
+
+  const mb = bytes / 1024 / 1024;
+  if (mb < 1024) {
+    return `${mb.toFixed(0)} MB`;
+  }
+
+  const gb = mb / 1024;
+  return `${gb.toFixed(1)} GB`;
+}
+
+/**
+ * Extract model name from HuggingFace model ID
+ * e.g., "onnx-community/gemma-3-270m-it-ONNX" -> "gemma-3-270m-it"
+ */
+function extractModelName(modelId: string): string {
+  // Remove organization prefix (e.g., "onnx-community/")
+  const parts = modelId.split('/');
+  const modelPart = parts[parts.length - 1];
+
+  // Remove common suffixes
+  return modelPart.replace(/-ONNX$/i, '').replace(/-onnx$/i, '');
+}
 
 /**
  * Calculate aggregated progress across all downloaded files
@@ -244,6 +287,30 @@ let progressDebounceTimer: NodeJS.Timeout | null = null;
 let hasPendingProgressUpdate = false;
 
 /**
+ * Calculate download speed in MB/s
+ */
+function calculateDownloadSpeed(): string | undefined {
+  if (!downloadStartTime || totalBytesLoaded === 0) {
+    return undefined;
+  }
+
+  const elapsedSeconds = (Date.now() - downloadStartTime) / 1000;
+  if (elapsedSeconds < 0.1) {
+    // Too early to calculate meaningful speed
+    return undefined;
+  }
+
+  const speedMBps = totalBytesLoaded / elapsedSeconds / 1024 / 1024;
+
+  // Format based on speed magnitude
+  if (speedMBps < 0.1) {
+    return `${(speedMBps * 1024).toFixed(0)} KB/s`;
+  }
+
+  return `${speedMBps.toFixed(1)} MB/s`;
+}
+
+/**
  * Report progress update to main thread with debouncing
  * This reduces the frequency of UI updates and prevents visual flashing
  */
@@ -257,10 +324,17 @@ function reportProgress(progress: number, stage: string): void {
   // Debounce to max 10 updates per second (100ms interval)
   progressDebounceTimer = setTimeout(() => {
     if (hasPendingProgressUpdate) {
+      const downloadSpeed = calculateDownloadSpeed();
+      const modelName = currentModelId ? extractModelName(currentModelId) : undefined;
+      const modelSize = totalModelSize > 0 ? formatBytes(totalModelSize) : undefined;
+
       self.postMessage({
         type: 'load-progress',
         progress,
         stage,
+        downloadSpeed,
+        modelName,
+        modelSize,
       } satisfies WorkerResponse);
 
       hasPendingProgressUpdate = false;
@@ -277,6 +351,10 @@ async function handleLoad(config: LoadConfig): Promise<void> {
     // Reset progress tracking state for new download
     fileProgressMap.clear();
     lastReportedProgress = 0;
+    downloadStartTime = null;
+    totalBytesLoaded = 0;
+    currentModelId = config.modelId;
+    totalModelSize = 0;
 
     // Load the text generation pipeline with progress callbacks
     // Type assertion needed due to complex union type from pipeline()
@@ -305,6 +383,25 @@ async function handleLoad(config: LoadConfig): Promise<void> {
           const loaded = 'loaded' in progressData ? (progressData.loaded as number) : 0;
           const total = 'total' in progressData ? (progressData.total as number) : 0;
 
+          // Start download timer on first progress event
+          if (!downloadStartTime) {
+            downloadStartTime = Date.now();
+          }
+
+          // Track total bytes loaded across all files
+          const previousLoaded = fileProgressMap.get(fileUrl)?.loaded ?? 0;
+          const bytesAddedThisUpdate = loaded - previousLoaded;
+          totalBytesLoaded += bytesAddedThisUpdate;
+
+          // Track total model size (sum of all file sizes)
+          if (total > 0) {
+            const previousTotal = fileProgressMap.get(fileUrl)?.total ?? 0;
+            if (previousTotal === 0) {
+              // New file with known size - add to total
+              totalModelSize += total;
+            }
+          }
+
           // CRITICAL FIX: Transformers.js reports progress as 0-100, not 0-1
           // Convert to 0-1 range for consistency with our internal format
           const normalizedProgress = rawProgress / 100;
@@ -315,6 +412,9 @@ async function handleLoad(config: LoadConfig): Promise<void> {
             normalizedProgress,
             loaded,
             total,
+            totalBytesLoaded,
+            totalModelSize,
+            downloadSpeed: calculateDownloadSpeed(),
           });
 
           // Update file progress tracking (using normalized 0-1 range)
