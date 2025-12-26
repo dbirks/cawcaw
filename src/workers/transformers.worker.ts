@@ -4,9 +4,20 @@
  * Runs AI inference in a background thread to prevent UI blocking.
  * Handles model loading, text generation, and progress events.
  *
- * Phase 2: Infrastructure scaffolding (no Transformers.js yet)
- * Phase 3: Will add actual @huggingface/transformers integration
+ * Phase 3: Integrated with @huggingface/transformers v3
  */
+
+import {
+  env,
+  pipeline,
+  type TextGenerationOutput,
+  type TextGenerationPipeline,
+  TextStreamer,
+} from '@huggingface/transformers';
+
+// Configure Transformers.js environment
+env.useBrowserCache = true; // Use Cache API for model storage
+env.allowRemoteModels = true; // Allow downloading from HuggingFace Hub
 
 // ============================================================================
 // Message Protocol Types
@@ -64,9 +75,9 @@ export type WorkerResponse =
 // ============================================================================
 
 /**
- * Model pipeline instance (Phase 3: will be Transformers.js pipeline)
+ * Model pipeline instance
  */
-let modelPipeline: unknown = null;
+let modelPipeline: TextGenerationPipeline | null = null;
 
 /**
  * Flag to cancel ongoing generation
@@ -78,57 +89,30 @@ let isCancelled = false;
 // ============================================================================
 
 /**
- * Load the AI model (Phase 3: will integrate Transformers.js)
+ * Load the AI model using Transformers.js
  */
 async function handleLoad(config: LoadConfig): Promise<void> {
   try {
-    // Phase 3: Replace with actual Transformers.js implementation
-    // import { pipeline, env } from '@huggingface/transformers';
-    //
-    // env.useBrowserCache = true;
-    // env.allowRemoteModels = true;
-    //
-    // modelPipeline = await pipeline(
-    //   'text-generation',
-    //   config.modelId,
-    //   {
-    //     device: config.device,
-    //     dtype: config.dtype,
-    //     progress_callback: (progress) => {
-    //       self.postMessage({
-    //         type: 'load-progress',
-    //         progress: progress.progress,
-    //         stage: progress.status
-    //       });
-    //     }
-    //   }
-    // );
+    // Load the text generation pipeline with progress callbacks
+    // Type assertion needed due to complex union type from pipeline()
+    // Using double assertion to work around TypeScript's complex union type issue
+    modelPipeline = (await pipeline('text-generation', config.modelId, {
+      device: config.device,
+      dtype: config.dtype,
+      progress_callback: (progressData) => {
+        // Transform Transformers.js progress format to our protocol
+        // ProgressInfo is a union type: InitiateProgressInfo | DownloadProgressInfo | ProgressStatusInfo | DoneProgressInfo | ReadyProgressInfo
+        // Only ProgressStatusInfo has the progress field
+        const progress = progressData.status === 'progress' ? progressData.progress : 0;
+        const stage = progressData.status;
 
-    // Placeholder: Simulate model loading with progress events
-    const stages = [
-      'Downloading tokenizer',
-      'Downloading model weights',
-      'Initializing WebGPU',
-      'Loading model into GPU',
-      'Ready',
-    ];
-
-    for (let i = 0; i < stages.length; i++) {
-      const progress = ((i + 1) / stages.length) * 100;
-      const stage = stages[i];
-
-      self.postMessage({
-        type: 'load-progress',
-        progress,
-        stage,
-      } satisfies WorkerResponse);
-
-      // Simulate download time
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    // Placeholder: Mark model as loaded
-    modelPipeline = { loaded: true, config };
+        self.postMessage({
+          type: 'load-progress',
+          progress,
+          stage,
+        } satisfies WorkerResponse);
+      },
+    })) as any as TextGenerationPipeline;
 
     self.postMessage({ type: 'ready' } satisfies WorkerResponse);
   } catch (error) {
@@ -144,9 +128,9 @@ async function handleLoad(config: LoadConfig): Promise<void> {
 }
 
 /**
- * Generate text from prompt (Phase 3: will integrate Transformers.js)
+ * Generate text from prompt using Transformers.js
  */
-async function handleGenerate(_prompt: string, _options: GenerateOptions): Promise<void> {
+async function handleGenerate(prompt: string, options: GenerateOptions): Promise<void> {
   if (!modelPipeline) {
     self.postMessage({
       type: 'error',
@@ -159,52 +143,59 @@ async function handleGenerate(_prompt: string, _options: GenerateOptions): Promi
     isCancelled = false;
     const startTime = performance.now();
     let firstTokenTime: number | null = null;
+    let tokenCount = 0;
 
-    // Phase 3: Replace with actual Transformers.js streaming inference
-    // const result = await modelPipeline(prompt, {
-    //   max_new_tokens: options.maxNewTokens ?? 256,
-    //   temperature: options.temperature ?? 0.7,
-    //   top_p: options.topP ?? 0.9,
-    //   streamer: (token) => {
-    //     if (!firstTokenTime) firstTokenTime = performance.now();
-    //     if (isCancelled) throw new Error('Generation cancelled');
-    //     self.postMessage({ type: 'token', text: token } satisfies WorkerResponse);
-    //   }
-    // });
+    // Create a TextStreamer for token-by-token output
+    const streamer = new TextStreamer(modelPipeline.tokenizer, {
+      skip_prompt: true,
+      skip_special_tokens: true,
+      callback_function: (text: string) => {
+        if (isCancelled) {
+          throw new Error('Generation cancelled');
+        }
 
-    // Placeholder: Simulate streaming token generation
-    const mockResponse = 'This is a placeholder response. Phase 3 will integrate Transformers.js.';
-    const tokens = mockResponse.split(' ');
+        if (!firstTokenTime) {
+          firstTokenTime = performance.now();
+        }
 
-    for (const token of tokens) {
-      if (isCancelled) {
-        throw new Error('Generation cancelled');
-      }
+        tokenCount++;
 
-      if (!firstTokenTime) {
-        firstTokenTime = performance.now();
-      }
+        self.postMessage({
+          type: 'token',
+          text,
+        } satisfies WorkerResponse);
+      },
+    });
 
-      self.postMessage({
-        type: 'token',
-        text: `${token} `,
-      } satisfies WorkerResponse);
-
-      // Simulate token generation delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    // Run text generation with streaming
+    const result = await modelPipeline(prompt, {
+      max_new_tokens: options.maxNewTokens ?? 256,
+      temperature: options.temperature ?? 0.7,
+      top_p: options.topP ?? 0.95,
+      streamer,
+    });
 
     const endTime = performance.now();
     const durationMs = endTime - startTime;
     const firstTokenLatencyMs = firstTokenTime ? firstTokenTime - startTime : 0;
 
+    // Extract generated text from result
+    // Result is TextGenerationOutput (array of TextGenerationSingle)
+    // Type assertion to handle complex union type
+    const resultArray = result as TextGenerationOutput;
+    let fullText = '';
+    if (Array.isArray(resultArray) && resultArray.length > 0) {
+      const generatedText = resultArray[0].generated_text;
+      fullText = typeof generatedText === 'string' ? generatedText : '';
+    }
+
     self.postMessage({
       type: 'complete',
-      fullText: mockResponse,
+      fullText,
       stats: {
-        totalTokens: tokens.length,
+        totalTokens: tokenCount,
         durationMs,
-        tokensPerSecond: (tokens.length / durationMs) * 1000,
+        tokensPerSecond: (tokenCount / durationMs) * 1000,
         firstTokenLatencyMs,
       },
     } satisfies WorkerResponse);
@@ -230,9 +221,11 @@ function handleCancel(): void {
 /**
  * Unload the model and free memory
  */
-function handleUnload(): void {
-  // Phase 3: Add proper cleanup for Transformers.js pipeline
-  // modelPipeline?.dispose?.();
+async function handleUnload(): Promise<void> {
+  // Transformers.js pipelines have a dispose method for cleanup
+  if (modelPipeline && typeof modelPipeline.dispose === 'function') {
+    await modelPipeline.dispose();
+  }
 
   modelPipeline = null;
   isCancelled = false;
@@ -259,7 +252,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       break;
 
     case 'unload':
-      handleUnload();
+      await handleUnload();
       break;
 
     default:
