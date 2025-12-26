@@ -146,7 +146,7 @@ let isCancelled = false;
 interface FileProgress {
   loaded: number;
   total: number;
-  progress: number; // 0-100
+  progress: number; // 0-1 (normalized from Transformers.js 0-100 range)
 }
 
 const fileProgressMap = new Map<string, FileProgress>();
@@ -305,18 +305,23 @@ async function handleLoad(config: LoadConfig): Promise<void> {
           const loaded = 'loaded' in progressData ? (progressData.loaded as number) : 0;
           const total = 'total' in progressData ? (progressData.total as number) : 0;
 
+          // CRITICAL FIX: Transformers.js reports progress as 0-100, not 0-1
+          // Convert to 0-1 range for consistency with our internal format
+          const normalizedProgress = rawProgress / 100;
+
           console.log('[Progress Debug] Processing progress event:', {
             file: fileUrl.split('/').pop(),
             rawProgress,
+            normalizedProgress,
             loaded,
             total,
           });
 
-          // Update file progress tracking
+          // Update file progress tracking (using normalized 0-1 range)
           fileProgressMap.set(fileUrl, {
             loaded,
             total,
-            progress: rawProgress,
+            progress: normalizedProgress,
           });
 
           // Calculate aggregated progress across all files
@@ -354,11 +359,11 @@ async function handleLoad(config: LoadConfig): Promise<void> {
             });
 
             if (existingProgress) {
-              // Mark file as fully loaded
+              // Mark file as fully loaded (1.0 = 100%)
               fileProgressMap.set(fileUrl, {
                 loaded: existingProgress.total,
                 total: existingProgress.total,
-                progress: 100,
+                progress: 1.0,
               });
 
               const aggregatedProgress = calculateAggregatedProgress();
