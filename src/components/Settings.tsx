@@ -665,10 +665,17 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
         (progress, stage) => {
           // Update progress state for UI
           setDownloadProgress({ progress, stage });
-          debugLogger.info(
-            'general',
-            `📊 Model download: ${stage} - ${Math.round(progress * 100)}%`
-          );
+
+          // Validate progress is in expected 0-1 range
+          const progressPercent = Math.round(progress * 100);
+          if (progress < 0 || progress > 1) {
+            debugLogger.warn(
+              'general',
+              `⚠️ Invalid progress value: ${progress} (expected 0-1 range)`
+            );
+          }
+
+          debugLogger.info('general', `📊 Model download: ${stage} - ${progressPercent}%`);
         }
       );
 
@@ -2052,6 +2059,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                                 <DialogTitle>Edit MCP Server</DialogTitle>
                                 <Button
                                   variant="ghost"
+                                  size="icon"
                                   onClick={() => setShowEditDialog(false)}
                                   className="h-14 w-14 p-0"
                                 >
@@ -2449,6 +2457,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                                 <DialogTitle>Edit ACP Agent</DialogTitle>
                                 <Button
                                   variant="ghost"
+                                  size="icon"
                                   onClick={() => setShowAcpEditDialog(false)}
                                   className="h-14 w-14 p-0"
                                 >

@@ -103,7 +103,14 @@ async function handleLoad(config: LoadConfig): Promise<void> {
         // Transform Transformers.js progress format to our protocol
         // ProgressInfo is a union type: InitiateProgressInfo | DownloadProgressInfo | ProgressStatusInfo | DoneProgressInfo | ReadyProgressInfo
         // Only ProgressStatusInfo has the progress field
-        const progress = progressData.status === 'progress' ? progressData.progress : 0;
+        // CRITICAL: Transformers.js reports progress as 0-100, not 0-1!
+        // We normalize to 0-1 range for consistent internal representation
+        let rawProgress = progressData.status === 'progress' ? progressData.progress : 0;
+
+        // Clamp to valid 0-100 range and convert to 0-1
+        rawProgress = Math.max(0, Math.min(100, rawProgress));
+        const progress = rawProgress / 100;
+
         const stage = progressData.status;
 
         self.postMessage({

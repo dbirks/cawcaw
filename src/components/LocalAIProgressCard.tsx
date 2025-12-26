@@ -22,7 +22,10 @@ export function LocalAIProgressCard({
   downloadSpeed,
   estimatedTimeRemaining,
 }: LocalAIProgressCardProps) {
-  const progressPercent = Math.round(progress * 100);
+  // Ensure progress is always valid (0-100%)
+  // Clamp to 0-1 range first, then convert to percentage
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const progressPercent = Math.round(clampedProgress * 100);
 
   return (
     <Card className="border-2 border-primary/20 shadow-md">
