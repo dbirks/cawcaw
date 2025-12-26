@@ -382,10 +382,10 @@ export default function Settings({ onClose }: SettingsProps) {
     loadSettings();
   }, [loadSettings]);
 
-  // Load cache status when debug view is opened
+  // Load cache status when LLM or debug view is opened
   // biome-ignore lint/correctness/useExhaustiveDependencies: handleRefreshCacheStatus is stable
   useEffect(() => {
-    if (currentView === 'debug') {
+    if (currentView === 'llm' || currentView === 'debug') {
       handleRefreshCacheStatus();
     }
   }, [currentView]);
@@ -1404,6 +1404,97 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                             Choose a lightweight model for generating conversation titles (optional)
                           </p>
                         </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Local AI Model Cache Management Section */}
+                    <Card className="mt-6">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Monitor className="h-5 w-5" />
+                          Local AI Model Cache
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Manage the cached Gemma 3 270M model (~150-250MB). Cached models are
+                          available for offline use.
+                        </p>
+
+                        {/* Cache Status */}
+                        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Cache Status:</span>
+                            {isLoadingCache ? (
+                              <span className="text-sm text-muted-foreground">Checking...</span>
+                            ) : cacheStatus ? (
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={cacheStatus.isCached ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {cacheStatus.isCached ? 'Cached' : 'Not Downloaded'}
+                                </Badge>
+                                {cacheStatus.isCached && cacheStatus.estimatedSize && (
+                                  <span className="text-sm text-muted-foreground">
+                                    ({cacheStatus.estimatedSize})
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Unknown</span>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRefreshCacheStatus}
+                            disabled={isLoadingCache}
+                          >
+                            Refresh
+                          </Button>
+                        </div>
+
+                        {/* Cache Actions */}
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={handlePredownloadModel}
+                            disabled={isLoadingCache || (cacheStatus?.isCached ?? false)}
+                            className="w-full sm:w-auto"
+                          >
+                            Pre-download Model
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={handleClearCache}
+                            disabled={isClearingCache || !(cacheStatus?.isCached ?? false)}
+                            className="w-full sm:w-auto"
+                          >
+                            {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                          </Button>
+                        </div>
+
+                        {/* Storage Usage Display */}
+                        {storageEstimate && (
+                          <div className="space-y-2 pt-3 border-t">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Storage Usage:</span>
+                              <span className="text-sm text-muted-foreground">
+                                {storageEstimate.usageFormatted} / {storageEstimate.quotaFormatted}
+                              </span>
+                            </div>
+                            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                              <div
+                                className="h-full bg-primary transition-all"
+                                style={{ width: `${Math.min(storageEstimate.percentage, 100)}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {storageEstimate.percentage.toFixed(1)}% of available storage used
+                            </p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
@@ -2641,319 +2732,225 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
             )}
 
             {currentView === 'debug' && (
-              <div className="flex flex-col gap-3 h-full">
-                {/* Header */}
-                <div className="px-4 sm:px-4 safe-x">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Bug className="h-5 w-5" />
-                    <h2 className="text-lg font-semibold">Debug Logs</h2>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    View OAuth authentication and MCP server connection logs for troubleshooting
-                  </p>
-                </div>
-
-                {/* Debug Controls */}
-                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between px-4 sm:px-4 safe-x">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <label htmlFor={debugFilterId} className="text-sm font-medium">
-                        Category:
-                      </label>
-                      <select
-                        id={debugFilterId}
-                        value={debugFilter}
-                        onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
-                        className="px-2 py-1 text-sm border rounded bg-background"
-                      >
-                        <option value="all">All</option>
-                        <option value="chat">Chat</option>
-                        <option value="audio">Audio</option>
-                        <option value="oauth">OAuth</option>
-                        <option value="mcp">MCP</option>
-                        <option value="general">General</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label htmlFor={debugLevelFilterId} className="text-sm font-medium">
-                        Level:
-                      </label>
-                      <select
-                        id={debugLevelFilterId}
-                        value={debugLevelFilter}
-                        onChange={(e) =>
-                          setDebugLevelFilter(e.target.value as typeof debugLevelFilter)
-                        }
-                        className="px-2 py-1 text-sm border rounded bg-background"
-                      >
-                        <option value="all">All</option>
-                        <option value="info">Info</option>
-                        <option value="warn">Warn</option>
-                        <option value="error">Error</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCopyLogs}
-                      className="flex items-center gap-1"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleClearLogs}
-                      className="flex items-center gap-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-
-                {/* WebGPU Test Section */}
-                <div className="px-4 sm:px-4 safe-x">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <TestTube className="h-5 w-5" />
-                        WebGPU Support Test
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        Test WebGPU availability on this device. Results are logged to Sentry for
-                        remote monitoring and debugging.
-                      </p>
-                      <Button
-                        onClick={handleTestWebGPU}
-                        disabled={isTestingWebGPU}
-                        className="w-full sm:w-auto"
-                      >
-                        {isTestingWebGPU ? 'Testing...' : 'Test WebGPU Support'}
-                      </Button>
-                      {webgpuTestResult && (
-                        <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
-                          {webgpuTestResult}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Local AI Capability Test Section */}
-                <div className="px-4 sm:px-4 safe-x">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Brain className="h-5 w-5" />
-                        Local AI Capability
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        Check if Gemma 3 270M local AI is available on this device. Requires WebGPU
-                        support for on-device inference.
-                      </p>
-                      <Button
-                        onClick={handleTestLocalAI}
-                        disabled={isTestingLocalAI}
-                        className="w-full sm:w-auto"
-                      >
-                        {isTestingLocalAI ? 'Testing...' : 'Test Local AI'}
-                      </Button>
-                      {localAITestResult && (
-                        <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
-                          {localAITestResult}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Model Cache Management Section */}
-                <div className="px-4 sm:px-4 safe-x">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Monitor className="h-5 w-5" />
-                        Local AI Model Cache
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        Manage the cached Gemma 3 270M model (~150-250MB). Cached models are
-                        available for offline use.
-                      </p>
-
-                      {/* Cache Status */}
-                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Cache Status:</span>
-                          {isLoadingCache ? (
-                            <span className="text-sm text-muted-foreground">Checking...</span>
-                          ) : cacheStatus ? (
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={cacheStatus.isCached ? 'default' : 'secondary'}
-                                className="text-xs"
-                              >
-                                {cacheStatus.isCached ? 'Cached' : 'Not Downloaded'}
-                              </Badge>
-                              {cacheStatus.isCached && cacheStatus.estimatedSize && (
-                                <span className="text-sm text-muted-foreground">
-                                  ({cacheStatus.estimatedSize})
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Unknown</span>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRefreshCacheStatus}
-                          disabled={isLoadingCache}
-                        >
-                          Refresh
-                        </Button>
+              <div className="flex-1 min-h-0">
+                <ScrollArea className="h-full">
+                  <div className="pr-4 safe-x safe-bottom space-y-4">
+                    {/* Header */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Bug className="h-5 w-5" />
+                        <h2 className="text-lg font-semibold">Debug Logs</h2>
                       </div>
+                      <p className="text-sm text-muted-foreground">
+                        View OAuth authentication and MCP server connection logs for troubleshooting
+                      </p>
+                    </div>
 
-                      {/* Cache Actions */}
-                      <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Debug Controls */}
+                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <label htmlFor={debugFilterId} className="text-sm font-medium">
+                            Category:
+                          </label>
+                          <select
+                            id={debugFilterId}
+                            value={debugFilter}
+                            onChange={(e) => setDebugFilter(e.target.value as typeof debugFilter)}
+                            className="px-2 py-1 text-sm border rounded bg-background"
+                          >
+                            <option value="all">All</option>
+                            <option value="chat">Chat</option>
+                            <option value="audio">Audio</option>
+                            <option value="oauth">OAuth</option>
+                            <option value="mcp">MCP</option>
+                            <option value="general">General</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor={debugLevelFilterId} className="text-sm font-medium">
+                            Level:
+                          </label>
+                          <select
+                            id={debugLevelFilterId}
+                            value={debugLevelFilter}
+                            onChange={(e) =>
+                              setDebugLevelFilter(e.target.value as typeof debugLevelFilter)
+                            }
+                            className="px-2 py-1 text-sm border rounded bg-background"
+                          >
+                            <option value="all">All</option>
+                            <option value="info">Info</option>
+                            <option value="warn">Warn</option>
+                            <option value="error">Error</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
-                          onClick={handlePredownloadModel}
-                          disabled={isLoadingCache || (cacheStatus?.isCached ?? false)}
-                          className="w-full sm:w-auto"
+                          size="sm"
+                          onClick={handleCopyLogs}
+                          className="flex items-center gap-1"
                         >
-                          Pre-download Model
+                          <Copy className="h-4 w-4" />
+                          Copy
                         </Button>
                         <Button
-                          variant="destructive"
-                          onClick={handleClearCache}
-                          disabled={isClearingCache || !(cacheStatus?.isCached ?? false)}
-                          className="w-full sm:w-auto"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearLogs}
+                          className="flex items-center gap-1"
                         >
-                          {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                          <Trash2 className="h-4 w-4" />
+                          Clear
                         </Button>
                       </div>
-
-                      {/* Storage Usage Display */}
-                      {storageEstimate && (
-                        <div className="space-y-2 pt-3 border-t">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Storage Usage:</span>
-                            <span className="text-sm text-muted-foreground">
-                              {storageEstimate.usageFormatted} / {storageEstimate.quotaFormatted}
-                            </span>
-                          </div>
-                          <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all"
-                              style={{ width: `${Math.min(storageEstimate.percentage, 100)}%` }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {storageEstimate.percentage.toFixed(1)}% of available storage used
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Debug Log Display - Flex-grow scrollable area */}
-                <div className="flex-1 min-h-0 px-4 sm:px-4 safe-x">
-                  <ScrollArea className="h-full">
-                    <div className="bg-muted/30 rounded-md p-3 font-mono text-xs">
-                      {getFilteredLogs().length === 0 ? (
-                        <div className="text-muted-foreground text-center py-8">
-                          {debugFilter === 'all'
-                            ? 'No debug logs yet. Try OAuth authentication or MCP server operations to see logs here.'
-                            : `No ${debugFilter} logs found.`}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {getFilteredLogs().map((log, index) => (
-                            <div
-                              key={`${log.timestamp}-${index}`}
-                              className={`p-2 rounded border-l-2 ${
-                                log.level === 'error'
-                                  ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20'
-                                  : log.level === 'warn'
-                                    ? 'border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20'
-                                    : 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-muted-foreground">
-                                  {new Date(log.timestamp).toLocaleTimeString()}
-                                </span>
-                                <span
-                                  className={`px-1.5 py-0.5 text-xs rounded font-medium ${
-                                    log.level === 'error'
-                                      ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                                      : log.level === 'warn'
-                                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                  }`}
-                                >
-                                  {log.level.toUpperCase()}
-                                </span>
-                                <span
-                                  className={`px-1.5 py-0.5 text-xs rounded font-medium ${
-                                    log.category === 'chat'
-                                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                      : log.category === 'audio'
-                                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                                        : log.category === 'oauth'
-                                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                                          : log.category === 'mcp'
-                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
-                                            : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
-                                  }`}
-                                >
-                                  {log.category.toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="text-foreground whitespace-pre-wrap break-all">
-                                {log.message}
-                              </div>
-                              {log.data != null && (
-                                <details className="mt-2">
-                                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                                    Show data
-                                  </summary>
-                                  <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-all">
-                                    {typeof log.data === 'string'
-                                      ? log.data
-                                      : JSON.stringify(log.data, null, 2)}
-                                  </pre>
-                                </details>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                  </ScrollArea>
-                </div>
 
-                {/* Debug Info Footer */}
-                <div className="text-xs text-muted-foreground space-y-1 px-4 sm:px-4 pb-2 safe-bottom safe-x">
-                  <div>Total logs: {debugLogs.length}</div>
-                  <div>Filtered logs: {getFilteredLogs().length}</div>
-                  <div>
-                    Categories: Audio transcription, OAuth authentication, MCP server connections,
-                    general app logs
+                    {/* WebGPU Test Section */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <TestTube className="h-5 w-5" />
+                          WebGPU Support Test
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Test WebGPU availability on this device. Results are logged to Sentry for
+                          remote monitoring and debugging.
+                        </p>
+                        <Button
+                          onClick={handleTestWebGPU}
+                          disabled={isTestingWebGPU}
+                          className="w-full sm:w-auto"
+                        >
+                          {isTestingWebGPU ? 'Testing...' : 'Test WebGPU Support'}
+                        </Button>
+                        {webgpuTestResult && (
+                          <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
+                            {webgpuTestResult}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Local AI Capability Test Section */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Brain className="h-5 w-5" />
+                          Local AI Capability
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Check if Gemma 3 270M local AI is available on this device. Requires
+                          WebGPU support for on-device inference.
+                        </p>
+                        <Button
+                          onClick={handleTestLocalAI}
+                          disabled={isTestingLocalAI}
+                          className="w-full sm:w-auto"
+                        >
+                          {isTestingLocalAI ? 'Testing...' : 'Test Local AI'}
+                        </Button>
+                        {localAITestResult && (
+                          <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
+                            {localAITestResult}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Debug Log Display */}
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2">Debug Logs</h3>
+                      <div className="bg-muted/30 rounded-md p-3 font-mono text-xs">
+                        {getFilteredLogs().length === 0 ? (
+                          <div className="text-muted-foreground text-center py-8">
+                            {debugFilter === 'all'
+                              ? 'No debug logs yet. Try OAuth authentication or MCP server operations to see logs here.'
+                              : `No ${debugFilter} logs found.`}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {getFilteredLogs().map((log, index) => (
+                              <div
+                                key={`${log.timestamp}-${index}`}
+                                className={`p-2 rounded border-l-2 ${
+                                  log.level === 'error'
+                                    ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20'
+                                    : log.level === 'warn'
+                                      ? 'border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20'
+                                      : 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-muted-foreground">
+                                    {new Date(log.timestamp).toLocaleTimeString()}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 text-xs rounded font-medium ${
+                                      log.level === 'error'
+                                        ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                                        : log.level === 'warn'
+                                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                    }`}
+                                  >
+                                    {log.level.toUpperCase()}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 text-xs rounded font-medium ${
+                                      log.category === 'chat'
+                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                        : log.category === 'audio'
+                                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                                          : log.category === 'oauth'
+                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                                            : log.category === 'mcp'
+                                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                                              : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
+                                    }`}
+                                  >
+                                    {log.category.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="text-foreground whitespace-pre-wrap break-all">
+                                  {log.message}
+                                </div>
+                                {log.data != null && (
+                                  <details className="mt-2">
+                                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                      Show data
+                                    </summary>
+                                    <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                                      {typeof log.data === 'string'
+                                        ? log.data
+                                        : JSON.stringify(log.data, null, 2)}
+                                    </pre>
+                                  </details>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Debug Info Footer */}
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <div>Total logs: {debugLogs.length}</div>
+                      <div>Filtered logs: {getFilteredLogs().length}</div>
+                      <div>
+                        Categories: Audio transcription, OAuth authentication, MCP server
+                        connections, general app logs
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </ScrollArea>
               </div>
             )}
 
