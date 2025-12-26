@@ -1,0 +1,262 @@
+/**
+ * Local AI Service
+ *
+ * Manages the Web Worker for on-device AI inference.
+ * Provides a Promise-based API for the main thread with progress callbacks.
+ *
+ * Phase 2: Infrastructure scaffolding
+ * Phase 3: Will integrate with actual Transformers.js worker
+ */
+
+import type {
+  GenerateOptions,
+  InferenceStats,
+  LoadConfig,
+  WorkerRequest,
+  WorkerResponse,
+} from '../workers/transformers.worker';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/**
+ * Callback for model loading progress
+ */
+export type ProgressCallback = (progress: number, stage: string) => void;
+
+/**
+ * Callback for streaming tokens during generation
+ */
+export type TokenCallback = (token: string) => void;
+
+/**
+ * Result from text generation
+ */
+export interface GenerateResult {
+  text: string;
+  stats: InferenceStats;
+}
+
+/**
+ * Worker state
+ */
+type WorkerState = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
+
+// ============================================================================
+// Local AI Service Class
+// ============================================================================
+
+/**
+ * Service for managing local AI inference worker
+ */
+export class LocalAIService {
+  private worker: Worker | null = null;
+  private state: WorkerState = 'idle';
+  private currentPromise: {
+    // biome-ignore lint/suspicious/noExplicitAny: Generic promise handler for multiple return types
+    resolve: (value: any) => void;
+    reject: (error: Error) => void;
+  } | null = null;
+
+  // Callbacks for async operations
+  private progressCallback: ProgressCallback | null = null;
+  private tokenCallback: TokenCallback | null = null;
+
+  /**
+   * Initialize the worker and load the model
+   *
+   * @param config - Model configuration
+   * @param onProgress - Optional callback for loading progress
+   * @returns Promise that resolves when model is ready
+   */
+  async initialize(config: LoadConfig, onProgress?: ProgressCallback): Promise<void> {
+    if (this.state === 'ready') {
+      console.warn('LocalAIService: Model already loaded');
+      return;
+    }
+
+    if (this.state === 'loading') {
+      throw new Error('LocalAIService: Model is already loading');
+    }
+
+    return new Promise((resolve, reject) => {
+      this.state = 'loading';
+      this.currentPromise = { resolve, reject };
+      this.progressCallback = onProgress ?? null;
+
+      // Create worker
+      this.worker = new Worker(new URL('../workers/transformers.worker.ts', import.meta.url), {
+        type: 'module',
+      });
+
+      // Set up message handler
+      this.worker.onmessage = this.handleWorkerMessage.bind(this);
+
+      // Set up error handler
+      this.worker.onerror = (error) => {
+        this.state = 'error';
+        const errorMessage = error.message || 'Worker error';
+        this.currentPromise?.reject(new Error(errorMessage));
+        this.currentPromise = null;
+      };
+
+      // Send load command
+      this.postMessage({ type: 'load', config });
+    });
+  }
+
+  /**
+   * Generate text from a prompt
+   *
+   * @param prompt - Input text
+   * @param options - Generation options
+   * @param onToken - Optional callback for streaming tokens
+   * @returns Promise with generated text and stats
+   */
+  async generate(
+    prompt: string,
+    options: GenerateOptions = {},
+    onToken?: TokenCallback
+  ): Promise<GenerateResult> {
+    if (this.state === 'generating') {
+      throw new Error('LocalAIService: Generation already in progress. Cancel first.');
+    }
+
+    if (this.state !== 'ready') {
+      throw new Error('LocalAIService: Model not ready. Call initialize() first.');
+    }
+
+    return new Promise((resolve, reject) => {
+      this.state = 'generating';
+      this.currentPromise = { resolve, reject };
+      this.tokenCallback = onToken ?? null;
+
+      this.postMessage({
+        type: 'generate',
+        prompt,
+        options,
+      });
+    });
+  }
+
+  /**
+   * Cancel ongoing generation
+   */
+  cancel(): void {
+    if (this.state !== 'generating') {
+      console.warn('LocalAIService: No generation in progress');
+      return;
+    }
+
+    this.postMessage({ type: 'cancel' });
+    this.currentPromise?.reject(new Error('Generation cancelled by user'));
+    this.currentPromise = null;
+    this.tokenCallback = null;
+    this.state = 'ready';
+  }
+
+  /**
+   * Unload the model and terminate the worker
+   */
+  unload(): void {
+    if (this.worker) {
+      this.postMessage({ type: 'unload' });
+      this.worker.terminate();
+      this.worker = null;
+    }
+
+    this.state = 'idle';
+    this.currentPromise = null;
+    this.progressCallback = null;
+    this.tokenCallback = null;
+  }
+
+  /**
+   * Get current worker state
+   */
+  getState(): WorkerState {
+    return this.state;
+  }
+
+  /**
+   * Check if model is ready for inference
+   */
+  isReady(): boolean {
+    return this.state === 'ready';
+  }
+
+  // ========================================================================
+  // Private Methods
+  // ========================================================================
+
+  /**
+   * Handle messages from the worker
+   */
+  private handleWorkerMessage(event: MessageEvent<WorkerResponse>): void {
+    const message = event.data;
+
+    switch (message.type) {
+      case 'load-progress':
+        this.progressCallback?.(message.progress, message.stage);
+        break;
+
+      case 'ready':
+        this.state = 'ready';
+        this.currentPromise?.resolve(undefined);
+        this.currentPromise = null;
+        this.progressCallback = null;
+        break;
+
+      case 'token':
+        this.tokenCallback?.(message.text);
+        break;
+
+      case 'complete':
+        this.state = 'ready';
+        this.currentPromise?.resolve({
+          text: message.fullText,
+          stats: message.stats,
+        });
+        this.currentPromise = null;
+        this.tokenCallback = null;
+        break;
+
+      case 'error': {
+        this.state = 'error';
+        const error = new Error(message.message);
+        if (message.stack) {
+          error.stack = message.stack;
+        }
+        this.currentPromise?.reject(error);
+        this.currentPromise = null;
+        this.progressCallback = null;
+        this.tokenCallback = null;
+        break;
+      }
+
+      default:
+        console.warn('LocalAIService: Unknown worker message type:', message);
+    }
+  }
+
+  /**
+   * Post message to worker (type-safe)
+   */
+  private postMessage(message: WorkerRequest): void {
+    if (!this.worker) {
+      throw new Error('LocalAIService: Worker not initialized');
+    }
+    this.worker.postMessage(message);
+  }
+}
+
+// ============================================================================
+// Singleton Instance
+// ============================================================================
+
+/**
+ * Singleton instance for convenient access
+ * (Can also instantiate manually if multiple instances needed)
+ */
+export const localAIService = new LocalAIService();
