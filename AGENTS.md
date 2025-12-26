@@ -139,6 +139,231 @@ For example: `bd create --help` shows `--parent`, `--deps`, `--assignee`, etc.
 
 For more details, see README.md and QUICKSTART.md.
 
+## Async/Parallel Subagent Execution
+
+This project supports launching multiple subagents in parallel to accelerate investigation and problem-solving. This pattern is essential for complex debugging scenarios where multiple independent tasks can run simultaneously.
+
+### When to Use Async Parallel Subagents
+
+Parallel subagent execution shines when:
+
+- **Multiple independent investigations needed**: Debugging multiple symptoms simultaneously (e.g., checking logs, analyzing code, reviewing errors)
+- **Want to preserve main thread context**: Main agent stays focused on coordination while subagents handle detailed research
+- **Tasks have no dependencies**: Each subagent can work independently without needing results from others
+- **Complex scenarios with multiple hypotheses**: Testing multiple root cause theories in parallel
+- **Accelerate research velocity**: Get answers from 3-4 focused investigations faster than sequential work
+
+### How to Launch Parallel Subagents
+
+**Key principle**: Launch all parallel tasks in a single message response using multiple independent tool calls.
+
+**Basic pattern**:
+
+```
+I need to investigate this issue from multiple angles. Let me launch three focused investigations:
+
+[First subagent investigation tool call]
+[Second subagent investigation tool call]
+[Third subagent investigation tool call]
+
+Results will be returned when all complete.
+```
+
+**Each subagent:**
+- Gets its own isolated context and working environment
+- Cannot see the other subagents' work or results
+- Focuses on a specific, well-defined task
+- Returns findings independently
+
+**Main thread benefits:**
+- Stays clean and focused on coordination
+- Preserves context for user interaction
+- Aggregates and synthesizes results from all subagents
+- Makes final decisions and implementations
+
+### Best Practices for Parallel Subagent Work
+
+1. **Launch all tasks in ONE response**: Don't wait between launches. Multiple tool calls in a single message execute in parallel.
+   ```
+   # Good: All three launch simultaneously
+   [call 1]
+   [call 2]
+   [call 3]
+
+   # Bad: These launch sequentially, defeating the purpose
+   [call 1]
+   [Wait for results]
+   [call 2]
+   ```
+
+2. **Make each subagent task self-contained**: Provide full context because subagents cannot see each other's work.
+   ```
+   # Good: Subagent has complete task context
+   "Investigate build errors in GitHub Actions workflow. Check the following log file..."
+
+   # Bad: Assumes subagent knows what was discussed earlier
+   "Fix the issue we just found"
+   ```
+
+3. **Provide comprehensive task briefs**: Each subagent needs enough detail to work independently.
+   - Specific files/areas to investigate
+   - What information is needed
+   - What patterns to look for
+   - Success criteria
+
+4. **Choose appropriate models for task complexity**:
+   - Haiku (4.5): Simple searches, quick checks, file reading
+   - Sonnet (4.5): Code analysis, complex debugging, architecture decisions
+   - Use the same model as main agent for consistency unless specific reason otherwise
+
+5. **Wait for all agents to complete**: Don't start synthesis until all results arrive. The tool framework handles this automatically.
+
+6. **Synthesize results intelligently**: After all subagents complete, correlate findings:
+   ```
+   Based on the three investigations:
+   - Subagent 1 found: [X]
+   - Subagent 2 found: [Y]
+   - Subagent 3 found: [Z]
+
+   Connecting these findings: [Analysis]
+   Next steps: [Implementation plan]
+   ```
+
+### Real-World Example Scenarios
+
+**Scenario 1: Multi-symptom Debugging (like E2E test failures)**
+
+Symptoms: Playwright test fails, but unclear why. Could be multiple issues.
+
+```
+I'll investigate this test failure from three angles in parallel:
+
+Subagent 1: Analyze the Playwright test code
+- Read tests/e2e/smoke.spec.ts
+- Look for CSS selectors that might be broken
+- Check for hidden elements with sm:inline classes
+
+Subagent 2: Check the actual webpage structure
+- Start dev server and inspect the page
+- Verify CSS classes on elements
+- Check visibility states
+
+Subagent 3: Review recent code changes
+- Check git log for CSS/UI changes
+- Look at Tailwind configuration changes
+- Search for selector-related commits
+```
+
+Each subagent works independently, then main thread synthesizes:
+- "The issue is X combines with Y, causing Z. Here's the fix..."
+
+**Scenario 2: Research + Implementation in Parallel**
+
+```
+Launching two parallel efforts:
+
+Subagent 1: Research Phase
+- Read existing Playwright test documentation
+- Review testing patterns in the codebase
+- Document best practices for our project
+
+Subagent 2: Implementation Phase (meanwhile)
+- Create new test file structure
+- Set up fixtures and helpers
+- Implement basic test framework
+```
+
+Both complete in parallel. Results are better quality and faster than sequential work.
+
+**Scenario 3: Testing Multiple Hypotheses**
+
+Bug report: "App crashes on iOS sometimes"
+
+```
+Three hypotheses tested in parallel:
+
+Subagent 1: Memory leak hypothesis
+- Profile memory usage in Capacitor
+- Check for unfreed resources
+- Review component lifecycle
+
+Subagent 2: State management hypothesis
+- Analyze Redux/Zustand state changes
+- Check for race conditions
+- Review async state updates
+
+Subagent 3: Platform-specific hypothesis
+- Check iOS-specific Capacitor issues
+- Review native plugin interactions
+- Look for WebView-specific problems
+```
+
+Results converge on most likely cause. Saves significant time vs. sequential investigation.
+
+**Scenario 4: Checking Logs + Fixing Code + Updating Docs**
+
+```
+Three focused tasks in parallel:
+
+Subagent 1: Analyze error logs
+- Read and parse application logs
+- Identify error patterns
+- Document findings
+
+Subagent 2: Fix the code
+- Implement solution based on error analysis
+- Test changes locally
+- Commit with proper messages
+
+Subagent 3: Update documentation
+- Update AGENTS.md with findings
+- Add examples of the fix
+- Document preventive measures
+```
+
+All complete without waiting. Main thread coordinates final integration.
+
+### When NOT to Use Parallel Subagents
+
+- **Sequential dependencies**: If Task B needs results from Task A, run sequentially
+- **Single focused task**: Overhead of subagents not worth it for one simple task
+- **Complex state sharing**: If subagents need to coordinate heavily, use main thread
+- **User interaction required**: If steps need user input/approval between them
+
+### Common Pitfalls to Avoid
+
+1. **Forgetting to provide context**: Subagent can't access previous messages
+   - Always include relevant file paths, error messages, code snippets
+   - Be explicit about what you're investigating
+
+2. **Assuming shared knowledge**: Subagent doesn't know what other subagents are doing
+   - Restate the problem in each subagent task
+   - Provide complete task context
+
+3. **Launching subagents with dependencies**: They can't wait for each other
+   - Task A (needs Task B's results) must be sequential
+   - Only parallelize truly independent work
+
+4. **Too many parallel subagents**: Diminishing returns and confusion
+   - 3-4 is usually optimal
+   - More than 5 becomes hard to synthesize
+   - Keep main thread focused on coordination
+
+5. **Not synthesizing results**: Parallel work is only valuable if you correlate findings
+   - Don't ignore "boring" findings from some subagents
+   - Look for patterns across results
+   - Make explicit connections between findings
+
+### Technical Notes
+
+- **Tool execution**: Multiple independent tool calls in one response execute in parallel (framework handles concurrency)
+- **Context isolation**: Each subagent gets its own working environment, doesn't see other tool calls
+- **Result aggregation**: All results returned together when all complete
+- **Error handling**: If one subagent fails, others continue (failures don't block other work)
+- **Token efficiency**: Parallel execution is more efficient than sequential for multi-agent work
+
+---
+
 ## Project Overview
 
 This is a cross-platform AI chat application built with React + Capacitor for iOS deployment. The app allows users to chat with AI using their own OpenAI and Anthropic API keys with MCP (Model Context Protocol) server integration for external tools.
