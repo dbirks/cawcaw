@@ -152,7 +152,7 @@ async function readMetadata(): Promise<CacheMetadata | null> {
   try {
     const result = await Filesystem.readFile({
       path: METADATA_FILE,
-      directory: Directory.Data,
+      directory: Directory.Library,
       encoding: 'utf8' as never,
     });
 
@@ -182,7 +182,7 @@ async function listFilesystemFiles(): Promise<string[]> {
   try {
     const result = await Filesystem.readdir({
       path: FILES_DIR,
-      directory: Directory.Data,
+      directory: Directory.Library,
     });
 
     return result.files.map((file) => file.name);
@@ -204,7 +204,7 @@ async function getFileSize(filename: string): Promise<number> {
   try {
     const stat = await Filesystem.stat({
       path: `${FILES_DIR}/${filename}`,
-      directory: Directory.Data,
+      directory: Directory.Library,
     });
 
     return stat.size;
@@ -411,7 +411,7 @@ export async function cleanupOrphanedFiles(): Promise<number> {
       try {
         await Filesystem.deleteFile({
           path: `${FILES_DIR}/${file.filename}`,
-          directory: Directory.Data,
+          directory: Directory.Library,
         });
         deletedCount++;
         console.log(`[StorageAnalysis] Deleted orphaned file: ${file.filename}`);
@@ -498,14 +498,14 @@ export async function deleteFile(url: string): Promise<boolean> {
     // Delete the file
     await Filesystem.deleteFile({
       path: `${FILES_DIR}/${entry.filename}`,
-      directory: Directory.Data,
+      directory: Directory.Library,
     });
 
     // Update metadata
     delete metadata.entries[url];
     await Filesystem.writeFile({
       path: METADATA_FILE,
-      directory: Directory.Data,
+      directory: Directory.Library,
       data: JSON.stringify(metadata, null, 2),
       encoding: 'utf8' as never,
       recursive: true,

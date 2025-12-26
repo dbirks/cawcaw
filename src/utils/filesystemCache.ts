@@ -439,13 +439,13 @@ export async function setCached(
     console.log('[FilesystemCache] Writing file to filesystem...', {
       filename,
       path: filePath,
-      directory: Directory.Data,
+      directory: Directory.Library,
     });
 
     // Write file to filesystem
     await Filesystem.writeFile({
       path: filePath,
-      directory: Directory.Data,
+      directory: Directory.Library,
       data: base64Data,
       recursive: true,
     });
@@ -499,6 +499,7 @@ export async function getCacheSize(): Promise<number> {
   }
 
   try {
+    await ensureFilesystemReady();
     const metadata = await readMetadata();
     let totalSize = 0;
 
@@ -523,10 +524,12 @@ export async function clearCache(): Promise<void> {
   }
 
   try {
+    await ensureFilesystemReady();
+
     // Delete the entire cache directory
     await Filesystem.rmdir({
       path: CACHE_DIR,
-      directory: Directory.Data,
+      directory: Directory.Library,
       recursive: true,
     });
 
@@ -558,6 +561,7 @@ export async function listCached(): Promise<string[]> {
   }
 
   try {
+    await ensureFilesystemReady();
     const metadata = await readMetadata();
     const urls = Object.keys(metadata.entries);
     console.log('[FilesystemCache] listCached RESULT', {
@@ -589,6 +593,7 @@ export async function getCacheStats(): Promise<{
   }
 
   try {
+    await ensureFilesystemReady();
     const metadata = await readMetadata();
     const urls = Object.keys(metadata.entries);
     const totalSize = Object.values(metadata.entries).reduce((sum, entry) => sum + entry.size, 0);
