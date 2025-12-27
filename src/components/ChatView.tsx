@@ -1676,6 +1676,21 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                           downloadSpeed={localAIProgress.downloadSpeed}
                           modelName={localAIProgress.modelName}
                           modelSize={localAIProgress.modelSize}
+                          error={localAIProgress.error}
+                          onRetry={() => {
+                            // Clear error and retry by sending the last user message again
+                            setLocalAIProgress(null);
+                            const lastUserMessage = messages
+                              .slice()
+                              .reverse()
+                              .find((m) => m.role === 'user');
+                            if (lastUserMessage) {
+                              const textPart = lastUserMessage.parts.find((p) => p.type === 'text');
+                              if (textPart?.text) {
+                                sendLocalMessage(textPart.text);
+                              }
+                            }
+                          }}
                         />
                       </div>
                     )}
