@@ -1383,7 +1383,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Settings</h1>
-            <Button variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose}>
               <X className="h-4 w-4 mr-2" />
               Close
             </Button>
@@ -1413,7 +1413,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
               ? 'Settings'
               : SETTINGS_ITEMS.find((item) => item.id === currentView)?.label || 'Settings'}
           </h1>
-          <Button variant="ghost" onClick={onClose} className="h-14 w-14 p-0">
+          <Button type="button" variant="ghost" onClick={onClose} className="h-14 w-14 p-0">
             <X className="size-8" />
           </Button>
         </div>
