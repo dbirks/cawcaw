@@ -87,46 +87,68 @@ async function ensureFilesystemReady(): Promise<void> {
     return;
   }
 
-  console.log('[FilesystemCache] Initializing filesystem...');
+  try {
+    console.log('[FilesystemCache] Initializing filesystem...');
 
-  Sentry.addBreadcrumb({
-    category: 'local-ai.cache',
-    message: 'Initializing filesystem',
-    level: 'info',
-    data: { stage: 'filesystem-init' },
-  });
-
-  // Ensure cache directory exists in Library
-  await ensureCacheDirectory();
-
-  // Check if migration from Data → Library is needed
-  const migrationComplete = await Preferences.get({ key: MIGRATION_COMPLETE_KEY });
-  if (!migrationComplete.value) {
     Sentry.addBreadcrumb({
       category: 'local-ai.cache',
-      message: 'Starting migration from Data to Library',
+      message: 'Initializing filesystem',
       level: 'info',
-      data: { stage: 'migration-start' },
+      data: { stage: 'filesystem-init' },
     });
-    await migrateFromDataToLibrary();
-    await Preferences.set({ key: MIGRATION_COMPLETE_KEY, value: 'true' });
+
+    // Ensure cache directory exists in Library
+    console.log('[FilesystemCache] Ensuring cache directory exists...');
+    await ensureCacheDirectory();
+    console.log('[FilesystemCache] Cache directory ready');
+
+    // Check if migration from Data → Library is needed
+    const migrationComplete = await Preferences.get({ key: MIGRATION_COMPLETE_KEY });
+    if (!migrationComplete.value) {
+      console.log('[FilesystemCache] Migration not complete, starting migration...');
+      Sentry.addBreadcrumb({
+        category: 'local-ai.cache',
+        message: 'Starting migration from Data to Library',
+        level: 'info',
+        data: { stage: 'migration-start' },
+      });
+      await migrateFromDataToLibrary();
+      await Preferences.set({ key: MIGRATION_COMPLETE_KEY, value: 'true' });
+      console.log('[FilesystemCache] Migration complete');
+      Sentry.addBreadcrumb({
+        category: 'local-ai.cache',
+        message: 'Migration complete',
+        level: 'info',
+        data: { stage: 'migration-complete' },
+      });
+    } else {
+      console.log('[FilesystemCache] Migration already complete, skipping');
+    }
+
+    filesystemReady = true;
+    console.log('[FilesystemCache] Filesystem ready');
+
     Sentry.addBreadcrumb({
       category: 'local-ai.cache',
-      message: 'Migration complete',
+      message: 'Filesystem initialization complete',
       level: 'info',
-      data: { stage: 'migration-complete' },
+      data: { stage: 'filesystem-ready' },
     });
+  } catch (error) {
+    console.error('[FilesystemCache] CRITICAL - Filesystem initialization failed:', error);
+    console.error('[FilesystemCache] Filesystem init error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    Sentry.captureException(error, {
+      tags: { component: 'local-ai-cache', operation: 'filesystem-init' },
+      extra: {
+        stage: 'filesystem-initialization',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    throw error;
   }
-
-  filesystemReady = true;
-  console.log('[FilesystemCache] Filesystem ready');
-
-  Sentry.addBreadcrumb({
-    category: 'local-ai.cache',
-    message: 'Filesystem initialization complete',
-    level: 'info',
-    data: { stage: 'filesystem-ready' },
-  });
 }
 
 /**
@@ -277,15 +299,36 @@ async function writeMetadata(metadata: CacheMetadata): Promise<void> {
  */
 async function ensureCacheDirectory(): Promise<void> {
   try {
+    console.log('[FilesystemCache] Creating cache directory:', {
+      path: FILES_DIR,
+      directory: Directory.Library,
+    });
     await Filesystem.mkdir({
       path: FILES_DIR,
       directory: Directory.Library,
       recursive: true,
     });
+    console.log('[FilesystemCache] Cache directory created/verified');
   } catch (error) {
     // Directory may already exist, ignore error
     if (error instanceof Error && !error.message.includes('already exists')) {
+      console.error('[FilesystemCache] CRITICAL - Failed to create cache directory:', error);
+      console.error('[FilesystemCache] Directory creation error details:', {
+        message: error.message,
+        stack: error.stack,
+        path: FILES_DIR,
+      });
+      Sentry.captureException(error, {
+        tags: { component: 'local-ai-cache', operation: 'directory-creation' },
+        extra: {
+          stage: 'directory-creation',
+          path: FILES_DIR,
+          errorMessage: error.message,
+        },
+      });
       throw error;
+    } else {
+      console.log('[FilesystemCache] Cache directory already exists');
     }
   }
 }
@@ -367,12 +410,20 @@ export async function getCached(url: string): Promise<Response | null> {
       return null;
     }
 
+    console.log('[FilesystemCache] Reading cached file:', {
+      url: url.substring(0, 100),
+      filename: entry.filename,
+      size: entry.size,
+    });
+
     // Read the cached file
     const filePath = `${FILES_DIR}/${entry.filename}`;
     const result = await Filesystem.readFile({
       path: filePath,
       directory: Directory.Library,
     });
+
+    console.log('[FilesystemCache] File read successfully, converting from base64...');
 
     // Convert base64 data to ArrayBuffer
     let base64Data: string;
@@ -391,6 +442,11 @@ export async function getCached(url: string): Promise<Response | null> {
       bytes[i] = binaryString.charCodeAt(i);
     }
 
+    console.log('[FilesystemCache] Cached file decoded successfully:', {
+      sizeBytes: bytes.length,
+      sizeMB: (bytes.length / 1024 / 1024).toFixed(2),
+    });
+
     // Create Response with headers
     const headers = objectToHeaders(entry.headers);
     return new Response(bytes.buffer, {
@@ -399,7 +455,20 @@ export async function getCached(url: string): Promise<Response | null> {
       headers,
     });
   } catch (error) {
-    console.error('Failed to get cached response:', error);
+    console.error('[FilesystemCache] ERROR - Failed to get cached response:', error);
+    console.error('[FilesystemCache] Cache read error details:', {
+      url: url.substring(0, 100),
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    Sentry.captureException(error, {
+      tags: { component: 'local-ai-cache', operation: 'cache-read' },
+      extra: {
+        stage: 'cache-read',
+        url: url.substring(0, 100),
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
     return null;
   }
 }

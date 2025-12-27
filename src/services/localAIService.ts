@@ -87,6 +87,12 @@ export class LocalAIService {
       throw new Error('LocalAIService: Model is already loading');
     }
 
+    console.log('[LocalAIService] Initializing with config:', {
+      modelId: config.modelId,
+      dtype: config.dtype,
+      device: config.device,
+    });
+
     Sentry.addBreadcrumb({
       category: 'local-ai.service',
       message: 'Initializing local AI service',
@@ -105,16 +111,37 @@ export class LocalAIService {
       this.progressCallback = onProgress ?? null;
 
       // Create worker
-      this.worker = new Worker(new URL('../workers/transformers.worker.ts', import.meta.url), {
-        type: 'module',
-      });
+      try {
+        console.log('[LocalAIService] Creating Web Worker...');
+        this.worker = new Worker(new URL('../workers/transformers.worker.ts', import.meta.url), {
+          type: 'module',
+        });
+        console.log('[LocalAIService] Web Worker created successfully');
 
-      Sentry.addBreadcrumb({
-        category: 'local-ai.service',
-        message: 'Worker created',
-        level: 'info',
-        data: { stage: 'worker-created' },
-      });
+        Sentry.addBreadcrumb({
+          category: 'local-ai.service',
+          message: 'Worker created',
+          level: 'info',
+          data: { stage: 'worker-created' },
+        });
+      } catch (workerError) {
+        console.error('[LocalAIService] CRITICAL - Failed to create Web Worker:', workerError);
+        console.error('[LocalAIService] Worker creation error details:', {
+          message: workerError instanceof Error ? workerError.message : 'Unknown error',
+          stack: workerError instanceof Error ? workerError.stack : undefined,
+        });
+        this.state = 'error';
+        const errorMessage = `Failed to create Web Worker: ${workerError instanceof Error ? workerError.message : 'Unknown error'}`;
+        Sentry.captureException(workerError, {
+          tags: { component: 'local-ai-service', operation: 'worker-creation' },
+          extra: {
+            stage: 'worker-creation',
+            errorMessage,
+          },
+        });
+        reject(new Error(errorMessage));
+        return;
+      }
 
       // Set up message handler
       this.worker.onmessage = this.handleWorkerMessage.bind(this);
@@ -124,11 +151,22 @@ export class LocalAIService {
         this.state = 'error';
         const errorMessage = error.message || 'Worker error';
 
+        console.error('[LocalAIService] CRITICAL - Worker error:', error);
+        console.error('[LocalAIService] Worker error details:', {
+          message: errorMessage,
+          filename: error.filename,
+          lineno: error.lineno,
+          colno: error.colno,
+        });
+
         Sentry.captureException(new Error(errorMessage), {
-          tags: { component: 'local-ai-service' },
+          tags: { component: 'local-ai-service', operation: 'worker-runtime' },
           extra: {
             stage: 'worker-error',
             errorMessage,
+            filename: error.filename,
+            lineno: error.lineno,
+            colno: error.colno,
           },
         });
 
@@ -137,6 +175,7 @@ export class LocalAIService {
       };
 
       // Send load command
+      console.log('[LocalAIService] Sending load command to worker...');
       this.postMessage({ type: 'load', config });
 
       Sentry.addBreadcrumb({
@@ -287,8 +326,11 @@ export class LocalAIService {
           error.stack = message.stack;
         }
 
+        console.error('[LocalAIService] CRITICAL - Error message from worker:', message.message);
+        console.error('[LocalAIService] Worker error stack:', message.stack);
+
         Sentry.captureException(error, {
-          tags: { component: 'local-ai-service' },
+          tags: { component: 'local-ai-service', operation: 'worker-message' },
           extra: {
             stage: 'worker-message-error',
             errorMessage: message.message,

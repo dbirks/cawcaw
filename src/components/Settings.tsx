@@ -234,6 +234,11 @@ export default function Settings({ onClose }: SettingsProps) {
   const [downloadProgress, setDownloadProgress] = useState<{
     progress: number;
     stage: string;
+    error?: {
+      message: string;
+      details?: string;
+      stage?: string;
+    };
   } | null>(null);
 
   // Storage analysis state
@@ -917,13 +922,25 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
         },
       });
 
-      setDownloadProgress(null);
-      alert(
-        `❌ Failed to download model: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    } finally {
+      // Set error state instead of showing alert (which dismisses Settings modal)
+      setDownloadProgress({
+        progress: 0,
+        stage: 'error',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error occurred',
+          details: error instanceof Error ? error.stack : undefined,
+          stage: 'download', // Could be 'download', 'cache', or 'model-load' based on where it failed
+        },
+      });
+
       setIsLoadingCache(false);
     }
+  };
+
+  const handleRetryDownload = () => {
+    // Clear error state and retry
+    setDownloadProgress(null);
+    handlePredownloadModel();
   };
 
   const handleTestLocalAI = async () => {
@@ -1685,6 +1702,8 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                           <LocalAIProgressCard
                             progress={downloadProgress.progress}
                             stage={downloadProgress.stage}
+                            error={downloadProgress.error}
+                            onRetry={handleRetryDownload}
                           />
                         )}
 

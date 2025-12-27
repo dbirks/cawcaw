@@ -183,6 +183,11 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     downloadSpeed?: string;
     modelName?: string;
     modelSize?: string;
+    error?: {
+      message: string;
+      details?: string;
+      stage?: string;
+    };
   } | null>(null);
   const [_streamingLocalText, setStreamingLocalText] = useState<string>('');
 
@@ -911,6 +916,19 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
       });
+
+      // Set error state in progress card if it was during initialization/download
+      if (!localAIService.isReady()) {
+        setLocalAIProgress({
+          progress: 0,
+          stage: 'error',
+          error: {
+            message: error instanceof Error ? error.message : 'Unknown error occurred',
+            details: error instanceof Error ? error.stack : undefined,
+            stage: 'model-load',
+          },
+        });
+      }
 
       const errorMessage: UIMessage = {
         id: (Date.now() + 1).toString(),

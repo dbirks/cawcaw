@@ -38,20 +38,37 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   const url =
     typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
-  // Check filesystem cache first
-  const cached = await filesystemCache.getCached(url);
-  if (cached) {
-    console.log(`[FilesystemCache] Cache hit for: ${url}`);
-    Sentry.addBreadcrumb({
-      category: 'local-ai.download',
-      message: 'Cache hit for file',
-      level: 'info',
-      data: {
+  try {
+    // Check filesystem cache first
+    const cached = await filesystemCache.getCached(url);
+    if (cached) {
+      console.log(`[FilesystemCache] Cache hit for: ${url}`);
+      Sentry.addBreadcrumb({
+        category: 'local-ai.download',
+        message: 'Cache hit for file',
+        level: 'info',
+        data: {
+          url: url.substring(0, 100),
+          stage: 'cache-hit',
+        },
+      });
+      return cached;
+    }
+  } catch (cacheError) {
+    console.error(`[FilesystemCache] ERROR checking cache for ${url}:`, cacheError);
+    console.error(`[FilesystemCache] Cache error details:`, {
+      message: cacheError instanceof Error ? cacheError.message : 'Unknown error',
+      stack: cacheError instanceof Error ? cacheError.stack : undefined,
+    });
+    Sentry.captureException(cacheError, {
+      tags: { component: 'local-ai-download', operation: 'cache-check' },
+      extra: {
+        stage: 'cache-check',
         url: url.substring(0, 100),
-        stage: 'cache-hit',
+        errorMessage: cacheError instanceof Error ? cacheError.message : 'Unknown error',
       },
     });
-    return cached;
+    // Continue with download even if cache check fails
   }
 
   console.log(`[FilesystemCache] Cache miss, downloading: ${url}`);
@@ -66,7 +83,34 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   });
 
   // Download and cache
-  const response = await originalFetch(input, init);
+  let response: Response;
+  try {
+    response = await originalFetch(input, init);
+    console.log(`[FilesystemCache] Download response received:`, {
+      url: url.substring(0, 100),
+      status: response.status,
+      ok: response.ok,
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length'),
+    });
+  } catch (fetchError) {
+    console.error(`[FilesystemCache] CRITICAL - Network download failed for ${url}:`, fetchError);
+    console.error(`[FilesystemCache] Fetch error details:`, {
+      message: fetchError instanceof Error ? fetchError.message : 'Unknown error',
+      stack: fetchError instanceof Error ? fetchError.stack : undefined,
+    });
+    Sentry.captureException(fetchError, {
+      tags: { component: 'local-ai-download', operation: 'network-fetch' },
+      extra: {
+        stage: 'network-download',
+        url: url.substring(0, 100),
+        errorMessage: fetchError instanceof Error ? fetchError.message : 'Unknown error',
+      },
+    });
+    throw new Error(
+      `Network download failed: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`
+    );
+  }
 
   // Only cache successful responses
   if (response.ok) {
@@ -102,8 +146,13 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
       });
     } catch (error) {
       console.error(`[FilesystemCache] CRITICAL - Failed to cache ${url}:`, error);
+      console.error(`[FilesystemCache] Cache write error details:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        url: url.substring(0, 100),
+      });
       Sentry.captureException(error, {
-        tags: { component: 'local-ai-download' },
+        tags: { component: 'local-ai-download', operation: 'cache-write' },
         extra: {
           stage: 'cache-write',
           url: url.substring(0, 100),
@@ -115,6 +164,19 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
         `Failed to cache model file: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+  } else {
+    const errorMsg = `HTTP ${response.status} ${response.statusText}`;
+    console.error(`[FilesystemCache] CRITICAL - Non-OK response for ${url}:`, errorMsg);
+    Sentry.captureException(new Error(`Download failed: ${errorMsg}`), {
+      tags: { component: 'local-ai-download', operation: 'http-response' },
+      extra: {
+        stage: 'http-response',
+        url: url.substring(0, 100),
+        status: response.status,
+        statusText: response.statusText,
+      },
+    });
+    throw new Error(`Download failed: ${errorMsg}`);
   }
 
   return response;
@@ -421,6 +483,12 @@ function reportProgress(progress: number, stage: string): void {
  */
 async function handleLoad(config: LoadConfig): Promise<void> {
   try {
+    console.log('[Worker] Starting model load:', {
+      modelId: config.modelId,
+      dtype: config.dtype,
+      device: config.device,
+    });
+
     Sentry.addBreadcrumb({
       category: 'local-ai.download',
       message: 'Starting model download',
@@ -441,6 +509,8 @@ async function handleLoad(config: LoadConfig): Promise<void> {
     totalBytesLoaded = 0;
     currentModelId = config.modelId;
     totalModelSize = 0;
+
+    console.log('[Worker] Progress state reset, creating pipeline...');
 
     // Load the text generation pipeline with progress callbacks
     // Type assertion needed due to complex union type from pipeline()
@@ -575,6 +645,7 @@ async function handleLoad(config: LoadConfig): Promise<void> {
       progressDebounceTimer = null;
     }
 
+    console.log('[Worker] Model pipeline created successfully');
     Sentry.addBreadcrumb({
       category: 'local-ai.download',
       message: 'Model ready - sending ready message',
@@ -588,6 +659,7 @@ async function handleLoad(config: LoadConfig): Promise<void> {
 
     self.postMessage({ type: 'ready' } satisfies WorkerResponse);
 
+    console.log('[Worker] Ready message sent - download complete');
     Sentry.addBreadcrumb({
       category: 'local-ai.download',
       message: 'Download complete - ready message sent',
@@ -601,8 +673,18 @@ async function handleLoad(config: LoadConfig): Promise<void> {
     const message = error instanceof Error ? error.message : 'Failed to load model';
     const stack = error instanceof Error ? error.stack : undefined;
 
+    console.error('[Worker] CRITICAL - Model load failed:', error);
+    console.error('[Worker] Error details:', {
+      message,
+      stack,
+      modelId: currentModelId,
+      totalBytesLoaded,
+      totalModelSize: totalModelSize > 0 ? formatBytes(totalModelSize) : 'unknown',
+      errorType: error?.constructor?.name,
+    });
+
     Sentry.captureException(error, {
-      tags: { component: 'local-ai-download' },
+      tags: { component: 'local-ai-download', operation: 'model-load' },
       extra: {
         stage: 'model-load',
         modelId: currentModelId,
