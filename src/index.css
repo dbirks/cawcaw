@@ -150,7 +150,7 @@
 @layer utilities {
   /* Safe area utilities using native CSS env() variables */
   .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: max(env(safe-area-inset-top, 0px), 16px);
   }
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);

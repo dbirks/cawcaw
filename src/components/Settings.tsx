@@ -1414,7 +1414,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
     <div className="h-dvh bg-background">
       <div className="max-w-4xl mx-auto flex flex-col h-full">
         {/* Header with back button for detail views */}
-        <div className="flex items-center gap-3 mb-4 sm:mb-6 pt-4 pb-4 safe-top safe-x">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-4 safe-top safe-x">
           {currentView !== 'list' && (
             <Button
               variant="ghost"
@@ -1431,6 +1431,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
           </h1>
           <Button type="button" variant="ghost" onClick={onClose} className="h-14 w-14 p-0">
             <X className="size-8" />
+            <span className="sr-only">Close</span>
           </Button>
         </div>
 
