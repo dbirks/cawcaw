@@ -400,18 +400,24 @@ export default function Settings({ onClose }: SettingsProps) {
       }
       setOAuthStatuses(oauthStatusMap);
 
-      // Load ACP servers
-      await acpManager.initialize();
-      const acpConfigs = await acpManager.loadConfigurations();
-      setAcpServers(acpConfigs);
-      setAcpServerStatuses(new Map(acpManager.getAllServerStatuses().map((s) => [s.id, s])));
-
-      // Automatically connect to enabled ACP servers
+      // Load ACP servers (with error handling to prevent blocking)
       try {
-        await acpManager.connectToEnabledServers();
-        debugLogger.info('mcp', 'Connected to enabled ACP servers on startup');
+        await acpManager.initialize();
+        const acpConfigs = await acpManager.loadConfigurations();
+        setAcpServers(acpConfigs);
+        setAcpServerStatuses(new Map(acpManager.getAllServerStatuses().map((s) => [s.id, s])));
+
+        // Automatically connect to enabled ACP servers
+        try {
+          await acpManager.connectToEnabledServers();
+          debugLogger.info('mcp', 'Connected to enabled ACP servers on startup');
+        } catch (error) {
+          debugLogger.warn('mcp', 'Failed to connect to some ACP servers:', error);
+        }
       } catch (error) {
-        debugLogger.warn('mcp', 'Failed to connect to some ACP servers:', error);
+        debugLogger.error('mcp', 'Failed to initialize ACP manager:', error);
+        console.error('Failed to initialize ACP manager:', error);
+        // Continue even if ACP initialization fails - don't block Settings from loading
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
