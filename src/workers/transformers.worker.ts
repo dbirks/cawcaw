@@ -14,7 +14,7 @@ import {
   type TextGenerationPipeline,
   TextStreamer,
 } from '@huggingface/transformers';
-import * as Sentry from '@sentry/react';
+import * as Sentry from '@sentry/capacitor';
 import * as filesystemCache from '../utils/filesystemCache';
 
 // Configure Transformers.js environment
