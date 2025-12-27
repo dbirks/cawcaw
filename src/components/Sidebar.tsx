@@ -185,7 +185,7 @@ export default function Sidebar({
           {/* New Conversation Button */}
           <div className="p-4 border-b">
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
               className="w-full justify-start"
               onClick={handleNewConversation}
