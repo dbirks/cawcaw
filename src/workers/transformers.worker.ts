@@ -14,6 +14,7 @@ import {
   type TextGenerationPipeline,
   TextStreamer,
 } from '@huggingface/transformers';
+import * as Sentry from '@sentry/react';
 import * as filesystemCache from '../utils/filesystemCache';
 
 // Configure Transformers.js environment
@@ -41,10 +42,28 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   const cached = await filesystemCache.getCached(url);
   if (cached) {
     console.log(`[FilesystemCache] Cache hit for: ${url}`);
+    Sentry.addBreadcrumb({
+      category: 'local-ai.download',
+      message: 'Cache hit for file',
+      level: 'info',
+      data: {
+        url: url.substring(0, 100),
+        stage: 'cache-hit',
+      },
+    });
     return cached;
   }
 
   console.log(`[FilesystemCache] Cache miss, downloading: ${url}`);
+  Sentry.addBreadcrumb({
+    category: 'local-ai.download',
+    message: 'Cache miss - starting download',
+    level: 'info',
+    data: {
+      url: url.substring(0, 100),
+      stage: 'cache-miss',
+    },
+  });
 
   // Download and cache
   const response = await originalFetch(input, init);
@@ -59,10 +78,38 @@ async function cachedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
       // before model loading completes. This prevents "download complete
       // but cache shows as empty" bugs.
       console.log(`[FilesystemCache] Starting cache write for: ${url.substring(0, 100)}`);
+      Sentry.addBreadcrumb({
+        category: 'local-ai.download',
+        message: 'Starting cache write',
+        level: 'info',
+        data: {
+          url: url.substring(0, 100),
+          stage: 'cache-write-start',
+        },
+      });
+
       await filesystemCache.setCached(url, clonedResponse);
+
       console.log(`[FilesystemCache] Cache write complete for: ${url.substring(0, 100)}`);
+      Sentry.addBreadcrumb({
+        category: 'local-ai.download',
+        message: 'Cache write complete',
+        level: 'info',
+        data: {
+          url: url.substring(0, 100),
+          stage: 'cache-write-complete',
+        },
+      });
     } catch (error) {
       console.error(`[FilesystemCache] CRITICAL - Failed to cache ${url}:`, error);
+      Sentry.captureException(error, {
+        tags: { component: 'local-ai-download' },
+        extra: {
+          stage: 'cache-write',
+          url: url.substring(0, 100),
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
       // THROW error to fail-fast with clear message - prevents "download complete but not cached" confusion
       throw new Error(
         `Failed to cache model file: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -313,11 +360,35 @@ function calculateDownloadSpeed(): string | undefined {
 }
 
 /**
+ * Track last logged progress milestone for Sentry (to avoid spam)
+ */
+let lastLoggedProgressMilestone = 0;
+
+/**
  * Report progress update to main thread with debouncing
  * This reduces the frequency of UI updates and prevents visual flashing
  */
 function reportProgress(progress: number, stage: string): void {
   hasPendingProgressUpdate = true;
+
+  // Log to Sentry at 25%, 50%, 75%, 100% milestones
+  const progressPercent = Math.floor(progress * 100);
+  const milestone = Math.floor(progressPercent / 25) * 25;
+  if (milestone > lastLoggedProgressMilestone && milestone > 0) {
+    lastLoggedProgressMilestone = milestone;
+    Sentry.addBreadcrumb({
+      category: 'local-ai.download',
+      message: `Download progress: ${milestone}%`,
+      level: 'info',
+      data: {
+        progress: progressPercent,
+        stage,
+        modelId: currentModelId,
+        downloadSpeed: calculateDownloadSpeed(),
+        totalModelSize: totalModelSize > 0 ? formatBytes(totalModelSize) : 'unknown',
+      },
+    });
+  }
 
   if (progressDebounceTimer) {
     clearTimeout(progressDebounceTimer);
@@ -350,9 +421,22 @@ function reportProgress(progress: number, stage: string): void {
  */
 async function handleLoad(config: LoadConfig): Promise<void> {
   try {
+    Sentry.addBreadcrumb({
+      category: 'local-ai.download',
+      message: 'Starting model download',
+      level: 'info',
+      data: {
+        modelId: config.modelId,
+        dtype: config.dtype,
+        device: config.device,
+        stage: 'download-start',
+      },
+    });
+
     // Reset progress tracking state for new download
     fileProgressMap.clear();
     lastReportedProgress = 0;
+    lastLoggedProgressMilestone = 0;
     downloadStartTime = null;
     totalBytesLoaded = 0;
     currentModelId = config.modelId;
@@ -491,10 +575,42 @@ async function handleLoad(config: LoadConfig): Promise<void> {
       progressDebounceTimer = null;
     }
 
+    Sentry.addBreadcrumb({
+      category: 'local-ai.download',
+      message: 'Model ready - sending ready message',
+      level: 'info',
+      data: {
+        modelId: currentModelId,
+        totalModelSize: totalModelSize > 0 ? formatBytes(totalModelSize) : 'unknown',
+        stage: 'model-ready',
+      },
+    });
+
     self.postMessage({ type: 'ready' } satisfies WorkerResponse);
+
+    Sentry.addBreadcrumb({
+      category: 'local-ai.download',
+      message: 'Download complete - ready message sent',
+      level: 'info',
+      data: {
+        modelId: currentModelId,
+        stage: 'complete',
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load model';
     const stack = error instanceof Error ? error.stack : undefined;
+
+    Sentry.captureException(error, {
+      tags: { component: 'local-ai-download' },
+      extra: {
+        stage: 'model-load',
+        modelId: currentModelId,
+        totalBytesLoaded,
+        totalModelSize,
+        errorMessage: message,
+      },
+    });
 
     self.postMessage({
       type: 'error',

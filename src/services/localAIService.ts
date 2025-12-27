@@ -8,6 +8,7 @@
  * Phase 3: Will integrate with actual Transformers.js worker
  */
 
+import * as Sentry from '@sentry/react';
 import type {
   GenerateOptions,
   InferenceStats,
@@ -86,6 +87,18 @@ export class LocalAIService {
       throw new Error('LocalAIService: Model is already loading');
     }
 
+    Sentry.addBreadcrumb({
+      category: 'local-ai.service',
+      message: 'Initializing local AI service',
+      level: 'info',
+      data: {
+        modelId: config.modelId,
+        dtype: config.dtype,
+        device: config.device,
+        stage: 'service-init',
+      },
+    });
+
     return new Promise((resolve, reject) => {
       this.state = 'loading';
       this.currentPromise = { resolve, reject };
@@ -96,6 +109,13 @@ export class LocalAIService {
         type: 'module',
       });
 
+      Sentry.addBreadcrumb({
+        category: 'local-ai.service',
+        message: 'Worker created',
+        level: 'info',
+        data: { stage: 'worker-created' },
+      });
+
       // Set up message handler
       this.worker.onmessage = this.handleWorkerMessage.bind(this);
 
@@ -103,12 +123,31 @@ export class LocalAIService {
       this.worker.onerror = (error) => {
         this.state = 'error';
         const errorMessage = error.message || 'Worker error';
+
+        Sentry.captureException(new Error(errorMessage), {
+          tags: { component: 'local-ai-service' },
+          extra: {
+            stage: 'worker-error',
+            errorMessage,
+          },
+        });
+
         this.currentPromise?.reject(new Error(errorMessage));
         this.currentPromise = null;
       };
 
       // Send load command
       this.postMessage({ type: 'load', config });
+
+      Sentry.addBreadcrumb({
+        category: 'local-ai.service',
+        message: 'Load command sent to worker',
+        level: 'info',
+        data: {
+          modelId: config.modelId,
+          stage: 'load-command-sent',
+        },
+      });
     });
   }
 
@@ -214,6 +253,13 @@ export class LocalAIService {
         break;
 
       case 'ready':
+        Sentry.addBreadcrumb({
+          category: 'local-ai.service',
+          message: 'Worker ready - model loaded',
+          level: 'info',
+          data: { stage: 'worker-ready' },
+        });
+
         this.state = 'ready';
         this.currentPromise?.resolve(undefined);
         this.currentPromise = null;
@@ -240,6 +286,15 @@ export class LocalAIService {
         if (message.stack) {
           error.stack = message.stack;
         }
+
+        Sentry.captureException(error, {
+          tags: { component: 'local-ai-service' },
+          extra: {
+            stage: 'worker-message-error',
+            errorMessage: message.message,
+          },
+        });
+
         this.currentPromise?.reject(error);
         this.currentPromise = null;
         this.progressCallback = null;

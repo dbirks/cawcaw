@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import {
   AlertTriangle,
@@ -826,6 +827,18 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
       setIsLoadingCache(true);
       setDownloadProgress({ progress: 0, stage: 'initializing' });
 
+      Sentry.addBreadcrumb({
+        category: 'local-ai.ui',
+        message: 'User initiated model download',
+        level: 'info',
+        data: {
+          modelId: 'onnx-community/gemma-3-270m-it-ONNX',
+          dtype: 'q4f16',
+          device: 'webgpu',
+          stage: 'download-initiated',
+        },
+      });
+
       await localAIService.initialize(
         {
           modelId: 'onnx-community/gemma-3-270m-it-ONNX',
@@ -860,9 +873,28 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
       // Download complete - refresh cache status and clear progress
       setDownloadProgress(null);
       await handleRefreshCacheStatus();
+
+      Sentry.addBreadcrumb({
+        category: 'local-ai.ui',
+        message: 'Model download completed successfully',
+        level: 'info',
+        data: {
+          stage: 'download-success',
+        },
+      });
+
       // Success - UI will show updated cache status (no alert to avoid dismissing Settings modal)
     } catch (error) {
       console.error('Failed to download model:', error);
+
+      Sentry.captureException(error, {
+        tags: { component: 'local-ai-ui' },
+        extra: {
+          stage: 'download-handler',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
       setDownloadProgress(null);
       alert(
         `❌ Failed to download model: ${error instanceof Error ? error.message : 'Unknown error'}`

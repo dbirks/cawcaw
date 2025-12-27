@@ -21,6 +21,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
+import * as Sentry from '@sentry/react';
 
 // ============================================================================
 // Constants
@@ -88,18 +89,44 @@ async function ensureFilesystemReady(): Promise<void> {
 
   console.log('[FilesystemCache] Initializing filesystem...');
 
+  Sentry.addBreadcrumb({
+    category: 'local-ai.cache',
+    message: 'Initializing filesystem',
+    level: 'info',
+    data: { stage: 'filesystem-init' },
+  });
+
   // Ensure cache directory exists in Library
   await ensureCacheDirectory();
 
   // Check if migration from Data → Library is needed
   const migrationComplete = await Preferences.get({ key: MIGRATION_COMPLETE_KEY });
   if (!migrationComplete.value) {
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'Starting migration from Data to Library',
+      level: 'info',
+      data: { stage: 'migration-start' },
+    });
     await migrateFromDataToLibrary();
     await Preferences.set({ key: MIGRATION_COMPLETE_KEY, value: 'true' });
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'Migration complete',
+      level: 'info',
+      data: { stage: 'migration-complete' },
+    });
   }
 
   filesystemReady = true;
   console.log('[FilesystemCache] Filesystem ready');
+
+  Sentry.addBreadcrumb({
+    category: 'local-ai.cache',
+    message: 'Filesystem initialization complete',
+    level: 'info',
+    data: { stage: 'filesystem-ready' },
+  });
 }
 
 /**
@@ -395,6 +422,17 @@ export async function setCached(
     isNative: Capacitor.isNativePlatform(),
   });
 
+  Sentry.addBreadcrumb({
+    category: 'local-ai.cache',
+    message: 'Starting cache write',
+    level: 'info',
+    data: {
+      url: url.substring(0, 100),
+      platform: Capacitor.getPlatform(),
+      stage: 'cache-write-init',
+    },
+  });
+
   // On web, skip caching since we only use filesystem on native
   if (!Capacitor.isNativePlatform()) {
     console.log('[FilesystemCache] setCached SKIPPED (web platform)');
@@ -404,6 +442,13 @@ export async function setCached(
   try {
     console.log('[FilesystemCache] Ensuring filesystem ready...');
     await ensureFilesystemReady();
+
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'Filesystem ready',
+      level: 'info',
+      data: { stage: 'filesystem-ready' },
+    });
 
     console.log('[FilesystemCache] Cloning response...');
     // Clone response to avoid consuming it
@@ -417,6 +462,17 @@ export async function setCached(
     console.log('[FilesystemCache] Converting to base64...', {
       sizeBytes: arrayBuffer.byteLength,
       sizeMB: (arrayBuffer.byteLength / 1024 / 1024).toFixed(2),
+    });
+
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'Converting to base64',
+      level: 'info',
+      data: {
+        sizeBytes: arrayBuffer.byteLength,
+        sizeMB: (arrayBuffer.byteLength / 1024 / 1024).toFixed(2),
+        stage: 'base64-conversion',
+      },
     });
 
     // Convert to base64 for Capacitor Filesystem
@@ -442,6 +498,18 @@ export async function setCached(
       directory: Directory.Library,
     });
 
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'Writing file to filesystem',
+      level: 'info',
+      data: {
+        filename,
+        path: filePath,
+        base64SizeMB: (base64Data.length / 1024 / 1024).toFixed(2),
+        stage: 'filesystem-write-start',
+      },
+    });
+
     // Write file to filesystem
     await Filesystem.writeFile({
       path: filePath,
@@ -451,6 +519,16 @@ export async function setCached(
     });
 
     console.log('[FilesystemCache] File written successfully');
+
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'File written successfully',
+      level: 'info',
+      data: {
+        filename,
+        stage: 'filesystem-write-complete',
+      },
+    });
 
     console.log('[FilesystemCache] Updating metadata...');
     // Update metadata
@@ -468,6 +546,16 @@ export async function setCached(
       totalEntries: Object.keys(metadata.entries).length,
     });
 
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'Metadata updated',
+      level: 'info',
+      data: {
+        totalEntries: Object.keys(metadata.entries).length,
+        stage: 'metadata-updated',
+      },
+    });
+
     // Report completion
     if (onProgress) {
       onProgress(1);
@@ -478,6 +566,18 @@ export async function setCached(
       filename,
       sizeBytes: arrayBuffer.byteLength,
     });
+
+    Sentry.addBreadcrumb({
+      category: 'local-ai.cache',
+      message: 'Cache write complete',
+      level: 'info',
+      data: {
+        url: url.substring(0, 100),
+        filename,
+        sizeBytes: arrayBuffer.byteLength,
+        stage: 'cache-write-success',
+      },
+    });
   } catch (error) {
     console.error('[FilesystemCache] setCached FAILED', {
       url: url.substring(0, 100),
@@ -485,6 +585,16 @@ export async function setCached(
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
       errorStack: error instanceof Error ? error.stack : undefined,
     });
+
+    Sentry.captureException(error, {
+      tags: { component: 'local-ai-cache' },
+      extra: {
+        stage: 'filesystem-cache-write',
+        url: url.substring(0, 100),
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
     throw error;
   }
 }
