@@ -352,26 +352,42 @@ export default function Settings({ onClose }: SettingsProps) {
       setServers(configs);
       setServerStatuses(mcpManager.getServerStatuses());
 
-      // Load current API keys
-      const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
-      if (result?.value) {
-        setApiKey(result.value);
+      // Load current API keys (wrap in try-catch to prevent errors from blocking ACP server loading)
+      try {
+        const result = await SecureStoragePlugin.get({ key: 'openai_api_key' });
+        if (result?.value) {
+          setApiKey(result.value);
+        }
+      } catch {
+        // Key doesn't exist, skip
       }
 
-      const anthropicResult = await SecureStoragePlugin.get({ key: 'anthropic_api_key' });
-      if (anthropicResult?.value) {
-        setAnthropicApiKey(anthropicResult.value);
+      try {
+        const anthropicResult = await SecureStoragePlugin.get({ key: 'anthropic_api_key' });
+        if (anthropicResult?.value) {
+          setAnthropicApiKey(anthropicResult.value);
+        }
+      } catch {
+        // Key doesn't exist, skip
       }
 
-      const titleModelResult = await SecureStoragePlugin.get({ key: 'title_model' });
-      if (titleModelResult?.value) {
-        setTitleModel(titleModelResult.value);
+      try {
+        const titleModelResult = await SecureStoragePlugin.get({ key: 'title_model' });
+        if (titleModelResult?.value) {
+          setTitleModel(titleModelResult.value);
+        }
+      } catch {
+        // Key doesn't exist, skip
       }
 
       // Load STT model preference
-      const sttModelResult = await SecureStoragePlugin.get({ key: 'stt_model' });
-      if (sttModelResult?.value) {
-        setSttModel(sttModelResult.value);
+      try {
+        const sttModelResult = await SecureStoragePlugin.get({ key: 'stt_model' });
+        if (sttModelResult?.value) {
+          setSttModel(sttModelResult.value);
+        }
+      } catch {
+        // Key doesn't exist, skip
       }
 
       // Load OAuth statuses for servers that require or support OAuth
