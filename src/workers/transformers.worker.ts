@@ -482,6 +482,7 @@ function reportProgress(progress: number, stage: string): void {
  * Load the AI model using Transformers.js
  */
 async function handleLoad(config: LoadConfig): Promise<void> {
+  const loadStartTime = Date.now(); // Track total load duration
   try {
     console.log('[Worker] Starting model load:', {
       modelId: config.modelId,
@@ -498,6 +499,7 @@ async function handleLoad(config: LoadConfig): Promise<void> {
         dtype: config.dtype,
         device: config.device,
         stage: 'download-start',
+        timestamp: loadStartTime,
       },
     });
 
@@ -659,6 +661,10 @@ async function handleLoad(config: LoadConfig): Promise<void> {
 
     self.postMessage({ type: 'ready' } satisfies WorkerResponse);
 
+    const loadEndTime = Date.now();
+    const loadDurationMs = loadEndTime - loadStartTime;
+    const loadDurationSec = (loadDurationMs / 1000).toFixed(1);
+
     console.log('[Worker] Ready message sent - download complete');
     Sentry.addBreadcrumb({
       category: 'local-ai.download',
@@ -666,6 +672,9 @@ async function handleLoad(config: LoadConfig): Promise<void> {
       level: 'info',
       data: {
         modelId: currentModelId,
+        totalModelSize: totalModelSize > 0 ? formatBytes(totalModelSize) : 'unknown',
+        durationMs: loadDurationMs,
+        durationSec: `${loadDurationSec}s`,
         stage: 'complete',
       },
     });
