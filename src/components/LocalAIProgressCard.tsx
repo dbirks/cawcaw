@@ -174,7 +174,7 @@ export function LocalAIProgressCard({
             </>
           ) : (
             <>
-              First-time download (~150-250MB). Model will be cached for offline use after download
+              First-time download (~430 MB). Model will be cached for offline use after download
               completes.
             </>
           )}
