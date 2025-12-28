@@ -181,7 +181,6 @@ export default function Settings({ onClose }: SettingsProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<SettingsView>('list');
 
   // ACP state
@@ -346,7 +345,12 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const loadSettings = useCallback(async () => {
     try {
-      setIsLoading(true);
+      // Log Settings dialog open event
+      Sentry.addBreadcrumb({
+        category: 'ui',
+        message: 'Settings dialog opened',
+        level: 'info',
+      });
 
       // Clean up demo servers first
       await mcpManager.cleanupDemoServers();
@@ -426,8 +430,13 @@ export default function Settings({ onClose }: SettingsProps) {
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
-    } finally {
-      setIsLoading(false);
+      // Log Settings load failure
+      Sentry.captureException(error, {
+        tags: {
+          component: 'Settings',
+          action: 'load',
+        },
+      });
     }
   }, []);
 
@@ -659,7 +668,7 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
   const handleClearCache = async () => {
     if (
       !confirm(
-        'Are you sure you want to clear the local AI model cache? The model will need to be downloaded again (~150-250MB) on next use.'
+        'Are you sure you want to clear the local AI model cache? The model will need to be downloaded again (~430 MB) on next use.'
       )
     ) {
       return;
@@ -844,7 +853,7 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
   const handlePredownloadModel = async () => {
     if (
       !confirm(
-        'Download the local AI model now (~150-250MB)? This will make the model available for offline use.'
+        'Download the local AI model now (~430 MB)? This will make the model available for offline use.'
       )
     ) {
       return;
@@ -911,6 +920,8 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
       });
 
       // Success - UI will show updated cache status (no alert to avoid dismissing Settings modal)
+      // Ensure loading state is cleared (defensive - handleRefreshCacheStatus should handle this)
+      setIsLoadingCache(false);
     } catch (error) {
       console.error('Failed to download model:', error);
 
@@ -1416,28 +1427,11 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="h-dvh bg-background p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">Settings</h1>
-            <Button type="button" variant="outline" onClick={onClose}>
-              <X className="h-4 w-4 mr-2" />
-              Close
-            </Button>
-          </div>
-          <div className="text-center py-8">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-dvh bg-background">
+    <div className="h-dvh bg-background safe-top">
       <div className="max-w-4xl mx-auto flex flex-col h-full">
         {/* Header with back button for detail views */}
-        <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-4 safe-top safe-x">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-4 safe-x">
           {currentView !== 'list' && (
             <Button
               variant="ghost"
@@ -1659,7 +1653,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <p className="text-sm text-muted-foreground">
-                          Manage the cached Gemma 3 270M model (~150-250MB). Cached models are
+                          Manage the cached Gemma 3 270M model (~430 MB). Cached models are
                           available for offline use.
                         </p>
 
