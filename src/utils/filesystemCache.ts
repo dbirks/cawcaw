@@ -546,10 +546,11 @@ export async function getCached(url: string): Promise<Response | null> {
     return null;
   }
 
+  let entry: CacheEntry | undefined;
   try {
     await ensureFilesystemReady();
     const metadata = await readMetadata();
-    const entry = metadata.entries[url];
+    entry = metadata.entries[url];
 
     if (!entry) {
       // CRITICAL: Log cache miss to Sentry
@@ -584,26 +585,62 @@ export async function getCached(url: string): Promise<Response | null> {
     console.log('[FilesystemCache] File read successfully, converting from base64...');
 
     // Convert base64 data to ArrayBuffer
-    let base64Data: string;
-    if (typeof result.data === 'string') {
-      base64Data = result.data;
-    } else {
-      // If it's a Blob, convert to base64
-      const arrayBuffer = await result.data.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      base64Data = btoa(String.fromCharCode(...bytes));
-    }
+    let bytes: Uint8Array;
+    try {
+      let base64Data: string;
+      if (typeof result.data === 'string') {
+        base64Data = result.data;
+      } else {
+        // If it's a Blob, convert to base64
+        const arrayBuffer = await result.data.arrayBuffer();
+        const tempBytes = new Uint8Array(arrayBuffer);
+        base64Data = btoa(String.fromCharCode(...tempBytes));
+      }
 
-    const binaryString = atob(base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+      const binaryString = atob(base64Data);
+      bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
 
-    console.log('[FilesystemCache] Cached file decoded successfully:', {
-      sizeBytes: bytes.length,
-      sizeMB: (bytes.length / 1024 / 1024).toFixed(2),
-    });
+      console.log('[FilesystemCache] Cached file decoded successfully:', {
+        sizeBytes: bytes.length,
+        sizeMB: (bytes.length / 1024 / 1024).toFixed(2),
+      });
+
+      // Verify size matches metadata
+      if (bytes.length !== entry.size) {
+        console.warn('[FilesystemCache] WARNING - Size mismatch detected:', {
+          expectedSize: entry.size,
+          actualSize: bytes.length,
+          filename: entry.filename,
+        });
+
+        Sentry.captureException(new Error('Cache file size mismatch'), {
+          tags: { component: 'local-ai-cache', operation: 'size-mismatch' },
+          extra: {
+            expectedSize: entry.size,
+            actualSize: bytes.length,
+            filename: entry.filename,
+            url: url.substring(0, 100),
+          },
+        });
+      }
+    } catch (decodeError) {
+      console.error('[FilesystemCache] Base64 decode error:', decodeError);
+
+      Sentry.captureException(decodeError, {
+        tags: { component: 'local-ai-cache', operation: 'decode-error' },
+        extra: {
+          stage: 'base64-decode',
+          filename: entry.filename,
+          expectedSize: entry.size,
+          errorMessage: decodeError instanceof Error ? decodeError.message : 'Unknown',
+        },
+      });
+
+      throw decodeError;
+    }
 
     // CRITICAL: Explicitly capture cache hit as Sentry event
     // This confirms cache is working and files are being retrieved
@@ -623,7 +660,7 @@ export async function getCached(url: string): Promise<Response | null> {
 
     // Create Response with headers
     const headers = objectToHeaders(entry.headers);
-    return new Response(bytes.buffer, {
+    return new Response(bytes.buffer as ArrayBuffer, {
       status: 200,
       statusText: 'OK',
       headers,
@@ -635,12 +672,17 @@ export async function getCached(url: string): Promise<Response | null> {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
     });
+
+    // CRITICAL: Cache read failure (file exists in metadata but can't be read)
     Sentry.captureException(error, {
-      tags: { component: 'local-ai-cache', operation: 'cache-read' },
+      tags: { component: 'local-ai-cache', operation: 'cache-read-error' },
       extra: {
-        stage: 'cache-read',
-        url: url.substring(0, 100),
+        stage: 'cache-file-read',
+        url: url.substring(0, 150), // Capture more of URL for query params
+        filename: entry?.filename || 'unknown',
+        expectedSize: entry?.size || 0,
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
       },
     });
     return null;
