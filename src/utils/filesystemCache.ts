@@ -463,10 +463,11 @@ async function ensureCacheDirectory(): Promise<void> {
         path: FILES_DIR,
       });
       Sentry.captureException(error, {
-        tags: { component: 'local-ai-cache', operation: 'directory-creation' },
+        tags: { component: 'local-ai-cache', operation: 'mkdir-error' },
         extra: {
           stage: 'directory-creation',
           path: FILES_DIR,
+          recursive: true,
           errorMessage: error.message,
         },
       });
