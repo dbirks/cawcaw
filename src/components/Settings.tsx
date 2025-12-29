@@ -211,9 +211,6 @@ export default function Settings({ onClose }: SettingsProps) {
   const [isTestingLocalAI, setIsTestingLocalAI] = useState(false);
   const [localAITestResult, setLocalAITestResult] = useState<string | null>(null);
 
-  // Cache health check state
-  const [isCacheHealthCheck, setIsCacheHealthCheck] = useState(false);
-
   // Model cache state
   const [cacheStatus, setCacheStatus] = useState<{
     isCached: boolean;
@@ -991,92 +988,6 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
       alert(errorMessage);
     } finally {
       setIsTestingLocalAI(false);
-    }
-  };
-
-  const handleCacheHealthCheck = async () => {
-    setIsCacheHealthCheck(true);
-
-    // Helper function for formatting bytes
-    const formatBytes = (bytes: number): string => {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB', 'GB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return `${(bytes / k ** i).toFixed(1)} ${sizes[i]}`;
-    };
-
-    try {
-      // Import cache utilities
-      const { getCacheStats, listCached, getCacheSize } = await import('@/utils/filesystemCache');
-      const { Filesystem, Directory } = await import('@capacitor/filesystem');
-      const { Preferences } = await import('@capacitor/preferences');
-
-      // Gather cache diagnostics
-      const cacheStats = await getCacheStats();
-      const cachedUrls = await listCached();
-      const cacheSize = await getCacheSize();
-
-      // Check for orphaned files
-      let orphanedFiles = 0;
-      try {
-        const filesDir = await Filesystem.readdir({
-          path: 'transformers-cache/files',
-          directory: Directory.Library,
-        });
-        orphanedFiles = filesDir.files.length - cachedUrls.length;
-      } catch (error) {
-        console.warn('Could not read cache directory:', error);
-      }
-
-      // Check migration status
-      const migrationComplete = await Preferences.get({ key: 'FILESYSTEM_MIGRATION_COMPLETE' });
-      const migrationCount = await Preferences.get({ key: 'MIGRATION_RUN_COUNT' });
-
-      // Send diagnostics to Sentry
-      Sentry.captureMessage('Cache health check performed', {
-        level: 'info',
-        tags: {
-          component: 'local-ai-cache',
-          operation: 'health-check',
-        },
-        extra: {
-          totalSize: cacheSize,
-          fileCount: cacheStats.fileCount,
-          urlCount: cachedUrls.length,
-          orphanedFiles,
-          migrationComplete: migrationComplete.value,
-          migrationCount: migrationCount.value || '0',
-          urls: cachedUrls.map((u) => u.substring(0, 100)),
-        },
-      });
-
-      // Display results to user
-      const message = `
-Cache Health Check Results:
-✅ Cache Size: ${formatBytes(cacheSize)}
-✅ Cached Files: ${cacheStats.fileCount}
-✅ Cached URLs: ${cachedUrls.length}
-${orphanedFiles > 0 ? `⚠️ Orphaned Files: ${orphanedFiles}` : '✅ No orphaned files'}
-✅ Migration Complete: ${migrationComplete.value || 'Not set'}
-✅ Migration Run Count: ${migrationCount.value || '0'}
-
-${orphanedFiles > 0 ? '\n⚠️ Warning: Orphaned files detected! This indicates metadata corruption.' : ''}
-
-Results sent to Sentry for analysis.
-    `.trim();
-
-      alert(message);
-    } catch (error) {
-      console.error('Cache health check failed:', error);
-      Sentry.captureException(error, {
-        tags: { component: 'settings', operation: 'cache-health-check-error' },
-      });
-      alert(
-        `❌ Cache health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    } finally {
-      setIsCacheHealthCheck(false);
     }
   };
 
@@ -3342,30 +3253,6 @@ Results sent to Sentry for analysis.
                             {localAITestResult}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-
-                    {/* Cache Health Check Section */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <HardDrive className="h-5 w-5" />
-                          Local AI Cache Diagnostics
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          Run diagnostics on Local AI cache and send results to Sentry for analysis.
-                          Checks cache size, file count, orphaned files, and migration status.
-                        </p>
-                        <Button
-                          onClick={handleCacheHealthCheck}
-                          disabled={isCacheHealthCheck}
-                          className="w-full sm:w-auto"
-                        >
-                          <TestTube className="mr-2 h-4 w-4" />
-                          {isCacheHealthCheck ? 'Checking Cache...' : 'Check Cache Health'}
-                        </Button>
                       </CardContent>
                     </Card>
 
