@@ -1,6 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import * as Sentry from '@sentry/react';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { ArrowUpIcon, Cpu, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
@@ -1467,6 +1468,94 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     const interval = setInterval(pollTitleUpdates, 500);
     return () => clearInterval(interval);
   }, [currentConversationId, conversationTitle]);
+
+  // Verify cache health on app startup
+  useEffect(() => {
+    const verifyCacheHealth = async () => {
+      try {
+        // Only run on native platforms (where cache is used)
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) {
+          return;
+        }
+
+        const { getCacheStats, listCached } = await import('@/utils/filesystemCache');
+        const { Preferences } = await import('@capacitor/preferences');
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+
+        // Get cache stats
+        const stats = await getCacheStats();
+        const urls = await listCached();
+
+        // Check for orphaned files (files exist but not in metadata)
+        let orphanedFileCount = 0;
+        try {
+          const filesDir = await Filesystem.readdir({
+            path: 'transformers-cache/files',
+            directory: Directory.Library,
+          });
+          orphanedFileCount = filesDir.files.length - urls.length;
+        } catch (_error) {
+          // Directory doesn't exist yet, that's fine
+          console.log('[CacheHealth] Cache directory not found (not used yet)');
+        }
+
+        // Check migration status
+        const migrationComplete = await Preferences.get({ key: 'FILESYSTEM_MIGRATION_COMPLETE' });
+        const migrationCount = await Preferences.get({ key: 'MIGRATION_RUN_COUNT' });
+
+        // Log to Sentry on app startup
+        Sentry.captureMessage('App startup cache verification', {
+          level: 'info',
+          tags: {
+            component: 'local-ai-cache',
+            operation: 'startup-verification',
+          },
+          extra: {
+            cacheFileCount: stats.fileCount,
+            cacheUrlCount: urls.length,
+            orphanedFiles: orphanedFileCount,
+            migrationComplete: migrationComplete.value || 'not-set',
+            migrationRunCount: migrationCount.value || '0',
+            hasOrphanedFiles: orphanedFileCount > 0,
+          },
+        });
+
+        // If orphaned files detected, log warning
+        if (orphanedFileCount > 0) {
+          Sentry.captureException(new Error('Orphaned cache files detected on startup'), {
+            tags: { component: 'local-ai-cache', operation: 'startup-orphaned-files' },
+            extra: {
+              orphanedFileCount,
+              totalFiles: stats.fileCount,
+              metadataUrls: urls.length,
+            },
+          });
+
+          console.warn(`[CacheHealth] Found ${orphanedFileCount} orphaned cache files on startup`);
+        }
+
+        // Detect repeated migrations (indicates Preferences not persisting)
+        const migCount = parseInt(migrationCount.value || '0', 10);
+        if (migCount > 2) {
+          Sentry.captureException(new Error('Cache migration running excessively'), {
+            tags: { component: 'local-ai-cache', operation: 'excessive-migration' },
+            extra: { migrationRunCount: migCount },
+          });
+
+          console.error(`[CacheHealth] Migration has run ${migCount} times (should only run once)`);
+        }
+      } catch (error) {
+        console.error('[CacheHealth] Startup verification failed:', error);
+        // Don't send to Sentry - avoid noise from import errors on web
+      }
+    };
+
+    // Run verification after a short delay to avoid blocking app startup
+    const timer = setTimeout(verifyCacheHealth, 2000);
+
+    return () => clearTimeout(timer);
+  }, []); // Run once on mount
 
   const handleNewConversation = async (conversation: ConversationData) => {
     console.log('[ChatView] handleNewConversation called with conversation:', conversation.id);

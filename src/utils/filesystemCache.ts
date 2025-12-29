@@ -99,8 +99,23 @@ async function ensureFilesystemReady(): Promise<void> {
 
     // Ensure cache directory exists in Library
     console.log('[FilesystemCache] Ensuring cache directory exists...');
-    await ensureCacheDirectory();
-    console.log('[FilesystemCache] Cache directory ready');
+    try {
+      await ensureCacheDirectory();
+      console.log('[FilesystemCache] Cache directory ready');
+    } catch (error) {
+      console.error('[FilesystemCache] Failed to ensure cache directory:', error);
+
+      Sentry.captureException(error, {
+        tags: { component: 'local-ai-cache', operation: 'directory-creation-error' },
+        extra: {
+          stage: 'cache-directory-setup',
+          path: CACHE_DIR,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
+      throw error;
+    }
 
     // Check if migration from Data → Library is needed
     const migrationComplete = await Preferences.get({ key: MIGRATION_COMPLETE_KEY });
@@ -128,15 +143,29 @@ async function ensureFilesystemReady(): Promise<void> {
         level: 'info',
         data: { stage: 'migration-start' },
       });
-      await migrateFromDataToLibrary();
-      await Preferences.set({ key: MIGRATION_COMPLETE_KEY, value: 'true' });
-      console.log('[FilesystemCache] Migration complete');
-      Sentry.addBreadcrumb({
-        category: 'local-ai.cache',
-        message: 'Migration complete',
-        level: 'info',
-        data: { stage: 'migration-complete' },
-      });
+      try {
+        await migrateFromDataToLibrary();
+        await Preferences.set({ key: MIGRATION_COMPLETE_KEY, value: 'true' });
+        console.log('[FilesystemCache] Migration complete');
+        Sentry.addBreadcrumb({
+          category: 'local-ai.cache',
+          message: 'Migration complete',
+          level: 'info',
+          data: { stage: 'migration-complete' },
+        });
+      } catch (error) {
+        console.error('[FilesystemCache] Migration failed:', error);
+
+        Sentry.captureException(error, {
+          tags: { component: 'local-ai-cache', operation: 'migration-error' },
+          extra: {
+            stage: 'cache-migration',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          },
+        });
+
+        throw error;
+      }
     } else {
       console.log('[FilesystemCache] Migration already complete, skipping');
     }
