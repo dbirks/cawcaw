@@ -212,7 +212,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const [localAITestResult, setLocalAITestResult] = useState<string | null>(null);
 
   // Cache health check state
-  const [_isCacheHealthCheck, _setIsCacheHealthCheck] = useState(false);
+  const [isCacheHealthCheck, setIsCacheHealthCheck] = useState(false);
 
   // Model cache state
   const [cacheStatus, setCacheStatus] = useState<{
@@ -1008,9 +1008,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
 
     try {
       // Import cache utilities
-      const { getCacheStats, listCached, getCacheSize } = await import(
-        '@/utils/filesystemCache'
-      );
+      const { getCacheStats, listCached, getCacheSize } = await import('@/utils/filesystemCache');
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
       const { Preferences } = await import('@capacitor/preferences');
 
@@ -3344,6 +3342,30 @@ Results sent to Sentry for analysis.
                             {localAITestResult}
                           </div>
                         )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Cache Health Check Section */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <HardDrive className="h-5 w-5" />
+                          Local AI Cache Diagnostics
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Run diagnostics on Local AI cache and send results to Sentry for analysis.
+                          Checks cache size, file count, orphaned files, and migration status.
+                        </p>
+                        <Button
+                          onClick={handleCacheHealthCheck}
+                          disabled={isCacheHealthCheck}
+                          className="w-full sm:w-auto"
+                        >
+                          <TestTube className="mr-2 h-4 w-4" />
+                          {isCacheHealthCheck ? 'Checking Cache...' : 'Check Cache Health'}
+                        </Button>
                       </CardContent>
                     </Card>
 
