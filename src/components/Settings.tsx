@@ -676,9 +676,11 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
 
     setIsClearingCache(true);
     try {
-      // Unload the model if it's currently loaded
+      // Unload the model if it's currently loaded, or reset if loading/error
       if (localAIService.isReady()) {
         localAIService.unload();
+      } else if (localAIService.isLoading() || localAIService.getState() === 'error') {
+        localAIService.reset();
       }
 
       await clearModelCache();
@@ -804,8 +806,11 @@ ${result.canRunComputePass ? '\n🎉 Local AI (WebGPU) READY!' : '\n⚠️  Loca
 
     setIsCleaningStorage(true);
     try {
+      // Unload the model if it's currently loaded, or reset if loading/error
       if (localAIService.isReady()) {
         localAIService.unload();
+      } else if (localAIService.isLoading() || localAIService.getState() === 'error') {
+        localAIService.reset();
       }
       const clearedSize = await clearAllStorage();
       alert(`✅ Cleared ${formatBytes(clearedSize)} of storage!`);

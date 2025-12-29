@@ -70,6 +70,10 @@ export class LocalAIService {
   private progressCallback: ProgressCallback | null = null;
   private tokenCallback: TokenCallback | null = null;
 
+  // Timeout for stuck loading states (10 minutes)
+  private loadingTimeout: NodeJS.Timeout | null = null;
+  private readonly LOADING_TIMEOUT_MS = 10 * 60 * 1000;
+
   /**
    * Initialize the worker and load the model
    *
@@ -84,7 +88,21 @@ export class LocalAIService {
     }
 
     if (this.state === 'loading') {
-      throw new Error('LocalAIService: Model is already loading');
+      throw new Error(
+        'LocalAIService: Model is already loading. Please wait for the current download to complete, or call reset() to cancel it.'
+      );
+    }
+
+    // If in error state, auto-reset to allow retry
+    if (this.state === 'error') {
+      console.warn('LocalAIService: Resetting from error state to allow retry');
+      Sentry.addBreadcrumb({
+        category: 'local-ai.service',
+        message: 'Auto-reset from error state',
+        level: 'warning',
+        data: { stage: 'auto-reset-error' },
+      });
+      this.reset();
     }
 
     console.log('[LocalAIService] Initializing with config:', {
@@ -110,6 +128,25 @@ export class LocalAIService {
       this.currentPromise = { resolve, reject };
       this.progressCallback = onProgress ?? null;
 
+      // Set timeout to auto-reset if loading gets stuck
+      this.loadingTimeout = setTimeout(() => {
+        if (this.state === 'loading') {
+          const timeoutError = new Error(
+            `Model loading timeout after ${this.LOADING_TIMEOUT_MS / 1000 / 60} minutes. Resetting service.`
+          );
+          console.error('[LocalAIService] Loading timeout - auto-resetting:', timeoutError);
+          Sentry.captureException(timeoutError, {
+            tags: { component: 'local-ai-service', operation: 'loading-timeout' },
+            extra: {
+              stage: 'loading-timeout',
+              timeoutMs: this.LOADING_TIMEOUT_MS,
+            },
+          });
+          this.reset();
+          reject(timeoutError);
+        }
+      }, this.LOADING_TIMEOUT_MS);
+
       // Create worker
       try {
         console.log('[LocalAIService] Creating Web Worker...');
@@ -130,6 +167,13 @@ export class LocalAIService {
           message: workerError instanceof Error ? workerError.message : 'Unknown error',
           stack: workerError instanceof Error ? workerError.stack : undefined,
         });
+
+        // Clear loading timeout
+        if (this.loadingTimeout) {
+          clearTimeout(this.loadingTimeout);
+          this.loadingTimeout = null;
+        }
+
         this.state = 'error';
         const errorMessage = `Failed to create Web Worker: ${workerError instanceof Error ? workerError.message : 'Unknown error'}`;
         Sentry.captureException(workerError, {
@@ -148,6 +192,12 @@ export class LocalAIService {
 
       // Set up error handler
       this.worker.onerror = (error) => {
+        // Clear loading timeout
+        if (this.loadingTimeout) {
+          clearTimeout(this.loadingTimeout);
+          this.loadingTimeout = null;
+        }
+
         this.state = 'error';
         const errorMessage = error.message || 'Worker error';
 
@@ -270,6 +320,44 @@ export class LocalAIService {
     return this.state === 'ready';
   }
 
+  /**
+   * Check if model is currently loading
+   */
+  isLoading(): boolean {
+    return this.state === 'loading';
+  }
+
+  /**
+   * Reset the service to idle state
+   * Useful for recovering from error states or canceling stuck loads
+   */
+  reset(): void {
+    // Clear any pending timeout
+    if (this.loadingTimeout) {
+      clearTimeout(this.loadingTimeout);
+      this.loadingTimeout = null;
+    }
+
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+
+    this.state = 'idle';
+    this.currentPromise?.reject(new Error('Service reset'));
+    this.currentPromise = null;
+    this.progressCallback = null;
+    this.tokenCallback = null;
+
+    console.log('[LocalAIService] Service reset to idle state');
+    Sentry.addBreadcrumb({
+      category: 'local-ai.service',
+      message: 'Service reset to idle state',
+      level: 'info',
+      data: { stage: 'service-reset' },
+    });
+  }
+
   // ========================================================================
   // Private Methods
   // ========================================================================
@@ -299,6 +387,12 @@ export class LocalAIService {
           data: { stage: 'worker-ready' },
         });
 
+        // Clear loading timeout
+        if (this.loadingTimeout) {
+          clearTimeout(this.loadingTimeout);
+          this.loadingTimeout = null;
+        }
+
         this.state = 'ready';
         this.currentPromise?.resolve(undefined);
         this.currentPromise = null;
@@ -320,6 +414,12 @@ export class LocalAIService {
         break;
 
       case 'error': {
+        // Clear loading timeout
+        if (this.loadingTimeout) {
+          clearTimeout(this.loadingTimeout);
+          this.loadingTimeout = null;
+        }
+
         this.state = 'error';
         const error = new Error(message.message);
         if (message.stack) {

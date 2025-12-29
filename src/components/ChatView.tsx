@@ -808,6 +808,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     try {
       // Initialize model if not ready
       if (!localAIService.isReady()) {
+        // Check if already loading (e.g., from Settings download)
+        if (localAIService.isLoading()) {
+          const loadingError = new Error(
+            'Local AI model is currently downloading. Please wait for the download to complete in Settings, or cancel and retry.'
+          );
+          debugLogger.warn('chat', '⚠️ Model already loading - cannot start chat');
+          throw loadingError;
+        }
+
         debugLogger.info('chat', '📥 Initializing local AI model...');
         setStatus('streaming'); // Show loading state during model download
 
@@ -1531,27 +1540,33 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   };
 
   const handleSettingsClose = async () => {
-    // Reload MCP servers when Settings closes in case they were added/modified
-    console.log('[ChatView] Settings closed, reloading MCP configurations...');
-    await mcpManager.loadConfigurations();
-    await mcpManager.connectToEnabledServers();
+    try {
+      // Reload MCP servers when Settings closes in case they were added/modified
+      console.log('[ChatView] Settings closed, reloading MCP configurations...');
+      await mcpManager.loadConfigurations();
+      await mcpManager.connectToEnabledServers();
 
-    const servers = mcpManager.getServerConfigs();
-    const statuses = mcpManager.getServerStatuses();
-    console.log('[ChatView] MCP servers reloaded:', servers.length, servers);
-    setAvailableServers(servers);
-    setServerStatuses(statuses);
+      const servers = mcpManager.getServerConfigs();
+      const statuses = mcpManager.getServerStatuses();
+      console.log('[ChatView] MCP servers reloaded:', servers.length, servers);
+      setAvailableServers(servers);
+      setServerStatuses(statuses);
 
-    // Reload ACP servers when Settings closes in case they were added/modified
-    console.log('[ChatView] Settings closed, reloading ACP configurations...');
-    await acpManager.loadConfigurations();
-    await acpManager.connectToEnabledServers();
+      // Reload ACP servers when Settings closes in case they were added/modified
+      console.log('[ChatView] Settings closed, reloading ACP configurations...');
+      await acpManager.loadConfigurations();
+      await acpManager.connectToEnabledServers();
 
-    const acpServerConfigs = acpManager.getServers();
-    console.log('[ChatView] ACP servers reloaded:', acpServerConfigs.length, acpServerConfigs);
-    setAcpServers(acpServerConfigs);
-
-    setShowSettings(false);
+      const acpServerConfigs = acpManager.getServers();
+      console.log('[ChatView] ACP servers reloaded:', acpServerConfigs.length, acpServerConfigs);
+      setAcpServers(acpServerConfigs);
+    } catch (error) {
+      console.error('[ChatView] Error reloading servers after Settings close:', error);
+      // Continue to close Settings even if reload fails
+    } finally {
+      // Always close Settings, even if server reload fails
+      setShowSettings(false);
+    }
   };
 
   // Show Settings screen
