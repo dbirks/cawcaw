@@ -270,6 +270,34 @@ async function readMetadata(): Promise<CacheMetadata> {
 
     // Both filesystem and backup failed, return empty metadata
     console.log('[FilesystemCache] No metadata found, starting fresh');
+
+    // CRITICAL: Check if cache files exist on disk despite missing metadata
+    // This would indicate metadata corruption/loss
+    try {
+      const filesDir = await Filesystem.readdir({
+        path: `${CACHE_DIR}/files`,
+        directory: Directory.Library,
+      });
+
+      if (filesDir.files.length > 0) {
+        // CRITICAL: Files exist but metadata is missing!
+        Sentry.captureException(new Error('Cache metadata missing but files exist on disk'), {
+          tags: { component: 'local-ai-cache', operation: 'metadata-corruption' },
+          extra: {
+            fileCount: filesDir.files.length,
+            files: filesDir.files.slice(0, 10).map((f) => f.name), // First 10 files
+          },
+        });
+        console.error(
+          '[FilesystemCache] CRITICAL - Metadata lost but files exist:',
+          filesDir.files.length
+        );
+      }
+    } catch (_dirError) {
+      // Directory doesn't exist yet, truly empty cache
+      console.log('[FilesystemCache] Cache directory empty or does not exist');
+    }
+
     return {
       version: 1,
       entries: {},
@@ -407,6 +435,19 @@ export async function getCached(url: string): Promise<Response | null> {
     const entry = metadata.entries[url];
 
     if (!entry) {
+      // CRITICAL: Log cache miss to Sentry
+      // This helps diagnose why cache isn't being used
+      Sentry.captureMessage('Local AI cache miss', {
+        level: 'info',
+        tags: {
+          component: 'local-ai-cache',
+          operation: 'cache-miss',
+        },
+        extra: {
+          url: url.substring(0, 100),
+          totalCachedUrls: Object.keys(metadata.entries).length,
+        },
+      });
       return null;
     }
 
@@ -445,6 +486,22 @@ export async function getCached(url: string): Promise<Response | null> {
     console.log('[FilesystemCache] Cached file decoded successfully:', {
       sizeBytes: bytes.length,
       sizeMB: (bytes.length / 1024 / 1024).toFixed(2),
+    });
+
+    // CRITICAL: Explicitly capture cache hit as Sentry event
+    // This confirms cache is working and files are being retrieved
+    Sentry.captureMessage('Local AI cache hit', {
+      level: 'info',
+      tags: {
+        component: 'local-ai-cache',
+        operation: 'cache-hit',
+      },
+      extra: {
+        url: url.substring(0, 100),
+        filename: entry.filename,
+        sizeBytes: bytes.length,
+        sizeMB: (bytes.length / 1024 / 1024).toFixed(2),
+      },
     });
 
     // Create Response with headers
@@ -645,6 +702,21 @@ export async function setCached(
         filename,
         sizeBytes: arrayBuffer.byteLength,
         stage: 'cache-write-success',
+      },
+    });
+
+    // CRITICAL: Explicitly capture successful cache write as Sentry event (not just breadcrumb)
+    // This ensures cache operations are visible in Sentry even without errors
+    Sentry.captureMessage('Local AI cache write successful', {
+      level: 'info',
+      tags: {
+        component: 'local-ai-cache',
+        operation: 'cache-write-success',
+      },
+      extra: {
+        url: url.substring(0, 100),
+        filename,
+        sizeBytes: arrayBuffer.byteLength,
       },
     });
   } catch (error) {
