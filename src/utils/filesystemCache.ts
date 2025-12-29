@@ -104,7 +104,23 @@ async function ensureFilesystemReady(): Promise<void> {
 
     // Check if migration from Data → Library is needed
     const migrationComplete = await Preferences.get({ key: MIGRATION_COMPLETE_KEY });
+    const migrationCount = await Preferences.get({ key: 'MIGRATION_RUN_COUNT' });
+    const currentCount = migrationCount.value ? parseInt(migrationCount.value, 10) : 0;
+
     if (!migrationComplete.value) {
+      if (currentCount > 1) {
+        // CRITICAL: Migration running multiple times (Preferences not persisting)
+        Sentry.captureException(new Error('Cache migration running repeatedly'), {
+          tags: { component: 'local-ai-cache', operation: 'repeated-migration' },
+          extra: { migrationCount: currentCount },
+        });
+      }
+
+      await Preferences.set({
+        key: 'MIGRATION_RUN_COUNT',
+        value: (currentCount + 1).toString(),
+      });
+
       console.log('[FilesystemCache] Migration not complete, starting migration...');
       Sentry.addBreadcrumb({
         category: 'local-ai.cache',
@@ -156,6 +172,12 @@ async function ensureFilesystemReady(): Promise<void> {
  */
 async function migrateFromDataToLibrary(): Promise<void> {
   console.log('[FilesystemCache] Checking for migration from Data → Library...');
+
+  Sentry.addBreadcrumb({
+    category: 'local-ai.cache',
+    message: 'Starting cache migration from Data to Library',
+    level: 'info',
+  });
 
   try {
     // Try to read metadata from old Data directory
@@ -217,6 +239,16 @@ async function migrateFromDataToLibrary(): Promise<void> {
 
     console.log(`[FilesystemCache] Migration complete: ${migratedCount} files migrated`);
 
+    Sentry.captureMessage('Cache migration completed', {
+      level: 'info',
+      tags: { component: 'local-ai-cache', operation: 'migration-complete' },
+      extra: {
+        migratedEntries: migratedCount,
+        from: 'Directory.Data',
+        to: 'Directory.Library',
+      },
+    });
+
     // Optional: Delete old cache from Data directory to free space
     try {
       await Filesystem.rmdir({
@@ -253,7 +285,21 @@ async function readMetadata(): Promise<CacheMetadata> {
       // If it's a Blob, we need to read it as text
       data = await result.data.text();
     }
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    const entryCount = Object.keys(parsed.entries).length;
+
+    // Log successful metadata read
+    Sentry.captureMessage('Cache metadata read from filesystem', {
+      level: 'info',
+      tags: { component: 'local-ai-cache', operation: 'metadata-read-filesystem' },
+      extra: {
+        entryCount,
+        metadataSize: data.length,
+        hasBackup: true,
+      },
+    });
+
+    return parsed;
   } catch (_error) {
     console.log('[FilesystemCache] Failed to read metadata from filesystem, trying backup...');
 
@@ -262,7 +308,20 @@ async function readMetadata(): Promise<CacheMetadata> {
       const backup = await Preferences.get({ key: METADATA_BACKUP_KEY });
       if (backup.value) {
         console.log('[FilesystemCache] Restored metadata from Preferences backup');
-        return JSON.parse(backup.value);
+        const parsed = JSON.parse(backup.value);
+        const entryCount = Object.keys(parsed.entries).length;
+
+        // CRITICAL: Metadata restored from backup (filesystem failed)
+        Sentry.captureMessage('Cache metadata restored from Preferences backup', {
+          level: 'warning',
+          tags: { component: 'local-ai-cache', operation: 'metadata-read-backup' },
+          extra: {
+            entryCount,
+            reason: 'filesystem-read-failed',
+          },
+        });
+
+        return parsed;
       }
     } catch (backupError) {
       console.error('[FilesystemCache] Failed to restore from backup:', backupError);
@@ -309,17 +368,45 @@ async function readMetadata(): Promise<CacheMetadata> {
  * Write metadata file with Preferences backup
  */
 async function writeMetadata(metadata: CacheMetadata): Promise<void> {
-  // Write to filesystem (primary storage)
-  await Filesystem.writeFile({
-    path: METADATA_FILE,
-    directory: Directory.Library,
-    data: JSON.stringify(metadata, null, 2),
-    encoding: Encoding.UTF8,
-    recursive: true,
-  });
+  try {
+    // Write to filesystem (primary storage)
+    await Filesystem.writeFile({
+      path: METADATA_FILE,
+      directory: Directory.Library,
+      data: JSON.stringify(metadata, null, 2),
+      encoding: Encoding.UTF8,
+      recursive: true,
+    });
 
-  // Backup to Preferences (redundancy)
-  await Preferences.set({ key: METADATA_BACKUP_KEY, value: JSON.stringify(metadata) });
+    // Backup to Preferences (redundancy)
+    await Preferences.set({ key: METADATA_BACKUP_KEY, value: JSON.stringify(metadata) });
+
+    const entryCount = Object.keys(metadata.entries).length;
+
+    // Log successful metadata write
+    Sentry.captureMessage('Cache metadata written successfully', {
+      level: 'info',
+      tags: { component: 'local-ai-cache', operation: 'metadata-write-success' },
+      extra: {
+        entryCount,
+        metadataSize: JSON.stringify(metadata).length,
+      },
+    });
+  } catch (error) {
+    console.error('[FilesystemCache] Failed to write metadata:', error);
+
+    // CRITICAL: Metadata write failure
+    Sentry.captureException(error, {
+      tags: { component: 'local-ai-cache', operation: 'metadata-write-failure' },
+      extra: {
+        stage: 'metadata-write',
+        entryCount: Object.keys(metadata.entries).length,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
+    throw error;
+  }
 }
 
 /**
