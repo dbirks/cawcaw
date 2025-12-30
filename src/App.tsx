@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react';
 import { useEffect, useState } from 'react';
 import ChatView from './components/ChatView';
+import { FeatureFlagsProvider } from './contexts/FeatureFlagsContext';
 import { conversationStorage } from './services/conversationStorage';
 import { mcpManager } from './services/mcpManager';
 
@@ -148,7 +149,11 @@ function AppContent() {
     );
   }
 
-  return <ChatView initialConversationId={initialConversationId} />;
+  return (
+    <FeatureFlagsProvider>
+      <ChatView initialConversationId={initialConversationId} />
+    </FeatureFlagsProvider>
+  );
 }
 
 const App = Sentry.withErrorBoundary(AppContent, {

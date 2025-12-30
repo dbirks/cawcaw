@@ -11,6 +11,7 @@ import {
   Clock,
   Copy,
   Edit,
+  Flag,
   Github,
   Hammer,
   HardDrive,
@@ -51,6 +52,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 import { useTheme } from '@/hooks/useTheme';
 import { acpManager } from '@/services/acpManager';
 import { type DebugLogEntry, debugLogger } from '@/services/debugLogger';
@@ -127,7 +129,16 @@ const AVAILABLE_STT_MODELS = [
 ] as const;
 
 // Settings navigation
-type SettingsView = 'list' | 'llm' | 'audio' | 'tools' | 'acp' | 'appearance' | 'debug' | 'about';
+type SettingsView =
+  | 'list'
+  | 'llm'
+  | 'audio'
+  | 'tools'
+  | 'acp'
+  | 'appearance'
+  | 'features'
+  | 'debug'
+  | 'about';
 
 const SETTINGS_ITEMS = [
   {
@@ -159,6 +170,12 @@ const SETTINGS_ITEMS = [
     label: 'Appearance',
     icon: Palette,
     description: 'Theme and display preferences',
+  },
+  {
+    id: 'features' as const,
+    label: 'Feature Flags',
+    icon: Flag,
+    description: 'Enable or disable experimental features',
   },
   {
     id: 'debug' as const,
@@ -257,6 +274,9 @@ export default function Settings({ onClose }: SettingsProps) {
 
   // Theme management
   const { themePreference, updateThemePreference } = useTheme();
+
+  // Feature flags
+  const { flags, setFlag } = useFeatureFlags();
 
   // New server form state
   const [newServer, setNewServer] = useState({
@@ -410,23 +430,26 @@ export default function Settings({ onClose }: SettingsProps) {
       setOAuthStatuses(oauthStatusMap);
 
       // Load ACP servers (with error handling to prevent blocking)
-      try {
-        await acpManager.initialize();
-        const acpConfigs = await acpManager.loadConfigurations();
-        setAcpServers(acpConfigs);
-        setAcpServerStatuses(new Map(acpManager.getAllServerStatuses().map((s) => [s.id, s])));
-
-        // Automatically connect to enabled ACP servers
+      // Only initialize if ACP feature flag is enabled
+      if (flags.enableACP) {
         try {
-          await acpManager.connectToEnabledServers();
-          debugLogger.info('mcp', 'Connected to enabled ACP servers on startup');
+          await acpManager.initialize();
+          const acpConfigs = await acpManager.loadConfigurations();
+          setAcpServers(acpConfigs);
+          setAcpServerStatuses(new Map(acpManager.getAllServerStatuses().map((s) => [s.id, s])));
+
+          // Automatically connect to enabled ACP servers
+          try {
+            await acpManager.connectToEnabledServers();
+            debugLogger.info('mcp', 'Connected to enabled ACP servers on startup');
+          } catch (error) {
+            debugLogger.warn('mcp', 'Failed to connect to some ACP servers:', error);
+          }
         } catch (error) {
-          debugLogger.warn('mcp', 'Failed to connect to some ACP servers:', error);
+          debugLogger.error('mcp', 'Failed to initialize ACP manager:', error);
+          console.error('Failed to initialize ACP manager:', error);
+          // Continue even if ACP initialization fails - don't block Settings from loading
         }
-      } catch (error) {
-        debugLogger.error('mcp', 'Failed to initialize ACP manager:', error);
-        console.error('Failed to initialize ACP manager:', error);
-        // Continue even if ACP initialization fails - don't block Settings from loading
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -438,7 +461,7 @@ export default function Settings({ onClose }: SettingsProps) {
         },
       });
     }
-  }, []);
+  }, [flags.enableACP]);
 
   useEffect(() => {
     loadSettings();
@@ -1463,7 +1486,13 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
           <div className="flex-1 min-h-0">
             <ScrollArea className="h-full">
               <div className="space-y-2 pr-4 safe-x safe-bottom">
-                {SETTINGS_ITEMS.map((item) => {
+                {SETTINGS_ITEMS.filter((item) => {
+                  // Hide ACP if feature flag is disabled
+                  if (item.id === 'acp' && !flags.enableACP) {
+                    return false;
+                  }
+                  return true;
+                }).map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
@@ -2772,7 +2801,7 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
               </div>
             )}
 
-            {currentView === 'acp' && (
+            {currentView === 'acp' && flags.enableACP && (
               <div className="flex-1 min-h-0">
                 <ScrollArea className="h-full">
                   <div className="space-y-3 pr-4 safe-x safe-bottom">
@@ -3118,6 +3147,63 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                         )}
                       </div>
                     </div>
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            {currentView === 'features' && (
+              <div className="flex-1 min-h-0">
+                <ScrollArea className="h-full">
+                  <div className="pr-4 safe-x safe-bottom">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Flag className="h-5 w-5" />
+                          Feature Flags
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            Enable or disable experimental features. These settings persist across
+                            app restarts and updates.
+                          </p>
+
+                          {/* Enable ACP Flag */}
+                          <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">Enable ACP</h4>
+                                <Badge variant="secondary" className="text-xs">
+                                  Experimental
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Enable Agent Client Protocol (ACP) integration for connecting to AI
+                                coding agents like Claude Code, Goose, and Gemini CLI. When
+                                disabled, all ACP-related UI and functionality will be hidden.
+                              </p>
+                            </div>
+                            <Switch
+                              checked={flags.enableACP}
+                              onCheckedChange={(checked) => {
+                                setFlag('enableACP', checked);
+                              }}
+                              className="ml-4"
+                            />
+                          </div>
+
+                          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                            <p className="text-xs text-muted-foreground">
+                              💡 <strong>Tip:</strong> Feature flags allow you to test experimental
+                              features without affecting the core app functionality. Disable flags
+                              if you encounter issues or want a cleaner interface.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </ScrollArea>
               </div>

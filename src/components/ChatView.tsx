@@ -61,6 +61,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useFeatureFlag } from '@/contexts/FeatureFlagsContext';
 import { cn } from '@/lib/utils';
 import { acpManager } from '@/services/acpManager';
 import {
@@ -159,6 +160,9 @@ interface UIMessage {
 }
 
 export default function ChatView({ initialConversationId }: { initialConversationId: string }) {
+  // Feature flags
+  const isACPEnabled = useFeatureFlag('enableACP');
+
   // Existing state
   const [apiKey, setApiKey] = useState<string>('');
   const [anthropicApiKey, setAnthropicApiKey] = useState<string>('');
@@ -296,18 +300,20 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         setAvailableServers(servers);
         setServerStatuses(statuses);
 
-        // Initialize ACP manager and load servers
-        debugLogger.info('acp', '🔄 Loading ACP configurations on startup');
-        await acpManager.initialize();
-        const acpServerConfigs = acpManager.getServers();
-        debugLogger.info('acp', '✅ ACP servers initialized', {
-          totalServers: acpServerConfigs.length,
-          enabledServers: acpServerConfigs.filter((s) => s.enabled).length,
-        });
-        setAcpServers(acpServerConfigs);
+        // Initialize ACP manager and load servers (only if feature is enabled)
+        if (isACPEnabled) {
+          debugLogger.info('acp', '🔄 Loading ACP configurations on startup');
+          await acpManager.initialize();
+          const acpServerConfigs = acpManager.getServers();
+          debugLogger.info('acp', '✅ ACP servers initialized', {
+            totalServers: acpServerConfigs.length,
+            enabledServers: acpServerConfigs.filter((s) => s.enabled).length,
+          });
+          setAcpServers(acpServerConfigs);
 
-        // Connect to enabled ACP servers
-        await acpManager.connectToEnabledServers();
+          // Connect to enabled ACP servers
+          await acpManager.connectToEnabledServers();
+        }
 
         // Check local AI capability
         debugLogger.info('chat', '🔍 Checking local AI capability...');
@@ -341,7 +347,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     return () => {
       mcpManager.cleanup();
     };
-  }, [initialConversationId]);
+  }, [initialConversationId, isACPEnabled]);
 
   // Update selected model when API keys change to ensure it's valid
   // Only run this after initialization is complete to avoid overwriting saved model preference
@@ -1984,64 +1990,66 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         {/* Fixed Input Area with safe area */}
         <div className="border-t pt-4 pb-6 safe-bottom flex-shrink-0">
           <div className="w-full max-w-4xl mx-auto px-4 safe-x">
-            {/* Mode Switcher */}
-            <div className="flex items-center gap-2 mb-3">
-              <Button
-                variant={chatMode === 'chat' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setChatMode('chat')}
-                className="h-8"
-              >
-                Chat
-              </Button>
-              <Button
-                variant={chatMode === 'acp' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setChatMode('acp')}
-                className="h-8"
-              >
-                ACP Agent
-              </Button>
-
-              {chatMode === 'acp' && (
-                <Select value={selectedAcpServer || ''} onValueChange={setSelectedAcpServer}>
-                  <SelectTrigger className="w-[200px] h-8">
-                    <SelectValue placeholder="Select agent..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {acpServers.filter((s) => s.enabled).length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">
-                        No enabled agents. Configure in Settings.
-                      </div>
-                    ) : (
-                      acpServers
-                        .filter((s) => s.enabled)
-                        .map((server) => (
-                          <SelectItem key={server.id} value={server.id}>
-                            {server.name}
-                          </SelectItem>
-                        ))
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {chatMode === 'acp' && status === 'streaming' && (
+            {/* Mode Switcher - Only show if ACP is enabled */}
+            {isACPEnabled && (
+              <div className="flex items-center gap-2 mb-3">
                 <Button
-                  variant="destructive"
+                  variant={chatMode === 'chat' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => {
-                    if (currentAcpSessionId) {
-                      acpManager.cancelSession(currentAcpSessionId);
-                      setStatus('ready');
-                    }
-                  }}
+                  onClick={() => setChatMode('chat')}
                   className="h-8"
                 >
-                  Cancel
+                  Chat
                 </Button>
-              )}
-            </div>
+                <Button
+                  variant={chatMode === 'acp' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChatMode('acp')}
+                  className="h-8"
+                >
+                  ACP Agent
+                </Button>
+
+                {chatMode === 'acp' && (
+                  <Select value={selectedAcpServer || ''} onValueChange={setSelectedAcpServer}>
+                    <SelectTrigger className="w-[200px] h-8">
+                      <SelectValue placeholder="Select agent..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {acpServers.filter((s) => s.enabled).length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No enabled agents. Configure in Settings.
+                        </div>
+                      ) : (
+                        acpServers
+                          .filter((s) => s.enabled)
+                          .map((server) => (
+                            <SelectItem key={server.id} value={server.id}>
+                              {server.name}
+                            </SelectItem>
+                          ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {chatMode === 'acp' && status === 'streaming' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (currentAcpSessionId) {
+                        acpManager.cancelSession(currentAcpSessionId);
+                        setStatus('ready');
+                      }
+                    }}
+                    className="h-8"
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            )}
 
             <PromptInput
               onSubmit={handleFormSubmit}
