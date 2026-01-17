@@ -200,7 +200,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
   const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
   const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-5-20250929');
-  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe');
+  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe-2025-12-15');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
   const [mcpPopoverOpen, setMcpPopoverOpen] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);

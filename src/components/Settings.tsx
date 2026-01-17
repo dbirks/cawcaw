@@ -125,6 +125,7 @@ const AVAILABLE_MODELS = [
 const AVAILABLE_STT_MODELS = [
   { value: 'whisper-1', label: 'whisper-1' },
   { value: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe' },
+  { value: 'gpt-4o-mini-transcribe-2025-12-15', label: 'gpt-4o-mini-transcribe-2025-12-15 (Dec 2025)' },
   { value: 'gpt-4o-transcribe', label: 'gpt-4o-transcribe' },
 ] as const;
 
@@ -270,7 +271,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
   // Provider and model state
   const [titleModel, setTitleModel] = useState<string>('same');
-  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe');
+  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe-2025-12-15');
 
   // Theme management
   const { themePreference, updateThemePreference } = useTheme();
