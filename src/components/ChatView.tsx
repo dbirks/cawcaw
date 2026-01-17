@@ -1822,7 +1822,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                                     <ToolInput input={part.input} toolType={part.type} />
                                     {(part.state === 'input-streaming' ||
                                       part.state === 'input-available') && (
-                                      <div className="p-4">
+                                      <div className="px-3 py-3 border-t border-border/30">
                                         <LoadingMessage />
                                       </div>
                                     )}
