@@ -127,7 +127,7 @@ const AVAILABLE_STT_MODELS = [
   { value: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe' },
   {
     value: 'gpt-4o-mini-transcribe-2025-12-15',
-    label: 'gpt-4o-mini-transcribe-2025-12-15 (Dec 2025)',
+    label: 'gpt-4o-mini-transcribe-2025-12-15',
   },
   { value: 'gpt-4o-transcribe', label: 'gpt-4o-transcribe' },
 ] as const;
@@ -1682,109 +1682,111 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                     </Card>
 
                     {/* Local AI Model Cache Management Section */}
-                    <Card className="mt-6">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Monitor className="h-5 w-5" />
-                          Local AI Model Cache
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          Manage the cached Gemma 3 270M model (~430 MB). Cached models are
-                          available for offline use.
-                        </p>
+                    {flags.enableLocalAI && (
+                      <Card className="mt-6">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Monitor className="h-5 w-5" />
+                            Local AI Model Cache
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <p className="text-sm text-muted-foreground">
+                            Manage the cached Gemma 3 270M model (~430 MB). Cached models are
+                            available for offline use.
+                          </p>
 
-                        {/* Cache Status */}
-                        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">Cache Status:</span>
-                            {isLoadingCache ? (
-                              <span className="text-sm text-muted-foreground">Checking...</span>
-                            ) : cacheStatus ? (
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant={cacheStatus.isCached ? 'default' : 'secondary'}
-                                  className="text-xs"
-                                >
-                                  {cacheStatus.isCached ? 'Cached' : 'Not Downloaded'}
-                                </Badge>
-                                {cacheStatus.isCached && cacheStatus.estimatedSize && (
-                                  <span className="text-sm text-muted-foreground">
-                                    ({cacheStatus.estimatedSize})
-                                  </span>
-                                )}
+                          {/* Cache Status */}
+                          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">Cache Status:</span>
+                              {isLoadingCache ? (
+                                <span className="text-sm text-muted-foreground">Checking...</span>
+                              ) : cacheStatus ? (
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant={cacheStatus.isCached ? 'default' : 'secondary'}
+                                    className="text-xs"
+                                  >
+                                    {cacheStatus.isCached ? 'Cached' : 'Not Downloaded'}
+                                  </Badge>
+                                  {cacheStatus.isCached && cacheStatus.estimatedSize && (
+                                    <span className="text-sm text-muted-foreground">
+                                      ({cacheStatus.estimatedSize})
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">Unknown</span>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleRefreshCacheStatus}
+                              disabled={isLoadingCache}
+                            >
+                              Refresh
+                            </Button>
+                          </div>
+
+                          {/* Download Progress */}
+                          {downloadProgress && (
+                            <LocalAIProgressCard
+                              progress={downloadProgress.progress}
+                              stage={downloadProgress.stage}
+                              error={downloadProgress.error}
+                              onRetry={handleRetryDownload}
+                            />
+                          )}
+
+                          {/* Cache Actions */}
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={handlePredownloadModel}
+                              disabled={isLoadingCache || (cacheStatus?.isCached ?? false)}
+                              className="w-full sm:w-auto"
+                            >
+                              {isLoadingCache ? 'Downloading...' : 'Download Model'}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={handleClearCache}
+                              disabled={isClearingCache || !(cacheStatus?.isCached ?? false)}
+                              className="w-full sm:w-auto"
+                            >
+                              {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                            </Button>
+                          </div>
+
+                          {/* Storage Usage Display */}
+                          {storageEstimate && (
+                            <div className="space-y-2 pt-3 border-t">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">
+                                  Browser Storage{storageEstimate.isEstimate ? ' (estimated)' : ''}:
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {storageEstimate.usageFormatted} used,{' '}
+                                  {storageEstimate.freeFormatted} free
+                                </span>
                               </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">Unknown</span>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleRefreshCacheStatus}
-                            disabled={isLoadingCache}
-                          >
-                            Refresh
-                          </Button>
-                        </div>
-
-                        {/* Download Progress */}
-                        {downloadProgress && (
-                          <LocalAIProgressCard
-                            progress={downloadProgress.progress}
-                            stage={downloadProgress.stage}
-                            error={downloadProgress.error}
-                            onRetry={handleRetryDownload}
-                          />
-                        )}
-
-                        {/* Cache Actions */}
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={handlePredownloadModel}
-                            disabled={isLoadingCache || (cacheStatus?.isCached ?? false)}
-                            className="w-full sm:w-auto"
-                          >
-                            {isLoadingCache ? 'Downloading...' : 'Download Model'}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={handleClearCache}
-                            disabled={isClearingCache || !(cacheStatus?.isCached ?? false)}
-                            className="w-full sm:w-auto"
-                          >
-                            {isClearingCache ? 'Clearing...' : 'Clear Cache'}
-                          </Button>
-                        </div>
-
-                        {/* Storage Usage Display */}
-                        {storageEstimate && (
-                          <div className="space-y-2 pt-3 border-t">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">
-                                Browser Storage{storageEstimate.isEstimate ? ' (estimated)' : ''}:
-                              </span>
-                              <span className="text-sm text-muted-foreground">
-                                {storageEstimate.usageFormatted} used,{' '}
-                                {storageEstimate.freeFormatted} free
-                              </span>
+                              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full bg-primary transition-all"
+                                  style={{ width: `${Math.min(storageEstimate.percentage, 100)}%` }}
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {storageEstimate.percentage.toFixed(1)}% used of{' '}
+                                {storageEstimate.quotaFormatted} quota
+                              </p>
                             </div>
-                            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
-                              <div
-                                className="h-full bg-primary transition-all"
-                                style={{ width: `${Math.min(storageEstimate.percentage, 100)}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {storageEstimate.percentage.toFixed(1)}% used of{' '}
-                              {storageEstimate.quotaFormatted} quota
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Storage Analysis Section */}
                     <Card className="mt-6">
@@ -3319,32 +3321,34 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                     </Card>
 
                     {/* Local AI Capability Test Section */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Brain className="h-5 w-5" />
-                          Local AI Capability
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          Check if Gemma 3 270M local AI is available on this device. Requires
-                          WebGPU support for on-device inference.
-                        </p>
-                        <Button
-                          onClick={handleTestLocalAI}
-                          disabled={isTestingLocalAI}
-                          className="w-full sm:w-auto"
-                        >
-                          {isTestingLocalAI ? 'Testing...' : 'Test Local AI'}
-                        </Button>
-                        {localAITestResult && (
-                          <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
-                            {localAITestResult}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                    {flags.enableLocalAI && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Brain className="h-5 w-5" />
+                            Local AI Capability
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <p className="text-sm text-muted-foreground">
+                            Check if Gemma 3 270M local AI is available on this device. Requires
+                            WebGPU support for on-device inference.
+                          </p>
+                          <Button
+                            onClick={handleTestLocalAI}
+                            disabled={isTestingLocalAI}
+                            className="w-full sm:w-auto"
+                          >
+                            {isTestingLocalAI ? 'Testing...' : 'Test Local AI'}
+                          </Button>
+                          {localAITestResult && (
+                            <div className="mt-3 p-3 bg-muted/30 rounded-md font-mono text-xs whitespace-pre-wrap">
+                              {localAITestResult}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Debug Log Display */}
                     <div>

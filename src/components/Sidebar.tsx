@@ -273,7 +273,7 @@ export function SidebarToggle({ onClick }: { onClick: () => void }) {
       className="lg:hidden"
       aria-label="Open sidebar"
     >
-      <Menu className="h-7 w-7" />
+      <Menu className="size-8" />
     </Button>
   );
 }

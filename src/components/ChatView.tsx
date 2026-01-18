@@ -4,7 +4,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import * as Sentry from '@sentry/react';
 import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { ArrowUpIcon, Cpu, MicIcon, PencilIcon, Plus, User } from 'lucide-react';
+import { ArrowUpIcon, Cpu, MicIcon, Plus, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 // AI Elements imports
@@ -1741,18 +1741,14 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 />
               </div>
             ) : (
-              <div className="flex items-center gap-1 flex-1 min-w-0">
-                <h1 className="text-xl font-semibold truncate">{conversationTitle}</h1>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground active:text-foreground"
-                  onClick={handleEditTitle}
-                  title="Edit title"
-                >
-                  <PencilIcon className="h-4 w-4" />
-                </Button>
-              </div>
+              <button
+                type="button"
+                className="flex items-center gap-1 flex-1 min-w-0 text-xl font-semibold truncate cursor-pointer hover:text-foreground/80 transition-colors text-left bg-transparent border-0 p-0"
+                onClick={handleEditTitle}
+                title="Click to edit title"
+              >
+                {conversationTitle}
+              </button>
             )}
           </div>
           <Button

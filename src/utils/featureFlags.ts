@@ -15,6 +15,8 @@ const FEATURE_FLAGS_KEY = 'feature_flags';
 export interface FeatureFlags {
   /** Enable ACP (Agent Client Protocol) experimental feature */
   enableACP: boolean;
+  /** Enable Local AI experimental feature */
+  enableLocalAI: boolean;
 }
 
 /**
@@ -22,6 +24,7 @@ export interface FeatureFlags {
  */
 const DEFAULT_FLAGS: FeatureFlags = {
   enableACP: false,
+  enableLocalAI: false,
 };
 
 /**

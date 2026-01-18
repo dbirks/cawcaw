@@ -27,7 +27,7 @@ const FeatureFlagsContext = createContext<FeatureFlagsContextValue | undefined>(
  * Wraps the entire app to provide feature flags
  */
 export function FeatureFlagsProvider({ children }: { children: React.ReactNode }) {
-  const [flags, setFlags] = useState<FeatureFlags>({ enableACP: false });
+  const [flags, setFlags] = useState<FeatureFlags>({ enableACP: false, enableLocalAI: false });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
