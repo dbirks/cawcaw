@@ -140,7 +140,10 @@ export const ToolInput = ({ className, input, toolType, ...props }: ToolInputPro
   const serverName = extractServerName(toolType);
 
   return (
-    <div className={cn('space-y-2.5 overflow-hidden px-3 py-3 border-t border-border/30', className)} {...props}>
+    <div
+      className={cn('space-y-2.5 overflow-hidden px-3 py-3 border-t border-border/30', className)}
+      {...props}
+    >
       {serverName && (
         <div>
           <h4 className="font-medium text-muted-foreground/80 text-[10px] uppercase tracking-wider mb-1">
