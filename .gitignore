@@ -30,3 +30,10 @@ test-results
 playwright-report
 .playwright-mcp/
 
+# Gas Town runtime files (agent state, not project code)
+state.json
+.runtime/
+
+# Beads redirect (contains machine-specific paths)
+.beads/redirect
+
