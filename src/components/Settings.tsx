@@ -1473,24 +1473,29 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
               <ChevronLeft className="size-8" />
             </Button>
           )}
-          <h1 className="text-xl sm:text-2xl font-bold flex-1">
+          <h1
+            className={cn('text-xl sm:text-2xl font-bold flex-1', currentView === 'list' && 'pl-3')}
+          >
             {currentView === 'list'
               ? 'Settings'
               : SETTINGS_ITEMS.find((item) => item.id === currentView)?.label || 'Settings'}
           </h1>
-          <Button
+          <button
             type="button"
-            variant="ghost"
             onClick={(e) => {
+              console.log('[Settings] Close button clicked', e);
               e.preventDefault();
               e.stopPropagation();
+              console.log('[Settings] Calling onClose');
               onClose();
+              console.log('[Settings] onClose called');
             }}
-            className="h-14 w-14 p-0"
+            className="inline-flex items-center justify-center h-14 w-14 p-0 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+            aria-label="Close settings"
           >
             <X className="size-8" />
             <span className="sr-only">Close</span>
-          </Button>
+          </button>
         </div>
 
         {/* Content Area */}
@@ -3204,6 +3209,30 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                               checked={flags.enableACP}
                               onCheckedChange={(checked) => {
                                 setFlag('enableACP', checked);
+                              }}
+                              className="ml-4"
+                            />
+                          </div>
+
+                          {/* Enable Local AI Flag */}
+                          <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">Enable Local AI</h4>
+                                <Badge variant="secondary" className="text-xs">
+                                  Experimental
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Enable Local AI (Gemma 3 270M) for offline inference using WebGPU.
+                                When disabled, local models will not appear in the model selector.
+                                Requires WebGPU-capable browser.
+                              </p>
+                            </div>
+                            <Switch
+                              checked={flags.enableLocalAI}
+                              onCheckedChange={(checked) => {
+                                setFlag('enableLocalAI', checked);
                               }}
                               className="ml-4"
                             />

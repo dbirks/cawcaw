@@ -1644,6 +1644,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   };
 
   const handleSettingsClose = async () => {
+    console.log('[ChatView] handleSettingsClose called');
     try {
       // Reload MCP servers when Settings closes in case they were added/modified
       console.log('[ChatView] Settings closed, reloading MCP configurations...');
