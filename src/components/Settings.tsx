@@ -3461,14 +3461,8 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {/* App Name */}
-                        <div>
-                          <h3 className="text-lg font-semibold">cawcaw</h3>
-                          <hr className="mt-2" />
-                        </div>
-
                         {/* Version Info */}
-                        <div className="space-y-2 border-t pt-4">
+                        <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Version:</span>
                             <span className="font-mono">{__APP_VERSION__}</span>
