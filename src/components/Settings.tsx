@@ -1478,7 +1478,16 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
               ? 'Settings'
               : SETTINGS_ITEMS.find((item) => item.id === currentView)?.label || 'Settings'}
           </h1>
-          <Button type="button" variant="ghost" onClick={onClose} className="h-14 w-14 p-0">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            className="h-14 w-14 p-0"
+          >
             <X className="size-8" />
             <span className="sr-only">Close</span>
           </Button>
