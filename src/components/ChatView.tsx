@@ -168,6 +168,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const [anthropicApiKey, setAnthropicApiKey] = useState<string>('');
   const [tempApiKey, setTempApiKey] = useState<string>('');
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(true);
+  const [startupProvider, setStartupProvider] = useState<'openai' | 'anthropic'>('anthropic');
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string>(initialConversationId);
@@ -389,8 +390,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const saveApiKey = async () => {
     if (tempApiKey.trim()) {
       try {
-        await SecureStoragePlugin.set({ key: 'openai_api_key', value: tempApiKey });
-        setApiKey(tempApiKey);
+        const storageKey = startupProvider === 'openai' ? 'openai_api_key' : 'anthropic_api_key';
+        await SecureStoragePlugin.set({ key: storageKey, value: tempApiKey });
+
+        if (startupProvider === 'openai') {
+          setApiKey(tempApiKey);
+        } else {
+          setAnthropicApiKey(tempApiKey);
+        }
+
         setShowApiKeyInput(false);
       } catch (error) {
         console.error('Failed to save API key:', error);
@@ -1676,13 +1684,42 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         <Card className="w-full max-w-md">
           <CardContent className="p-6 space-y-4">
             <h2 className="text-2xl font-bold text-center">caw caw</h2>
-            <p className="text-muted-foreground text-center">
-              Enter your OpenAI API key to get started
-            </p>
+            <p className="text-muted-foreground text-center">Enter your API key to get started</p>
+
+            {/* Provider Selection Tabs */}
+            <div className="flex gap-2 p-1 bg-muted rounded-lg">
+              <button
+                type="button"
+                onClick={() => setStartupProvider('anthropic')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors',
+                  startupProvider === 'anthropic'
+                    ? 'bg-background shadow-sm'
+                    : 'hover:bg-background/50'
+                )}
+              >
+                <AnthropicIcon className="w-4 h-4" />
+                <span className="text-sm font-medium">Anthropic</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStartupProvider('openai')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors',
+                  startupProvider === 'openai'
+                    ? 'bg-background shadow-sm'
+                    : 'hover:bg-background/50'
+                )}
+              >
+                <OpenAIIcon className="w-4 h-4" />
+                <span className="text-sm font-medium">OpenAI</span>
+              </button>
+            </div>
+
             <div className="space-y-4">
               <Input
                 type="password"
-                placeholder="sk-..."
+                placeholder={startupProvider === 'anthropic' ? 'sk-ant-...' : 'sk-...'}
                 value={tempApiKey}
                 onChange={(e) => setTempApiKey(e.target.value)}
                 onKeyDown={(e) => {
