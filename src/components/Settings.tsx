@@ -37,6 +37,7 @@ import {
 import { useCallback, useEffect, useId, useState } from 'react';
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
+import { cn } from '@/lib/utils';
 import { LocalAIProgressCard } from '@/components/LocalAIProgressCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
