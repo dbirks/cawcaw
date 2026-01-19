@@ -206,37 +206,37 @@ export default function Sidebar({
                   </div>
                 ) : (
                   conversations.map((conversation) => (
-                    <button
+                    <div
                       key={conversation.id}
-                      type="button"
-                      onClick={() => handleSelectConversation(conversation.id)}
-                      className={`w-full text-left p-3 rounded-lg hover:bg-accent transition-colors group ${
+                      className={`w-full rounded-lg hover:bg-accent transition-colors group relative ${
                         conversation.id === currentConversationId ? 'bg-accent' : ''
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <h4 className="text-sm font-medium truncate">{conversation.title}</h4>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{conversation.messages.length} messages</span>
-                            <span>•</span>
-                            <span>{formatDate(conversation.updatedAt)}</span>
-                          </div>
+                      <button
+                        type="button"
+                        className="w-full text-left p-3 pr-14"
+                        onClick={() => handleSelectConversation(conversation.id)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <h4 className="text-sm font-medium truncate">{conversation.title}</h4>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-11 w-11 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:text-destructive active:bg-destructive/10"
-                          onClick={(e) => handleDeleteConversation(conversation.id, e)}
-                          title="Delete conversation"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </button>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{conversation.messages.length} messages</span>
+                          <span>•</span>
+                          <span>{formatDate(conversation.updatedAt)}</span>
+                        </div>
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-11 w-11 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:text-destructive active:bg-destructive/10"
+                        onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                        title="Delete conversation"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </div>
                   ))
                 )}
               </div>

@@ -37,7 +37,6 @@ import {
 import { useCallback, useEffect, useId, useState } from 'react';
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon';
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon';
-import { cn } from '@/lib/utils';
 import { LocalAIProgressCard } from '@/components/LocalAIProgressCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,6 +54,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 import { useTheme } from '@/hooks/useTheme';
+import { cn } from '@/lib/utils';
 import { acpManager } from '@/services/acpManager';
 import { type DebugLogEntry, debugLogger } from '@/services/debugLogger';
 import { getLocalAICapability } from '@/services/localAICapabilities';
