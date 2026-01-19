@@ -1481,22 +1481,16 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
               ? 'Settings'
               : SETTINGS_ITEMS.find((item) => item.id === currentView)?.label || 'Settings'}
           </h1>
-          <button
+          <Button
             type="button"
-            onClick={(e) => {
-              console.log('[Settings] Close button clicked', e);
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('[Settings] Calling onClose');
-              onClose();
-              console.log('[Settings] onClose called');
-            }}
-            className="inline-flex items-center justify-center h-14 w-14 p-0 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+            variant="ghost"
+            onClick={onClose}
+            className="h-14 w-14 p-0"
             aria-label="Close settings"
           >
             <X className="size-8" />
             <span className="sr-only">Close</span>
-          </button>
+          </Button>
         </div>
 
         {/* Content Area */}

@@ -270,10 +270,10 @@ export function SidebarToggle({ onClick }: { onClick: () => void }) {
       variant="ghost"
       size="icon"
       onClick={onClick}
-      className="lg:hidden"
+      className="lg:hidden h-8 w-8"
       aria-label="Open sidebar"
     >
-      <Menu className="size-[26px]" />
+      <Menu className="size-5" />
     </Button>
   );
 }
