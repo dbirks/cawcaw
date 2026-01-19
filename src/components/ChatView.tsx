@@ -162,6 +162,7 @@ interface UIMessage {
 export default function ChatView({ initialConversationId }: { initialConversationId: string }) {
   // Feature flags
   const isACPEnabled = useFeatureFlag('enableACP');
+  const isLocalAIEnabled = useFeatureFlag('enableLocalAI');
 
   // Existing state
   const [apiKey, setApiKey] = useState<string>('');
@@ -227,13 +228,13 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     const models = AVAILABLE_MODELS.filter((model) => {
       if (model.provider === 'openai') return !!apiKey;
       if (model.provider === 'anthropic') return !!anthropicApiKey;
-      if (model.provider === 'local') return isLocalAIAvailable;
+      if (model.provider === 'local') return isLocalAIEnabled && isLocalAIAvailable;
       return false;
     });
 
     // If no API keys are set, show all models (for settings view)
     return models.length > 0 ? models : AVAILABLE_MODELS;
-  }, [apiKey, anthropicApiKey, isLocalAIAvailable]);
+  }, [apiKey, anthropicApiKey, isLocalAIEnabled, isLocalAIAvailable]);
 
   useEffect(() => {
     // Load conversation data and initialize settings
