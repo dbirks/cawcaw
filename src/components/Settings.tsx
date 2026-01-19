@@ -123,13 +123,13 @@ const AVAILABLE_MODELS = [
 
 // Available STT (Speech-to-Text) models
 const AVAILABLE_STT_MODELS = [
-  { value: 'whisper-1', label: 'whisper-1' },
-  { value: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe' },
   {
     value: 'gpt-4o-mini-transcribe-2025-12-15',
-    label: 'gpt-4o-mini-transcribe-2025-12-15',
+    label: 'gpt-4o-mini-transcribe-2025-12-15 (Recommended)',
   },
   { value: 'gpt-4o-transcribe', label: 'gpt-4o-transcribe' },
+  { value: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe' },
+  { value: 'whisper-1', label: 'whisper-1' },
 ] as const;
 
 // Settings navigation
