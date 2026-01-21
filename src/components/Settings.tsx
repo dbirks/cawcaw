@@ -1481,16 +1481,20 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
               ? 'Settings'
               : SETTINGS_ITEMS.find((item) => item.id === currentView)?.label || 'Settings'}
           </h1>
-          <Button
+          <button
             type="button"
-            variant="ghost"
             onClick={onClose}
-            className="h-14 w-14 p-0"
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onClose();
+            }}
+            className="inline-flex items-center justify-center h-14 w-14 p-0 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer touch-manipulation"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
             aria-label="Close settings"
           >
-            <X className="size-8" />
+            <X className="size-8 pointer-events-none" />
             <span className="sr-only">Close</span>
-          </Button>
+          </button>
         </div>
 
         {/* Content Area */}
@@ -2171,16 +2175,19 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                             <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Add MCP Server</DialogTitle>
-                                <Button
+                                <button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
                                   onClick={() => setShowAddDialog(false)}
-                                  className="h-10 w-10 p-0 rounded-full"
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    setShowAddDialog(false);
+                                  }}
+                                  className="inline-flex items-center justify-center h-10 w-10 p-0 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer touch-manipulation"
+                                  style={{ WebkitTapHighlightColor: 'transparent' }}
                                 >
-                                  <X className="h-6 w-6" />
+                                  <X className="h-6 w-6 pointer-events-none" />
                                   <span className="sr-only">Close</span>
-                                </Button>
+                                </button>
                               </div>
                             </DialogHeader>
                             <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
@@ -2533,16 +2540,19 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                             <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Edit MCP Server</DialogTitle>
-                                <Button
+                                <button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
                                   onClick={() => setShowEditDialog(false)}
-                                  className="h-14 w-14 p-0"
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    setShowEditDialog(false);
+                                  }}
+                                  className="inline-flex items-center justify-center h-14 w-14 p-0 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer touch-manipulation"
+                                  style={{ WebkitTapHighlightColor: 'transparent' }}
                                 >
-                                  <X className="size-8" />
+                                  <X className="size-8 pointer-events-none" />
                                   <span className="sr-only">Close</span>
-                                </Button>
+                                </button>
                               </div>
                             </DialogHeader>
                             <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
@@ -2838,16 +2848,19 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                             <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Add ACP Agent</DialogTitle>
-                                <Button
+                                <button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
                                   onClick={() => setShowAcpAddDialog(false)}
-                                  className="h-10 w-10 p-0 rounded-full"
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    setShowAcpAddDialog(false);
+                                  }}
+                                  className="inline-flex items-center justify-center h-10 w-10 p-0 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer touch-manipulation"
+                                  style={{ WebkitTapHighlightColor: 'transparent' }}
                                 >
-                                  <X className="h-6 w-6" />
+                                  <X className="h-6 w-6 pointer-events-none" />
                                   <span className="sr-only">Close</span>
-                                </Button>
+                                </button>
                               </div>
                             </DialogHeader>
                             <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
@@ -2933,16 +2946,19 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
                             <DialogHeader className="p-4 sm:p-6 pb-0 sm:pb-0 safe-top safe-x">
                               <div className="flex items-center justify-between">
                                 <DialogTitle>Edit ACP Agent</DialogTitle>
-                                <Button
+                                <button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
                                   onClick={() => setShowAcpEditDialog(false)}
-                                  className="h-14 w-14 p-0"
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    setShowAcpEditDialog(false);
+                                  }}
+                                  className="inline-flex items-center justify-center h-14 w-14 p-0 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer touch-manipulation"
+                                  style={{ WebkitTapHighlightColor: 'transparent' }}
                                 >
-                                  <X className="size-8" />
+                                  <X className="size-8 pointer-events-none" />
                                   <span className="sr-only">Close</span>
-                                </Button>
+                                </button>
                               </div>
                             </DialogHeader>
                             <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 safe-x">
