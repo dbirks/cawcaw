@@ -123,13 +123,15 @@ const AVAILABLE_MODELS = [
 ] as const;
 
 // Available STT (Speech-to-Text) models
-// Note: gpt-4o transcribe models have known format detection issues on some platforms
-// whisper-1 is more reliable across all audio formats
+// Note: gpt-4o models auto-fallback to whisper-1 if format detection fails
 const AVAILABLE_STT_MODELS = [
-  { value: 'whisper-1', label: 'whisper-1 (Recommended)' },
-  { value: 'gpt-4o-mini-transcribe-2025-12-15', label: 'gpt-4o-mini-transcribe-2025-12-15' },
+  {
+    value: 'gpt-4o-mini-transcribe-2025-12-15',
+    label: 'gpt-4o-mini-transcribe-2025-12-15 (Recommended)',
+  },
   { value: 'gpt-4o-transcribe', label: 'gpt-4o-transcribe' },
   { value: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe' },
+  { value: 'whisper-1', label: 'whisper-1 (Fallback)' },
 ] as const;
 
 // Settings navigation
@@ -274,7 +276,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
   // Provider and model state
   const [titleModel, setTitleModel] = useState<string>('same');
-  const [sttModel, setSttModel] = useState<string>('whisper-1');
+  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe-2025-12-15');
 
   // Theme management
   const { themePreference, updateThemePreference } = useTheme();
