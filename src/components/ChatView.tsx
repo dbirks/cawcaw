@@ -2,7 +2,13 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import * as Sentry from '@sentry/react';
-import { generateText, stepCountIs, tool, experimental_transcribe as transcribe } from 'ai';
+import {
+  generateText,
+  stepCountIs,
+  tool,
+  experimental_transcribe as transcribe,
+  type Experimental_TranscriptionResult as TranscriptionResult,
+} from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { ArrowUpIcon, Cpu, MicIcon, Plus, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -202,7 +208,7 @@ export default function ChatView({ initialConversationId }: { initialConversatio
   const [availableServers, setAvailableServers] = useState<MCPServerConfig[]>([]);
   const [serverStatuses, setServerStatuses] = useState<Map<string, MCPServerStatus>>(new Map());
   const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-5-20250929');
-  const [sttModel, setSttModel] = useState<string>('gpt-4o-mini-transcribe-2025-12-15');
+  const [sttModel, setSttModel] = useState<string>('whisper-1');
   const [status, setStatus] = useState<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
   const [mcpPopoverOpen, setMcpPopoverOpen] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -1292,11 +1298,39 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         console.debug('Haptics not available:', error);
       }
 
-      // Create MediaRecorder to capture audio
-      const mediaRecorder = new MediaRecorder(stream);
+      // Detect best supported audio format for this browser
+      // OpenAI supports: mp3, opus, aac, flac, wav, pcm
+      // Safari/iOS uses mp4 (aac), Chrome uses webm (opus)
+      const supportedTypes = [
+        'audio/webm;codecs=opus', // Chrome/Firefox - opus is supported by OpenAI
+        'audio/webm',
+        'audio/mp4', // Safari/iOS - mp4 container with aac
+        'audio/mpeg', // mp3
+        'audio/wav',
+      ];
+      let selectedMimeType: string | undefined;
+      for (const type of supportedTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          selectedMimeType = type;
+          break;
+        }
+      }
+      debugLogger.info('audio', '🎤 Audio format detection', {
+        selectedMimeType,
+        testedTypes: supportedTypes.map((t) => ({
+          type: t,
+          supported: MediaRecorder.isTypeSupported(t),
+        })),
+      });
+
+      // Create MediaRecorder with the best supported format
+      const mediaRecorderOptions = selectedMimeType ? { mimeType: selectedMimeType } : undefined;
+      const mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
       const audioChunks: Blob[] = [];
+      const actualMimeType = mediaRecorder.mimeType; // Store the actual mimeType being used
       debugLogger.info('audio', '🎙️ MediaRecorder created', {
-        mimeType: mediaRecorder.mimeType,
+        requestedMimeType: selectedMimeType,
+        actualMimeType,
         state: mediaRecorder.state,
       });
 
@@ -1317,11 +1351,12 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         setIsRecording(false);
         setCurrentRecording(null);
         try {
-          // Create audio blob from chunks
-          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          // Create audio blob from chunks using the actual recorded format
+          const audioBlob = new Blob(audioChunks, { type: actualMimeType || 'audio/webm' });
           debugLogger.info('audio', '🎵 Audio blob created', {
             size: audioBlob.size,
             type: audioBlob.type,
+            actualMimeType,
             chunks: audioChunks.length,
           });
 
@@ -1341,22 +1376,68 @@ export default function ChatView({ initialConversationId }: { initialConversatio
             return;
           }
 
+          // Determine file extension from mimeType for proper format detection
+          const mimeToExt: Record<string, string> = {
+            'audio/webm': 'webm',
+            'audio/webm;codecs=opus': 'webm',
+            'audio/mp4': 'm4a',
+            'audio/mpeg': 'mp3',
+            'audio/wav': 'wav',
+            'audio/ogg': 'ogg',
+            'audio/flac': 'flac',
+          };
+          const fileExt = mimeToExt[actualMimeType] || 'webm';
+
           debugLogger.info('audio', '🚀 Calling transcription API', {
             model: sttModel,
             audioSize: audioData.byteLength,
+            actualMimeType,
+            fileExt,
             provider: 'openai',
           });
 
           const openai = createOpenAI({ apiKey });
           const startTime = Date.now();
-          const transcript = await transcribe({
-            model: openai.transcription(sttModel), // Use selected STT model from settings
-            audio: audioData,
+
+          // Create a File object with proper filename for format detection
+          const audioFile = new File([audioBlob], `recording.${fileExt}`, {
+            type: actualMimeType || 'audio/webm',
           });
+
+          // Try transcription with selected model, fall back to whisper-1 on format errors
+          let transcript: TranscriptionResult;
+          let usedModel = sttModel;
+          try {
+            transcript = await transcribe({
+              model: openai.transcription(sttModel),
+              audio: new Uint8Array(await audioFile.arrayBuffer()),
+            });
+          } catch (transcribeError) {
+            const errorMsg =
+              transcribeError instanceof Error ? transcribeError.message : String(transcribeError);
+            // If format error with gpt-4o models, fall back to whisper-1
+            if (
+              errorMsg.includes('does not support the format') &&
+              sttModel.includes('gpt-4o')
+            ) {
+              debugLogger.warn('audio', '⚠️ Format error with gpt-4o model, falling back to whisper-1', {
+                originalModel: sttModel,
+                error: errorMsg,
+              });
+              usedModel = 'whisper-1';
+              transcript = await transcribe({
+                model: openai.transcription('whisper-1'),
+                audio: new Uint8Array(await audioFile.arrayBuffer()),
+              });
+            } else {
+              throw transcribeError;
+            }
+          }
           const duration = Date.now() - startTime;
 
           debugLogger.info('audio', '✅ Transcription received', {
             duration: `${duration}ms`,
+            usedModel,
             textLength: transcript.text?.length || 0,
             hasText: !!transcript.text?.trim(),
           });
