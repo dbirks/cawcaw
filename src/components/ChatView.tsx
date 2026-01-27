@@ -5,9 +5,9 @@ import * as Sentry from '@sentry/react';
 import {
   generateText,
   stepCountIs,
+  type Experimental_TranscriptionResult as TranscriptionResult,
   tool,
   experimental_transcribe as transcribe,
-  type Experimental_TranscriptionResult as TranscriptionResult,
 } from 'ai';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
 import { ArrowUpIcon, Cpu, MicIcon, Plus, User } from 'lucide-react';
@@ -1476,14 +1476,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
             const errorMsg =
               transcribeError instanceof Error ? transcribeError.message : String(transcribeError);
             // If format error with gpt-4o models, fall back to whisper-1
-            if (
-              errorMsg.includes('does not support the format') &&
-              sttModel.includes('gpt-4o')
-            ) {
-              debugLogger.warn('audio', '⚠️ Format error with gpt-4o model, falling back to whisper-1', {
-                originalModel: sttModel,
-                error: errorMsg,
-              });
+            if (errorMsg.includes('does not support the format') && sttModel.includes('gpt-4o')) {
+              debugLogger.warn(
+                'audio',
+                '⚠️ Format error with gpt-4o model, falling back to whisper-1',
+                {
+                  originalModel: sttModel,
+                  error: errorMsg,
+                }
+              );
               usedModel = 'whisper-1';
               transcript = await transcribe({
                 model: openai.transcription('whisper-1'),
