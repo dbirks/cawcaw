@@ -1264,6 +1264,11 @@ export default function ChatView({ initialConversationId }: { initialConversatio
     // If already recording, stop the current recording
     if (isRecording && currentRecording) {
       debugLogger.info('audio', '⏹️ Stopping recording (user clicked stop button)');
+      Sentry.addBreadcrumb({
+        category: 'audio',
+        message: 'User stopped recording',
+        level: 'info',
+      });
       // Haptic feedback for stopping
       try {
         await Haptics.impact({ style: ImpactStyle.Medium });
@@ -1280,14 +1285,38 @@ export default function ChatView({ initialConversationId }: { initialConversatio
       hasApiKey: !!apiKey,
       currentProvider: selectedProvider,
     });
+    Sentry.addBreadcrumb({
+      category: 'audio',
+      message: 'Starting voice input',
+      data: {
+        sttModel,
+        hasApiKey: !!apiKey,
+        provider: selectedProvider,
+      },
+      level: 'info',
+    });
 
     try {
       // Request microphone permission and start recording
       debugLogger.info('audio', '🔑 Requesting microphone permission...');
+      Sentry.addBreadcrumb({
+        category: 'audio',
+        message: 'Requesting microphone permission',
+        level: 'info',
+      });
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       debugLogger.info('audio', '✅ Microphone permission granted', {
         audioTracks: stream.getAudioTracks().length,
         trackSettings: stream.getAudioTracks()[0]?.getSettings(),
+      });
+      Sentry.addBreadcrumb({
+        category: 'audio',
+        message: 'Microphone permission granted',
+        data: {
+          audioTracks: stream.getAudioTracks().length,
+          trackSettings: stream.getAudioTracks()[0]?.getSettings(),
+        },
+        level: 'info',
       });
 
       // Haptic feedback for starting recording
@@ -1333,6 +1362,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
         actualMimeType,
         state: mediaRecorder.state,
       });
+      Sentry.addBreadcrumb({
+        category: 'audio',
+        message: 'MediaRecorder created',
+        data: {
+          mimeType: mediaRecorder.mimeType,
+          state: mediaRecorder.state,
+        },
+        level: 'info',
+      });
 
       // Collect audio data
       mediaRecorder.ondataavailable = (event) => {
@@ -1371,7 +1409,20 @@ export default function ChatView({ initialConversationId }: { initialConversatio
 
           // Transcribe using OpenAI Whisper (always use OpenAI for transcription)
           if (!apiKey) {
+            const error = new Error('No OpenAI API key available for transcription');
             debugLogger.error('audio', '❌ No OpenAI API key available for transcription');
+            Sentry.captureException(error, {
+              tags: {
+                component: 'audio-transcription',
+                error_type: 'missing_api_key',
+              },
+              contexts: {
+                audio: {
+                  sttModel,
+                  hasApiKey: false,
+                },
+              },
+            });
             setStatus('error');
             return;
           }
@@ -1394,6 +1445,15 @@ export default function ChatView({ initialConversationId }: { initialConversatio
             actualMimeType,
             fileExt,
             provider: 'openai',
+          });
+          Sentry.addBreadcrumb({
+            category: 'audio',
+            message: 'Calling transcription API',
+            data: {
+              model: sttModel,
+              audioSize: audioData.byteLength,
+            },
+            level: 'info',
           });
 
           const openai = createOpenAI({ apiKey });
@@ -1441,6 +1501,16 @@ export default function ChatView({ initialConversationId }: { initialConversatio
             textLength: transcript.text?.length || 0,
             hasText: !!transcript.text?.trim(),
           });
+          Sentry.addBreadcrumb({
+            category: 'audio',
+            message: 'Transcription received',
+            data: {
+              duration: `${duration}ms`,
+              textLength: transcript.text?.length || 0,
+              hasText: !!transcript.text?.trim(),
+            },
+            level: 'info',
+          });
 
           const transcribedText = transcript.text?.trim();
           if (transcribedText) {
@@ -1449,17 +1519,51 @@ export default function ChatView({ initialConversationId }: { initialConversatio
                 transcribedText.substring(0, 50) + (transcribedText.length > 50 ? '...' : ''),
               fullLength: transcribedText.length,
             });
+            Sentry.addBreadcrumb({
+              category: 'audio',
+              message: 'Sending transcribed message',
+              data: {
+                textLength: transcribedText.length,
+              },
+              level: 'info',
+            });
             // Send the transcribed message
             await sendMessage(transcribedText);
             debugLogger.info('audio', '✅ Message sent successfully');
           } else {
+            const error = new Error('Transcription returned empty text');
             debugLogger.warn('audio', '⚠️ Transcription returned empty text');
+            Sentry.captureException(error, {
+              tags: {
+                component: 'audio-transcription',
+                error_type: 'empty_transcription',
+              },
+              contexts: {
+                audio: {
+                  sttModel,
+                  audioSize: audioData.byteLength,
+                  audioChunks: audioChunks.length,
+                },
+              },
+            });
             setStatus('error');
           }
         } catch (error) {
           debugLogger.error('audio', '❌ Transcription error', {
             error: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined,
+          });
+          Sentry.captureException(error, {
+            tags: {
+              component: 'audio-transcription',
+              error_type: 'transcription_api_error',
+            },
+            contexts: {
+              audio: {
+                sttModel,
+                audioChunks: audioChunks.length,
+              },
+            },
           });
           setStatus('error');
         } finally {
@@ -1478,11 +1582,30 @@ export default function ChatView({ initialConversationId }: { initialConversatio
       setIsRecording(true);
       setCurrentRecording({ mediaRecorder, stream });
       debugLogger.info('audio', '▶️ Recording started successfully with 1s timeslice');
+      Sentry.addBreadcrumb({
+        category: 'audio',
+        message: 'Recording started successfully',
+        level: 'info',
+      });
     } catch (error) {
       debugLogger.error('audio', '❌ Voice input error', {
         error: error instanceof Error ? error.message : 'Unknown error',
         name: error instanceof Error ? error.name : undefined,
         stack: error instanceof Error ? error.stack : undefined,
+      });
+      Sentry.captureException(error, {
+        tags: {
+          component: 'audio-recording',
+          error_type: error instanceof Error ? error.name : 'unknown',
+        },
+        contexts: {
+          audio: {
+            sttModel,
+            hasApiKey: !!apiKey,
+            errorName: error instanceof Error ? error.name : undefined,
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          },
+        },
       });
       setIsRecording(false);
       setCurrentRecording(null);
