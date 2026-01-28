@@ -1484,13 +1484,13 @@ ${capability.available ? 'Local AI (Gemma 3 270M) is available for offline infer
           </h1>
           <button
             type="button"
-            onClick={onClose}
-            onTouchEnd={(e) => {
+            onPointerDown={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               onClose();
             }}
-            className="inline-flex items-center justify-center h-14 w-14 p-0 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer touch-manipulation"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+            className="inline-flex items-center justify-center h-14 w-14 p-0 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer touch-manipulation relative z-50"
+            style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
             aria-label="Close settings"
           >
             <X className="size-8 pointer-events-none" />

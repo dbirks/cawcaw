@@ -169,9 +169,9 @@ export default function Sidebar({
         <DrawerContent className="w-80 h-full flex flex-col lg:hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b safe-top">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <img src="/app-icon.png" alt="cawcaw icon" className="h-8 w-8 rounded-lg" />
-              <h2 className="text-xl" style={{ fontFamily: 'Jua, sans-serif' }}>
+              <h2 className="text-xl flex items-center" style={{ fontFamily: 'Jua, sans-serif' }}>
                 cawcaw
               </h2>
             </div>
