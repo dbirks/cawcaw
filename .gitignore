@@ -37,3 +37,6 @@ state.json
 # Beads redirect (contains machine-specific paths)
 .beads/redirect
 
+# Gas Town (added by gt)
+.claude/commands/
+.logs/
